@@ -1,0 +1,143 @@
+import { app, BrowserWindow, dialog, ipcMain, safeStorage, shell } from 'electron'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { randomUUID } from 'node:crypto'
+import { ResearchStore } from './store'
+import { ResearchService } from './service'
+import {
+  loadStorageLocation,
+  relocateResearchStorage,
+  validateStorageDestination,
+} from './storage-location'
+
+const directory = dirname(fileURLToPath(import.meta.url))
+let service: ResearchService
+let store: ResearchStore
+// A second desktop instance must not treat the first instance's live turns as interrupted.
+const primary = app.requestSingleInstanceLock()
+if (!primary) app.quit()
+app.on('second-instance', () => {
+  const window = BrowserWindow.getAllWindows()[0]
+  if (window?.isMinimized()) window.restore()
+  window?.show()
+  window?.focus()
+})
+function createWindow() {
+  const window = new BrowserWindow({
+    width: 1536,
+    height: 960,
+    minWidth: 1050,
+    minHeight: 700,
+    backgroundColor: '#f7f8f5',
+    title: 'QuestBranch · 问枝',
+    autoHideMenuBar: true,
+    webPreferences: {
+      preload: join(directory, '../preload/index.cjs'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  })
+  window.webContents.setWindowOpenHandler(({ url }) => {
+    if (/^https?:\/\//.test(url)) void shell.openExternal(url)
+    return { action: 'deny' }
+  })
+  window.webContents.on('will-navigate', (event, url) => {
+    const current = window.webContents.getURL()
+    if (url !== current && !url.startsWith(process.env.ELECTRON_RENDERER_URL ?? 'file://'))
+      event.preventDefault()
+  })
+  if (process.env.ELECTRON_RENDERER_URL) void window.loadURL(process.env.ELECTRON_RENDERER_URL)
+  else void window.loadFile(join(directory, '../renderer/index.html'))
+}
+// Electron waits for the ESM entry point to finish evaluating before emitting ready.
+// Keep initialization in the callback instead of awaiting ready at module scope.
+void app
+  .whenReady()
+  .then(() => {
+    if (!primary) return
+    const userData = app.getPath('userData')
+    const location = loadStorageLocation(userData, process.env.QUESTBRANCH_DATA_DIR)
+    let relocating = false
+    let selection: { directory: string; token: string; sender: number } | undefined
+    const writable = () => {
+      if (relocating) throw new Error('正在迁移研究资料，应用即将重启')
+    }
+    store = new ResearchStore(location.directory, {
+      codec: safeStorage.isEncryptionAvailable()
+        ? {
+            encrypt: (value) => safeStorage.encryptString(value).toString('base64'),
+            decrypt: (value) => safeStorage.decryptString(Buffer.from(value, 'base64')),
+          }
+        : undefined,
+    })
+    service = new ResearchService(store)
+    ipcMain.handle('research:snapshot', async () => {
+      const snapshot = await service.snapshot()
+      return { ...snapshot, storage: { ...snapshot.storage!, source: location.source } }
+    })
+    ipcMain.handle('research:command', (_, command) => {
+      writable()
+      return service.command(command)
+    })
+    ipcMain.handle('research:test', () => {
+      writable()
+      return service.testConnection()
+    })
+    ipcMain.handle('research:export', (_, id: string) => service.exportWorkspace(id))
+    ipcMain.handle('storage:choose-directory', async (event) => {
+      writable()
+      if (location.source === 'environment')
+        throw new Error('当前保存位置由 QUESTBRANCH_DATA_DIR 指定，请移除启动覆盖后再选择')
+      const window = BrowserWindow.fromWebContents(event.sender)
+      if (!window) throw new Error('请在问枝窗口中选择文件夹')
+      const result = await dialog.showOpenDialog(window, {
+        title: '选择一个空文件夹保存问枝研究',
+        buttonLabel: '选择保存位置',
+        properties: ['openDirectory', 'createDirectory', 'dontAddToRecent'],
+      })
+      if (result.canceled || !result.filePaths[0]) return null
+      selection = {
+        directory: validateStorageDestination(store.directory, result.filePaths[0]),
+        token: randomUUID(),
+        sender: event.sender.id,
+      }
+      return { directory: selection.directory, token: selection.token }
+    })
+    ipcMain.handle('storage:relocate', async (event, token: unknown) => {
+      writable()
+      if (!selection || selection.sender !== event.sender.id || token !== selection.token)
+        throw new Error('请先选择新的研究保存文件夹')
+      if (service.hasActiveRuns) throw new Error('请等待当前对话或研究结束，或停止研究后再迁移')
+      relocating = true
+      try {
+        await relocateResearchStorage(store, userData, selection.directory)
+      } catch (error) {
+        relocating = false
+        throw error
+      }
+      setTimeout(() => {
+        try {
+          app.relaunch()
+        } catch {
+          dialog.showErrorBox('研究位置已更改', '资料已迁移，请重新打开问枝继续研究。')
+        }
+        app.quit()
+      }, 400)
+    })
+    createWindow()
+  })
+  .catch((error: unknown) => {
+    dialog.showErrorBox(
+      '问枝未能打开本地研究空间',
+      error instanceof Error ? error.message : '初始化失败',
+    )
+    app.quit()
+  })
+app.on('activate', () => {
+  if (primary && !BrowserWindow.getAllWindows().length) createWindow()
+})
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') app.quit()
+})
+app.on('before-quit', () => service?.shutdown())

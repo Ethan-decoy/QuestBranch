@@ -1,0 +1,10 @@
+node_modules/
+out/
+dist-web/
+release/
+.questbranch/
+.env
+.env.*
+!.env.example
+artifacts/
+*.log

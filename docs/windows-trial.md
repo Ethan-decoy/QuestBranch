@@ -1,6 +1,6 @@
 # Windows 独立版试用
 
-适用版本：0.3.0-dev.2 候选。当前尚未发布；下列文件随正式候选附件提供。仅面向已获得私有仓库访问权限的试用者，无需安装 Node.js 或 pnpm。
+适用版本：**0.3.0-dev.2 · Windows x64 预发布**。面向已获得私有仓库访问权限的试用者，无需安装 Node.js 或 pnpm。附件及校验文件见 [Releases](https://github.com/Ethan-decoy/QuestBranch/releases)。
 
 ## 启动
 

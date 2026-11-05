@@ -6,9 +6,20 @@
 
 一个节点对应一项研究；节点保存对话、完整报告、来源与报告历史。后续问题成为可以继续深入的子节点。
 
-本仓库用于分发源码、使用文档与问题反馈，承载预发布和稳定版本，具体内容及验证范围以对应发布标签和发行说明为准。目标是未来公开，**目前保持私有，暂不公布**。
+本仓库提供独立应用的源码、版本和使用文档。当前为私有预发布，面向已有访问权限的开发者。
 
-当前在准备 **0.3.0-dev.2** 候选，尚未发布。本轮范围为 Windows x64 目录包；安装、隔离试用与手动升级见[试用指南](docs/windows-trial.md)。
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/workspace-dark.png">
+  <img src="docs/images/workspace-light.png" alt="问之研究工作台：分支导航、研究图谱与报告">
+</picture>
+
+## 下载与试用
+
+**0.3.0-dev.2 · Windows x64 预发布**
+
+从 [Releases](https://github.com/Ethan-decoy/QuestBranch/releases) 获取完整 ZIP 与 `SHA256SUMS.txt`，核对后解压，双击顶层 `Start-QuestBranch.cmd`。无需安装 Node.js 或 pnpm；研究和配置保存在同级 `data/`。
+
+安装、隔离试用和手动升级见 [Windows 试用指南](docs/windows-trial.md)，具体交付范围以发行说明为准。当前未提供签名、自动更新或 macOS/Linux 成品。
 
 ## 功能
 
@@ -33,12 +44,12 @@ pnpm dev:web
 打开 [本地浏览器预览](http://127.0.0.1:5173)。桌面开发使用 `pnpm dev`。
 
 ```powershell
-pnpm check          # 格式、类型与关键行为测试
+pnpm check          # 格式、双语、类型与关键行为测试
 pnpm build          # Electron 与浏览器构建
 pnpm preview        # 启动构建后的浏览器预览
 pnpm start          # 启动构建后的 Electron 应用
 pnpm package:dir    # 构建并覆盖 release/ 中当前平台的应用目录
-pnpm notices:check # 核对本机锁定依赖与第三方声明
+pnpm notices:check  # 核对本机锁定依赖与第三方声明
 ```
 
 Windows 应用目录的固定入口为 `release/win-unpacked/QuestBranch.exe`。更新前先退出 QB，再次运行 `pnpm package:dir` 覆盖同一目录，本地构建不会发布版本。当前已验证 Windows 本地运行，macOS、Linux 的实际运行和安装包尚未验证；目前未提供签名安装包。

@@ -63,9 +63,11 @@ function collect(directory) {
     )
   }
   if (!texts.length) throw new Error(`缺少原始许可文本：${id}；请核对来源后补充该版本的声明`)
-  const text = `${id}\nDeclared license: ${license}\n\n${texts.join('\n\n')}`
-  if (packages.has(id) && packages.get(id) !== text) throw new Error(`同版本的许可不同：${id}`)
-  packages.set(id, text)
+  const notice = { license, text: texts.join('\n\n') }
+  const existing = packages.get(id)
+  if (existing && (existing.license !== notice.license || existing.text !== notice.text))
+    throw new Error(`同版本的许可不同：${id}`)
+  packages.set(id, notice)
 }
 for (const records of Object.values(inventory))
   for (const record of records) for (const directory of record.paths) collect(directory)
@@ -75,6 +77,13 @@ for (const name of ['tailwindcss', 'electron'])
   collect(dirname(require.resolve(`${name}/package.json`)))
 const codexNotice = readFileSync(join(root, 'licenses/openai-codex.NOTICE'), 'utf8').trimEnd()
 const lockHash = hash(readFileSync(join(root, 'pnpm-lock.yaml')))
+// Share only byte-identical notice text; retain every package's own declaration.
+const notices = new Map()
+for (const [id, notice] of [...packages].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) {
+  const declarations = notices.get(notice.text) ?? []
+  declarations.push(`${id}\nDeclared license: ${notice.license}`)
+  notices.set(notice.text, declarations)
+}
 const text = `QuestBranch standalone third-party notices
 
 Generated from the lockfile's installed production inventory on ${process.platform}/${process.arch},
@@ -91,10 +100,13 @@ those entries remain unresolved and must be reviewed before public distribution.
 
 Lockfile SHA-256: ${lockHash}
 Packages: ${packages.size}
+Identical notice texts are printed once with all applicable packages listed.
 
-${[...packages]
-  .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
-  .map(([, value]) => `${'='.repeat(80)}\n${value}`)
+${[...notices]
+  .map(
+    ([body, declarations]) =>
+      `${'='.repeat(80)}\nApplies to:\n\n${declarations.join('\n\n')}\n\nOriginal notice text:\n\n${body}`,
+  )
   .join('\n\n')}
 
 ${'='.repeat(80)}

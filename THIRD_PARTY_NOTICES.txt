@@ -7,10 +7,11 @@ Electron's accompanying LICENSE.electron.txt and LICENSES.chromium.html must
 also remain with the distributed application. The bundled Codex upstream
 NOTICE follows this inventory.
 
-QuestBranch has no selected project license. SessionWeave is a private,
-UNLICENSED snapshot. These notices do not grant rights to either project.
-3 dependency declarations have no verified original notice below;
-those entries remain unresolved and must be reviewed before public distribution.
+QuestBranch is MIT licensed; see LICENSE and LICENSING.md. The unchanged
+SessionWeave snapshot has an explicit supplemental MIT grant below.
+3 packages supply MIT declarations only in their original manifests.
+Those manifests and standard terms are preserved below; no separate upstream
+copyright notice was supplied or invented. Other entries preserve original notices.
 
 Lockfile SHA-256: b979e72686f53851c2becc8b57a3978bc3c3ca52915b40496a5c0b2c9883581f
 Packages: 476
@@ -40,7 +41,7 @@ Declared license: Apache-2.0
 long@5.3.2
 Declared license: Apache-2.0
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 
@@ -252,7 +253,7 @@ Applies to:
 @agentclientprotocol/codex-acp@2.2.2
 Declared license: Apache-2.0
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
    Copyright 2025 JetBrains s.r.o.
@@ -455,7 +456,7 @@ Declared license: Apache-2.0
 @agentclientprotocol/sdk@2.0.1
 Declared license: Apache-2.0
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 
@@ -656,7 +657,7 @@ Applies to:
 @ai-sdk/provider-utils@5.0.62
 Declared license: Apache-2.0
 
-Original notice text:
+Notice text and licensing evidence:
 
 Source: https://github.com/vercel/ai/blob/8e8033a73dd471f221810ade3c7a355b78cf4d8b/LICENSE
 The published npm archive omits a license file. Preserved from this pinned upstream revision; it is not claimed to be the exact npm source commit.
@@ -684,7 +685,7 @@ Declared license: Apache-2.0
 remend@1.4.0
 Declared license: Apache-2.0
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 Copyright 2023 Vercel, Inc.
@@ -707,7 +708,7 @@ Applies to:
 @anthropic-ai/sdk@0.129.0
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 Copyright 2023 Anthropic, PBC.
@@ -724,7 +725,7 @@ Applies to:
 @aws-sdk/client-bedrock-runtime@3.1127.0
 Declared license: Apache-2.0
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
                                 Apache License
@@ -935,7 +936,7 @@ Applies to:
 @aws-sdk/core@3.978.3
 Declared license: Apache-2.0
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 Apache License
@@ -1176,7 +1177,7 @@ Declared license: Apache-2.0
 @smithy/signature-v4@5.7.4
 Declared license: Apache-2.0
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 Apache License
@@ -1393,7 +1394,7 @@ Declared license: Apache-2.0
 @aws-sdk/nested-clients@3.997.48
 Declared license: Apache-2.0
 
-Original notice text:
+Notice text and licensing evidence:
 
 Source: https://github.com/aws/aws-sdk-js-v3/blob/0bde7a791084dfefae6a98ddcf7c9e8da8da3754/LICENSE
 The published npm archive omits a license file. Preserved from this pinned upstream revision; it is not claimed to be the exact npm source commit.
@@ -1612,7 +1613,7 @@ Declared license: Apache-2.0
 @aws-sdk/credential-provider-web-identity@3.972.80
 Declared license: Apache-2.0
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 Apache License
@@ -1835,7 +1836,7 @@ Declared license: Apache-2.0
 @smithy/types@4.19.0
 Declared license: Apache-2.0
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
                                 Apache License
@@ -2046,7 +2047,7 @@ Applies to:
 @aws-sdk/middleware-eventstream@3.972.31
 Declared license: Apache-2.0
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
                                 Apache License
@@ -2257,7 +2258,7 @@ Applies to:
 @aws/lambda-invoke-store@0.3.0
 Declared license: Apache-2.0
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 
@@ -2442,7 +2443,7 @@ Applies to:
 @babel/runtime@7.29.10
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 MIT License
@@ -2477,7 +2478,7 @@ Declared license: MIT
 chat@4.43.0
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 MIT License
@@ -2499,7 +2500,7 @@ Declared license: MIT
 @dagrejs/graphlib@4.0.5
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 Copyright (c) 2012-2014 Chris Pettitt
@@ -2531,7 +2532,7 @@ Declared license: MIT
 @earendil-works/pi-telemetry@1.3.0
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 Source: https://github.com/earendil-works/pi/blob/71023aec1546d6d677a65669c5665c0927ce0dd0/LICENSE
 The published npm archive omits a license file. Preserved from the pinned upstream revision shown here.
@@ -2573,7 +2574,7 @@ Declared license: MIT
 @floating-ui/utils@0.2.12
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 MIT License
@@ -2606,7 +2607,7 @@ Declared license: MIT
 @hono/standard-validator@0.4.1
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 MIT License
@@ -2643,7 +2644,7 @@ Declared license: BlueOak-1.0.0
 sax@1.6.1
 Declared license: BlueOak-1.0.0
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE.md ---
 # Blue Oak Model License
@@ -2714,7 +2715,7 @@ Declared license: MIT
 clsx@2.1.1
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- license ---
 MIT License
@@ -2733,7 +2734,7 @@ Applies to:
 @mastra/core@1.79.0
 Declared license: Apache-2.0
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE.md ---
 Portions of this software are licensed as follows:
@@ -2781,7 +2782,7 @@ Declared license: Apache-2.0
 @mastra/schema-compat@1.3.16
 Declared license: Apache-2.0
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE.md ---
 Portions of this software are licensed as follows:
@@ -2823,7 +2824,7 @@ Applies to:
 @modelcontextprotocol/sdk@1.32.1
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 MIT License
@@ -2857,7 +2858,7 @@ Declared license: Apache-2.0
 @openai/codex@0.160.1-win32-x64
 Declared license: Apache-2.0
 
-Original notice text:
+Notice text and licensing evidence:
 
 Source: https://github.com/openai/codex/blob/d27764b82f7118f674371e6d6e76271d9d606edb/LICENSE
 The published npm archive omits a license file. Preserved from the pinned upstream revision shown here.
@@ -3076,7 +3077,7 @@ Declared license: MIT
 posthog-node@5.61.1
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 Copyright 2020 Posthog / Hiberly, Inc.
@@ -3527,7 +3528,7 @@ Declared license: BSD-3-Clause
 @protobufjs/utf8@1.1.2
 Declared license: BSD-3-Clause
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 Copyright (c) 2016, Daniel Wirtz  All rights reserved.
@@ -3743,7 +3744,7 @@ Declared license: MIT
 radix-ui@1.8.1
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 MIT License
@@ -3774,7 +3775,7 @@ Applies to:
 @sec-ant/readable-stream@0.4.1
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 MIT License
@@ -3892,7 +3893,7 @@ Declared license: MIT
 yoctocolors@2.2.0
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- license ---
 MIT License
@@ -3911,7 +3912,7 @@ Applies to:
 @stablelib/base64@1.0.1
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 This software is licensed under the MIT license:
@@ -3942,11 +3943,125 @@ Applies to:
 @standard-community/standard-json@0.3.7
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
-UNRESOLVED ORIGINAL NOTICE
-Source inspected: https://github.com/standard-community/standard-json/tree/49890fa93b41138843bac1b2db8dc416ecc89e57
-The installed package declares MIT but omits the original license text. No license for this package was found in the inspected upstream revision. This entry preserves the declaration only; its original notice remains unresolved.
+Original package manifest (licenses/standard-community-standard-json.package.json):
+{
+  "name": "@standard-community/standard-json",
+  "version": "0.3.7",
+  "type": "module",
+  "license": "MIT",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "standard-schema",
+    "standard-community",
+    "standard-schema-community",
+    "json-schema",
+    "convertor"
+  ],
+  "homepage": "https://github.com/standard-community",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/standard-community/standard-json.git"
+  },
+  "bugs": {
+    "url": "https://github.com/standard-community/standard-json/issues"
+  },
+  "exports": {
+    "import": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "require": {
+      "types": "./dist/index.d.cts",
+      "default": "./dist/index.cjs"
+    }
+  },
+  "dependencies": {
+    "quansync": "^0.2.11"
+  },
+  "peerDependencies": {
+    "@standard-schema/spec": "^1.0.0",
+    "@types/json-schema": "^7.0.15",
+    "@valibot/to-json-schema": "^1.3.0",
+    "arktype": "^2.1.20",
+    "effect": "^3.20.0",
+    "typebox": "^1.0.17",
+    "sury": "^10.0.0",
+    "valibot": "^1.4.2",
+    "zod": "^3.25.0 || ^4.0.0",
+    "zod-to-json-schema": "^3.24.5"
+  },
+  "peerDependenciesMeta": {
+    "@valibot/to-json-schema": {
+      "optional": true
+    },
+    "arktype": {
+      "optional": true
+    },
+    "effect": {
+      "optional": true
+    },
+    "typebox": {
+      "optional": true
+    },
+    "sury": {
+      "optional": true
+    },
+    "valibot": {
+      "optional": true
+    },
+    "zod": {
+      "optional": true
+    },
+    "zod-to-json-schema": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.0.4",
+    "@types/node": "^24.3.1",
+    "pkgroll": "^2.28.1",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.6"
+  },
+  "scripts": {
+    "build": "pkgroll --clean-dist",
+    "format": "biome check --write .",
+    "test": "vitest"
+  }
+}
+
+Source: https://github.com/standard-community/standard-json/tree/49890fa93b41138843bac1b2db8dc416ecc89e57
+The original package manifest declares the SPDX identifier MIT. The package archive and inspected upstream revision supply no separate license or copyright notice. The original manifest is preserved below, followed by standard MIT terms; no copyright notice has been invented.
+
+MIT License
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 
 ================================================================================
 Applies to:
@@ -3954,11 +4069,137 @@ Applies to:
 @standard-community/standard-openapi@0.2.11
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
-UNRESOLVED ORIGINAL NOTICE
-Source inspected: https://github.com/standard-community/standard-openapi/tree/31194430a8254d606025271e3fe87923835366bf
-The installed package declares MIT but omits the original license text. No license for this package was found in the inspected upstream revision. This entry preserves the declaration only; its original notice remains unresolved.
+Original package manifest (licenses/standard-community-standard-openapi.package.json):
+{
+  "name": "@standard-community/standard-openapi",
+  "version": "0.2.11",
+  "type": "module",
+  "license": "MIT",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "standard-schema",
+    "standard-community",
+    "standard-schema-community",
+    "openapi-schema",
+    "openapi",
+    "convertor"
+  ],
+  "homepage": "https://github.com/standard-community",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/standard-community/standard-openapi.git"
+  },
+  "bugs": {
+    "url": "https://github.com/standard-community/standard-openapi/issues"
+  },
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./convert": {
+      "import": {
+        "types": "./dist/vendors/convert.d.ts",
+        "default": "./dist/vendors/convert.js"
+      },
+      "require": {
+        "types": "./dist/vendors/convert.d.cts",
+        "default": "./dist/vendors/convert.cjs"
+      }
+    }
+  },
+  "peerDependencies": {
+    "@standard-community/standard-json": "^0.3.5",
+    "@standard-schema/spec": "^1.0.0",
+    "arktype": "^2.1.20",
+    "effect": "^3.20.0",
+    "openapi-types": "^12.1.3",
+    "sury": "^10.0.0",
+    "typebox": "^1.0.0",
+    "valibot": "^1.4.2",
+    "zod": "^3.25.0 || ^4.0.0",
+    "zod-openapi": "^4"
+  },
+  "peerDependenciesMeta": {
+    "arktype": {
+      "optional": true
+    },
+    "effect": {
+      "optional": true
+    },
+    "sury": {
+      "optional": true
+    },
+    "typebox": {
+      "optional": true
+    },
+    "valibot": {
+      "optional": true
+    },
+    "zod": {
+      "optional": true
+    },
+    "zod-openapi": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.0.4",
+    "@types/json-schema": "^7.0.15",
+    "@types/node": "^24.3.1",
+    "@valibot/to-json-schema": "^1.3.0",
+    "pkgroll": "^2.28.1",
+    "typebox": "1.0.17",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.6",
+    "zod": "^3.25.67",
+    "zod-to-json-schema": "^3.24.6"
+  },
+  "scripts": {
+    "build": "pkgroll --clean-dist",
+    "format": "biome check --write .",
+    "test": "vitest"
+  }
+}
+
+Source: https://github.com/standard-community/standard-openapi/tree/31194430a8254d606025271e3fe87923835366bf
+The original package manifest declares the SPDX identifier MIT. The package archive and inspected upstream revision supply no separate license or copyright notice. The original manifest is preserved below, followed by standard MIT terms; no copyright notice has been invented.
+
+MIT License
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 
 ================================================================================
 Applies to:
@@ -3966,7 +4207,7 @@ Applies to:
 @standard-schema/spec@1.1.0
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 MIT License
@@ -4048,7 +4289,7 @@ Declared license: MIT
 @types/unist@3.0.3
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
     MIT License
@@ -4079,7 +4320,7 @@ Applies to:
 @types/retry@0.12.0
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
     MIT License
@@ -4113,7 +4354,7 @@ Declared license: Apache-2.0
 typescript@7.0.2
 Declared license: Apache-2.0
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 Apache License
@@ -4615,7 +4856,7 @@ Applies to:
 @ungap/structured-clone@1.4.0
 Declared license: ISC
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 ISC License
@@ -4643,7 +4884,7 @@ Declared license: Apache-2.0
 @workflow/serde@4.1.0-beta.2
 Declared license: Apache-2.0
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE.md ---
 Apache License 2.0
@@ -4659,7 +4900,7 @@ Declared license: MIT
 @xyflow/system@0.0.83
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 MIT License
@@ -4693,7 +4934,7 @@ Declared license: MIT
 mime-types@3.0.2
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 (The MIT License)
@@ -4738,7 +4979,7 @@ Declared license: MIT
 https-proxy-agent@9.1.0
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 (The MIT License)
@@ -4770,7 +5011,7 @@ Applies to:
 ajv-formats@3.0.1
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 MIT License
@@ -4801,7 +5042,7 @@ Applies to:
 ajv@8.20.0
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 The MIT License (MIT)
@@ -4844,7 +5085,7 @@ Declared license: MIT
 use-sidecar@1.1.3
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 MIT License
@@ -4875,7 +5116,7 @@ Applies to:
 async-mutex@0.5.0
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 The MIT License (MIT)
@@ -4930,7 +5171,7 @@ Declared license: MIT
 unist-util-visit@5.1.0
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- license ---
 (The MIT License)
@@ -4962,7 +5203,7 @@ Applies to:
 base64-js@1.5.1
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 The MIT License (MIT)
@@ -4993,7 +5234,7 @@ Applies to:
 bignumber.js@9.3.1
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENCE.md ---
 The MIT License (MIT)
@@ -5031,7 +5272,7 @@ Declared license: MIT
 type-is@2.1.0
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 (The MIT License)
@@ -5064,7 +5305,7 @@ Applies to:
 bowser@2.14.1
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 Copyright 2015, Dustin Diaz (the "Original Author")
@@ -5113,7 +5354,7 @@ Applies to:
 buffer-equal-constant-time@1.0.1
 Declared license: BSD-3-Clause
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE.txt ---
 Copyright (c) 2013, GoInstant Inc., a salesforce.com company
@@ -5135,7 +5376,7 @@ Applies to:
 bytes@3.1.2
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 (The MIT License)
@@ -5186,7 +5427,7 @@ Declared license: MIT
 side-channel-map@1.0.1
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 MIT License
@@ -5217,7 +5458,7 @@ Applies to:
 classcat@5.0.5
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE.md ---
 Copyright © Jorge Bucaran <<https://jorgebucaran.com>>
@@ -5264,7 +5505,7 @@ Declared license: MIT
 zwitch@2.0.4
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- license ---
 (The MIT License)
@@ -5305,7 +5546,7 @@ Declared license: MIT
 vary@1.1.2
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 (The MIT License)
@@ -5340,7 +5581,7 @@ Declared license: MIT
 content-type@2.1.0
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 (The MIT License)
@@ -5372,7 +5613,7 @@ Applies to:
 cookie-signature@1.2.2
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 (The MIT License)
@@ -5404,7 +5645,7 @@ Applies to:
 cookie@0.7.2
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 (The MIT License)
@@ -5437,7 +5678,7 @@ Applies to:
 cors@2.8.6
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 (The MIT License)
@@ -5469,7 +5710,7 @@ Applies to:
 croner@10.0.1
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 The MIT License (MIT)
@@ -5503,7 +5744,7 @@ Declared license: MIT
 proper-lockfile@4.1.2
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 The MIT License (MIT)
@@ -5534,7 +5775,7 @@ Applies to:
 csstype@3.2.3
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 Copyright (c) 2017-2018 Fredrik Nicol
@@ -5563,7 +5804,7 @@ Applies to:
 d3-color@3.1.0
 Declared license: ISC
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 Copyright 2010-2022 Mike Bostock
@@ -5604,7 +5845,7 @@ Declared license: ISC
 d3-zoom@3.0.0
 Declared license: ISC
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 Copyright 2010-2021 Mike Bostock
@@ -5627,7 +5868,7 @@ Applies to:
 d3-ease@3.0.1
 Declared license: BSD-3-Clause
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 Copyright 2010-2021 Mike Bostock
@@ -5665,7 +5906,7 @@ Applies to:
 data-uri-to-buffer@4.0.1
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 Source: https://github.com/TooTallNate/node-data-uri-to-buffer/blob/85cd8c854aefbf1bb636789d80364cfac8ea1583/README.md#license
 The published npm archive omits a license file. Preserved from the pinned upstream revision shown here.
@@ -5702,7 +5943,7 @@ Applies to:
 debug@3.2.7
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 (The MIT License)
@@ -5730,7 +5971,7 @@ Applies to:
 debug@4.4.3
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 (The MIT License)
@@ -5861,7 +6102,7 @@ Declared license: MIT
 vfile-message@4.0.3
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- license ---
 (The MIT License)
@@ -5893,7 +6134,7 @@ Applies to:
 depd@2.0.0
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 (The MIT License)
@@ -5925,7 +6166,7 @@ Applies to:
 dequal@2.0.3
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- license ---
 The MIT License (MIT)
@@ -5956,7 +6197,7 @@ Applies to:
 detect-node-es@1.1.0
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 MIT License
@@ -5987,7 +6228,7 @@ Applies to:
 devlop@1.1.0
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- license ---
 (The MIT License)
@@ -6022,7 +6263,7 @@ Declared license: BSD-3-Clause
 diff@9.0.0
 Declared license: BSD-3-Clause
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 BSD 3-Clause License
@@ -6061,7 +6302,7 @@ Applies to:
 dotenv@17.4.2
 Declared license: BSD-2-Clause
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 Copyright (c) 2015, Scott Motte
@@ -6097,7 +6338,7 @@ Declared license: MIT
 math-intrinsics@1.1.0
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 MIT License
@@ -6128,7 +6369,7 @@ Applies to:
 ecdsa-sig-formatter@1.0.11
 Declared license: Apache-2.0
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 Apache License
@@ -6339,7 +6580,7 @@ Applies to:
 ee-first@1.1.1
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 
@@ -6371,7 +6612,7 @@ Applies to:
 electron-log@5.4.4
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 The MIT License (MIT)
@@ -6402,7 +6643,7 @@ Applies to:
 electron@44.7.2
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 Copyright (c) Electron contributors
@@ -6433,7 +6674,7 @@ Applies to:
 encodeurl@2.0.0
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 (The MIT License)
@@ -6465,7 +6706,7 @@ Applies to:
 escape-html@1.0.3
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 (The MIT License)
@@ -6532,7 +6773,7 @@ Declared license: MIT
 micromark-extension-gfm@3.0.0
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- license ---
 (The MIT License)
@@ -6567,7 +6808,7 @@ Declared license: MIT
 proxy-addr@2.0.8
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 (The MIT License)
@@ -6599,7 +6840,7 @@ Applies to:
 eventsource-parser@3.1.1
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 MIT License
@@ -6630,7 +6871,7 @@ Applies to:
 eventsource@3.0.7
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 The MIT License
@@ -6662,7 +6903,7 @@ Applies to:
 express-rate-limit@8.7.1
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- license ---
 MIT License
@@ -6693,7 +6934,7 @@ Applies to:
 express@5.3.0
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 (The MIT License)
@@ -6727,7 +6968,7 @@ Applies to:
 extend@3.0.2
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 The MIT License (MIT)
@@ -6762,7 +7003,7 @@ Declared license: MIT
 json-schema-traverse@1.0.0
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 MIT License
@@ -6793,7 +7034,7 @@ Applies to:
 fast-sha256@1.3.0
 Declared license: Unlicense
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 This is free and unencumbered software released into the public domain.
@@ -6827,7 +7068,7 @@ Applies to:
 fast-uri@3.1.8
 Declared license: BSD-3-Clause
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 Copyright (c) 2011-2021, Gary Court until https://github.com/garycourt/uri-js/commit/a1acf730b4bba3f1097c9f52e7d9d3aba8cdcaae
@@ -6867,7 +7108,7 @@ Applies to:
 fastq@1.20.3
 Declared license: ISC
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 Copyright (c) 2015-2020, Matteo Collina <matteo.collina@gmail.com>
@@ -6890,7 +7131,7 @@ Applies to:
 fetch-blob@3.2.0
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 MIT License
@@ -6921,7 +7162,7 @@ Applies to:
 finalhandler@2.1.1
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 (The MIT License)
@@ -6953,7 +7194,7 @@ Applies to:
 formdata-polyfill@4.0.10
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 MIT License
@@ -6984,7 +7225,7 @@ Applies to:
 fresh@2.0.0
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 (The MIT License)
@@ -7017,7 +7258,7 @@ Applies to:
 function-bind@1.1.2
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 Copyright (c) 2013 Raynos.
@@ -7046,7 +7287,7 @@ Applies to:
 get-intrinsic@1.3.0
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 MIT License
@@ -7077,7 +7318,7 @@ Applies to:
 get-nonce@1.0.1
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 MIT License
@@ -7108,7 +7349,7 @@ Applies to:
 get-proto@1.0.1
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 MIT License
@@ -7139,7 +7380,7 @@ Applies to:
 gopd@1.2.0
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 MIT License
@@ -7170,7 +7411,7 @@ Applies to:
 graceful-fs@4.2.11
 Declared license: ISC
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 The ISC License
@@ -7195,7 +7436,7 @@ Applies to:
 has-symbols@1.1.0
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 MIT License
@@ -7226,7 +7467,7 @@ Applies to:
 hasown@2.0.4
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 MIT License
@@ -7257,7 +7498,7 @@ Applies to:
 hono-openapi@1.5.0
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 MIT License
@@ -7288,7 +7529,7 @@ Applies to:
 hono@4.13.13
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 MIT License
@@ -7319,7 +7560,7 @@ Applies to:
 html-parse-stringify@4.0.1
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 MIT License
@@ -7351,7 +7592,7 @@ Applies to:
 html-url-attributes@3.0.1
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- license ---
 (The MIT License)
@@ -7382,7 +7623,7 @@ Applies to:
 http-errors@2.0.1
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 
@@ -7415,7 +7656,7 @@ Applies to:
 human-signals@8.0.1
 Declared license: Apache-2.0
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
                                  Apache License
@@ -7626,7 +7867,7 @@ Applies to:
 i18next@26.7.1
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 The MIT License (MIT)
@@ -7660,7 +7901,7 @@ Declared license: MIT
 iconv-lite@0.7.3
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 Copyright (c) 2011 Alexander Shtuchkin
@@ -7690,7 +7931,7 @@ Applies to:
 ignore@7.0.14
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE-MIT ---
 Copyright (c) 2013 Kael Zhang <i@kael.me>, contributors
@@ -7721,7 +7962,7 @@ Applies to:
 inherits@2.0.4
 Declared license: ISC
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 The ISC License
@@ -7746,7 +7987,7 @@ Applies to:
 inline-style-parser@0.2.7
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 (The MIT License)
@@ -7765,7 +8006,7 @@ Applies to:
 ip-address@10.7.4
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 Copyright (C) 2011 by Beau Gunderson
@@ -7794,7 +8035,7 @@ Applies to:
 ipaddr.js@1.9.1
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 Copyright (C) 2011-2017 whitequark <whitequark@whitequark.org>
@@ -7823,7 +8064,7 @@ Applies to:
 is-promise@4.0.0
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 Copyright (c) 2014 Forbes Lindesay
@@ -7861,7 +8102,7 @@ Declared license: ISC
 wrappy@1.0.2
 Declared license: ISC
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 The ISC License
@@ -7886,7 +8127,7 @@ Applies to:
 jose@6.2.13
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE.md ---
 The MIT License (MIT)
@@ -7917,7 +8158,7 @@ Applies to:
 jpeg-js@0.4.4
 Declared license: BSD-3-Clause
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 Copyright (c) 2014, Eugene Ware
@@ -7952,7 +8193,7 @@ Applies to:
 json-bigint@1.0.0
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 The MIT License (MIT)
@@ -7985,7 +8226,7 @@ Declared license: MIT
 ts-algebra@2.0.0
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 MIT License
@@ -8016,7 +8257,7 @@ Applies to:
 json-schema-to-zod@2.8.1
 Declared license: ISC
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 ISC License
@@ -8041,7 +8282,7 @@ Applies to:
 json-schema-typed@8.0.2
 Declared license: BSD-2-Clause
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE.md ---
 BSD 2-Clause License
@@ -8108,7 +8349,7 @@ Applies to:
 json-schema@0.4.0
 Declared license: (AFL-2.1 OR BSD-3-Clause)
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 Dojo is available under *either* the terms of the BSD 3-Clause "New" License *or* the
@@ -8316,7 +8557,7 @@ Declared license: MIT
 jws@4.0.1
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 Copyright (c) 2013 Brian J. Brennan
@@ -8343,7 +8584,7 @@ Applies to:
 lodash.merge@4.6.2
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 Copyright OpenJS Foundation and other contributors <https://openjsf.org/>
@@ -8406,7 +8647,7 @@ Declared license: MIT
 trim-lines@3.0.1
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- license ---
 (The MIT License)
@@ -8438,7 +8679,7 @@ Applies to:
 lucide-react@1.57.0
 Declared license: ISC
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 ISC License
@@ -8491,7 +8732,7 @@ Applies to:
 mdast-util-phrasing@4.1.0
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- license ---
 (The MIT License)
@@ -8524,7 +8765,7 @@ Applies to:
 merge-descriptors@2.0.0
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- license ---
 MIT License
@@ -8545,7 +8786,7 @@ Applies to:
 micromark-extension-gfm-footnote@2.1.0
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- license ---
 (The MIT License)
@@ -8577,7 +8818,7 @@ Applies to:
 mime-db@1.54.0
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 (The MIT License)
@@ -8610,7 +8851,7 @@ Applies to:
 ms@2.1.3
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- license.md ---
 The MIT License (MIT)
@@ -8641,7 +8882,7 @@ Applies to:
 needle@2.9.1
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- license.txt ---
 Copyright (c) Fork, Ltd.
@@ -8670,7 +8911,7 @@ Applies to:
 negotiator@1.1.0
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 (The MIT License)
@@ -8704,7 +8945,7 @@ Applies to:
 node-domexception@1.0.0
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 MIT License
@@ -8735,7 +8976,7 @@ Applies to:
 node-fetch@3.3.2
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE.md ---
 The MIT License (MIT)
@@ -8766,7 +9007,7 @@ Applies to:
 object-assign@4.1.1
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- license ---
 The MIT License (MIT)
@@ -8797,7 +9038,7 @@ Applies to:
 object-inspect@1.13.4
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 MIT License
@@ -8828,7 +9069,7 @@ Applies to:
 on-finished@2.4.1
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 (The MIT License)
@@ -8861,7 +9102,7 @@ Applies to:
 openai@7.19.0
 Declared license: Apache-2.0
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
                                  Apache License
@@ -9072,7 +9313,7 @@ Applies to:
 openapi-types@12.1.3
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 The MIT License (MIT)
@@ -9109,7 +9350,7 @@ Declared license: MIT
 shebang-regex@3.0.0
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- license ---
 MIT License
@@ -9131,7 +9372,7 @@ Declared license: MIT
 property-information@7.2.0
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- license ---
 (The MIT License)
@@ -9163,7 +9404,7 @@ Applies to:
 parseurl@1.3.3
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 
@@ -9197,7 +9438,7 @@ Applies to:
 partial-json@0.1.7
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 MIT License
@@ -9228,7 +9469,7 @@ Applies to:
 path-to-regexp@8.4.2
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 The MIT License (MIT)
@@ -9259,7 +9500,7 @@ Applies to:
 picomatch@4.0.7
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 The MIT License (MIT)
@@ -9290,7 +9531,7 @@ Applies to:
 pkce-challenge@5.0.1
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 MIT License
@@ -9321,7 +9562,7 @@ Applies to:
 probe-image-size@7.5.0
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 Copyright (c) 2015 Vitaly Puzrin.
@@ -9353,7 +9594,7 @@ Applies to:
 protobufjs@7.6.6
 Declared license: BSD-3-Clause
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 This license applies to all parts of protobuf.js except those files
@@ -9402,11 +9643,79 @@ Applies to:
 proxy-agent-negotiate@1.1.0
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
-UNRESOLVED ORIGINAL NOTICE
-Source inspected: https://github.com/TooTallNate/proxy-agents/tree/84e41e433b422cbe9f073952d8e16052eb9b0251
-The installed package declares MIT but omits the original license text. No license for this package was found in the inspected upstream revision. This entry preserves the declaration only; its original notice remains unresolved.
+Original package manifest (licenses/proxy-agent-negotiate.package.json):
+{
+  "name": "proxy-agent-negotiate",
+  "version": "1.1.0",
+  "type": "module",
+  "description": "Negotiate/SPNEGO proxy authentication for proxy-agents",
+  "exports": {
+    "types": "./dist/index.d.ts",
+    "default": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TooTallNate/proxy-agents.git",
+    "directory": "packages/negotiate"
+  },
+  "keywords": [
+    "proxy",
+    "negotiate",
+    "kerberos",
+    "spnego",
+    "authentication"
+  ],
+  "author": "Nathan Rajlich <nathan@tootallnate.net> (http://n8.io/)",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^22.13.0",
+    "typescript": "^5.1.6",
+    "tsconfig": "0.0.0"
+  },
+  "engines": {
+    "node": ">= 20"
+  },
+  "peerDependencies": {
+    "kerberos": "^2.0.0"
+  },
+  "peerDependenciesMeta": {
+    "kerberos": {
+      "optional": true
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "pack": "node ../../scripts/pack.mjs"
+  }
+}
+
+Source: https://github.com/TooTallNate/proxy-agents/tree/84e41e433b422cbe9f073952d8e16052eb9b0251
+The original package manifest declares the SPDX identifier MIT. The package archive and inspected upstream revision supply no separate license or copyright notice. The original manifest is preserved below, followed by standard MIT terms; no copyright notice has been invented.
+
+MIT License
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 
 ================================================================================
 Applies to:
@@ -9414,7 +9723,7 @@ Applies to:
 qs@6.16.1
 Declared license: BSD-3-Clause
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE.md ---
 BSD 3-Clause License
@@ -9453,7 +9762,7 @@ Applies to:
 quansync@0.2.11
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE.md ---
 MIT License
@@ -9484,7 +9793,7 @@ Applies to:
 range-parser@1.3.0
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 (The MIT License)
@@ -9517,7 +9826,7 @@ Applies to:
 raw-body@3.0.2
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 The MIT License (MIT)
@@ -9549,7 +9858,7 @@ Applies to:
 re2js@2.9.1
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 MIT License
@@ -9589,7 +9898,7 @@ Declared license: MIT
 use-sync-external-store@1.7.0
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 MIT License
@@ -9620,7 +9929,7 @@ Applies to:
 react-i18next@17.1.12
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 The MIT License (MIT)
@@ -9651,7 +9960,7 @@ Applies to:
 react-markdown@10.1.0
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- license ---
 The MIT License (MIT)
@@ -9682,7 +9991,7 @@ Applies to:
 react-remove-scroll-bar@2.3.8
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 Source: https://github.com/theKashey/react-remove-scroll-bar/blob/8ca9ba5ea52de03308fe8ced94f7b159a44d28ff/LICENSE
 The published npm archive omits a license file. Preserved from this pinned upstream revision; it is not claimed to be the exact npm source commit.
@@ -9718,7 +10027,7 @@ Declared license: MIT
 remark-stringify@11.0.0
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- license ---
 (The MIT License)
@@ -9749,7 +10058,7 @@ Applies to:
 require-from-string@2.0.2
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- license ---
 The MIT License (MIT)
@@ -9783,7 +10092,7 @@ Declared license: MIT
 retry@0.13.1
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- License ---
 Copyright (c) 2011:
@@ -9814,7 +10123,7 @@ Applies to:
 reusify@1.1.0
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 The MIT License (MIT)
@@ -9845,7 +10154,7 @@ Applies to:
 router@2.2.0
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 (The MIT License)
@@ -9878,7 +10187,7 @@ Applies to:
 safe-buffer@5.1.2
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 The MIT License (MIT)
@@ -9909,7 +10218,7 @@ Applies to:
 safer-buffer@2.1.2
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 MIT License
@@ -9940,7 +10249,7 @@ Applies to:
 send@1.2.1
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 (The MIT License)
@@ -9973,7 +10282,7 @@ Applies to:
 serve-static@2.2.1
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 (The MIT License)
@@ -10006,14 +10315,36 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 Applies to:
 
 sessionweave@0.0.0
-Declared license: UNLICENSED
+Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
-Private local snapshot. No open-source license grant is supplied.
+Fixed source snapshot. Original archive metadata license: UNLICENSED.
 Source commit: 79a076ecdf6d45208762556c609046156444ea4c
 Archive SHA-256: 8cc6c9e34aabd060b6147f0c76aee004c8c50b8e89ba3f62a42902aa84667d07
-Public redistribution requires a separate licensing decision.
+Supplemental MIT grant dated 2026-11-05: The owner authorized MIT licensing and public redistribution of this exact snapshot, including existing QuestBranch source history and v0.3.0-dev.2. The original archive remains byte-for-byte unchanged.
+
+MIT License
+
+Copyright (c) 2026 Ethan-decoy
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 
 ================================================================================
 Applies to:
@@ -10021,7 +10352,7 @@ Applies to:
 setprototypeof@1.2.0
 Declared license: ISC
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 Copyright (c) 2015, Wes Todd
@@ -10044,7 +10375,7 @@ Applies to:
 shebang-command@2.0.0
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- license ---
 MIT License
@@ -10066,7 +10397,7 @@ Declared license: MIT
 side-channel@1.1.1
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 MIT License
@@ -10097,7 +10428,7 @@ Applies to:
 signal-exit@3.0.7
 Declared license: ISC
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE.txt ---
 The ISC License
@@ -10123,7 +10454,7 @@ Applies to:
 signal-exit@4.1.0
 Declared license: ISC
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE.txt ---
 The ISC License
@@ -10149,7 +10480,7 @@ Applies to:
 standardwebhooks@1.1.1
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 Source: https://github.com/standard-webhooks/standard-webhooks/blob/b4d2c14fc5b4ccff3ff271e3b087dff812254c59/LICENSE
 The published npm archive omits a license file. Preserved from the pinned upstream revision shown here.
@@ -10362,7 +10693,7 @@ Applies to:
 statuses@2.0.2
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 
@@ -10395,7 +10726,7 @@ Applies to:
 style-to-js@1.1.21
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 The MIT License (MIT)
@@ -10427,7 +10758,7 @@ Applies to:
 style-to-object@1.0.14
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 The MIT License (MIT)
@@ -10459,7 +10790,7 @@ Applies to:
 tailwindcss@4.3.3
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 MIT License
@@ -10490,7 +10821,7 @@ Applies to:
 toidentifier@1.0.1
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 MIT License
@@ -10521,7 +10852,7 @@ Applies to:
 trough@2.2.0
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- license ---
 (The MIT License)
@@ -10552,7 +10883,7 @@ Applies to:
 tslib@2.8.1
 Declared license: 0BSD
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE.txt ---
 Copyright (c) Microsoft Corporation.
@@ -10574,7 +10905,7 @@ Applies to:
 typebox@1.3.27
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- license ---
 TypeBox
@@ -10610,7 +10941,7 @@ Declared license: MIT
 undici@7.30.0
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 MIT License
@@ -10644,7 +10975,7 @@ Declared license: MIT
 vfile@6.0.3
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- license ---
 (The MIT License)
@@ -10675,7 +11006,7 @@ Applies to:
 unist-util-is@6.0.1
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- license ---
 (The MIT license)
@@ -10707,7 +11038,7 @@ Applies to:
 unpipe@1.0.0
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 (The MIT License)
@@ -10739,7 +11070,7 @@ Applies to:
 vscode-jsonrpc@9.0.3
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- License.txt ---
 Copyright (c) Microsoft Corporation
@@ -10760,7 +11091,7 @@ Applies to:
 web-streams-polyfill@3.3.3
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 The MIT License (MIT)
@@ -10792,7 +11123,7 @@ Applies to:
 ws@8.22.0
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 Copyright (c) 2011 Einar Otto Stangvik <einaros@gmail.com>
@@ -10822,7 +11153,7 @@ Applies to:
 xxhash-wasm@1.1.0
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE.md ---
 The MIT License (MIT)
@@ -10857,7 +11188,7 @@ Applies to:
 yaml@2.9.1
 Declared license: ISC
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 Copyright Eemeli Aro <eemeli@gmail.com>
@@ -10880,7 +11211,7 @@ Applies to:
 zod-from-json-schema@0.5.6
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 The MIT License (MIT)
@@ -10911,7 +11242,7 @@ Applies to:
 zod-to-json-schema@3.25.2
 Declared license: ISC
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 ISC License
@@ -10936,7 +11267,7 @@ Applies to:
 zod@4.6.7
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 MIT License
@@ -10970,7 +11301,7 @@ Declared license: MIT
 zustand@5.0.15
 Declared license: MIT
 
-Original notice text:
+Notice text and licensing evidence:
 
 --- LICENSE ---
 MIT License

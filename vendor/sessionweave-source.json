@@ -4,9 +4,20 @@
   "sourceCommit": "79a076ecdf6d45208762556c609046156444ea4c",
   "distributionCandidate": "c86db94dcbc32661c0bc85d5fc0fc75675e5e9f1",
   "verifiedSourceTree": "35d4a4b55ff8da2fee3362ddfcfc14ce058e3bd4",
-  "status": "private local snapshot; not an npm release",
-  "license": "UNLICENSED",
+  "status": "fixed source snapshot; not an npm release",
+  "license": "MIT",
   "build": "Node 24.13.0; npm ci --ignore-scripts --offline; npm run build; npm pack --ignore-scripts",
   "contents": "compiled dist and API docs from the exact development commit; no runtime absolute checkout dependency",
-  "peers": { "@mastra/core": "1.79.0", "@mastra/memory": "1.39.0" }
+  "peers": {
+    "@mastra/core": "1.79.0",
+    "@mastra/memory": "1.39.0"
+  },
+  "archiveMetadataLicense": "UNLICENSED",
+  "repository": "https://github.com/Ethan-decoy/session_weave",
+  "licenseGrant": {
+    "date": "2026-11-05",
+    "file": "licenses/sessionweave.LICENSE",
+    "sha256": "1f05b4ed4133de00dc697998b863b5b62550c2cb98a6d5d6e49cd72a2f4680f1",
+    "scope": "The owner authorized MIT licensing and public redistribution of this exact snapshot, including existing QuestBranch source history and v0.3.0-dev.2. The original archive remains byte-for-byte unchanged."
+  }
 }

@@ -6,7 +6,7 @@
 
 一个节点对应一项研究；节点保存对话、完整报告、来源与报告历史。后续问题成为可以继续深入的子节点。
 
-本仓库提供独立应用的源码、版本和使用文档。当前为私有预发布，面向已有访问权限的开发者。
+本仓库提供独立应用的源码、版本和使用文档。当前提供公开开发者预发布。
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/workspace-dark.png">
@@ -15,7 +15,7 @@
 
 ## 下载与试用
 
-**0.3.0-dev.2 · Windows x64 预发布**
+**0.3.0-dev.3 · Windows x64 预发布**
 
 从 [Releases](https://github.com/Ethan-decoy/QuestBranch/releases) 获取完整 ZIP 与 `SHA256SUMS.txt`，核对后解压，双击顶层 `Start-QuestBranch.cmd`。无需安装 Node.js 或 pnpm；研究和配置保存在同级 `data/`。
 
@@ -76,4 +76,4 @@ tests/         关键行为测试
 
 使用问题与缺陷请通过 [Issues](https://github.com/Ethan-decoy/QuestBranch/issues) 反馈。版本变化见 [CHANGELOG](CHANGELOG.md)。反馈时请移除密钥和私人研究内容。
 
-项目尚未指定开源许可证。第三方声明见 [THIRD_PARTY_NOTICES.txt](THIRD_PARTY_NOTICES.txt)；其中列出的私有依赖与待核实原文不会因准备预发布而自动获得公开分发许可。
+本项目采用 [MIT](LICENSE)。固定 SessionWeave 快照及历史版本的许可范围见 [LICENSING.md](LICENSING.md)，第三方声明见 [THIRD_PARTY_NOTICES.txt](THIRD_PARTY_NOTICES.txt)。

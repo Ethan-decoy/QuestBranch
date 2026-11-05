@@ -1,15 +1,15 @@
 # Windows 独立版试用
 
-适用版本：**0.3.0-dev.2 · Windows x64 预发布**。面向已获得私有仓库访问权限的试用者，无需安装 Node.js 或 pnpm。附件及校验文件见 [Releases](https://github.com/Ethan-decoy/QuestBranch/releases)。
+适用版本：**0.3.0-dev.3 · Windows x64 预发布**。面向开发者与试用者，无需安装 Node.js 或 pnpm。附件及校验文件见 [Releases](https://github.com/Ethan-decoy/QuestBranch/releases)。
 
 ## 启动
 
-1. 下载完整的 `QuestBranch-0.3.0-dev.2-windows-x64.zip` 和 `SHA256SUMS.txt`，核对校验值。
+1. 下载完整的 `QuestBranch-0.3.0-dev.3-windows-x64.zip` 和 `SHA256SUMS.txt`，核对校验值。
 2. 完整解压到可写目录，例如 `D:\Apps\QuestBranch`。保留 `win-unpacked/` 整个目录，不单独复制 EXE。
 3. 双击顶层 `Start-QuestBranch.cmd`。首次可先新建或浏览研究；对话前在“模型与连接”连接自己的模型或智能体。
 
 ```powershell
-Get-FileHash .\QuestBranch-0.3.0-dev.2-windows-x64.zip -Algorithm SHA256
+Get-FileHash .\QuestBranch-0.3.0-dev.3-windows-x64.zip -Algorithm SHA256
 Get-Content .\SHA256SUMS.txt
 ```
 
@@ -38,6 +38,6 @@ Get-Content .\SHA256SUMS.txt
 
 ## 范围与反馈
 
-当前候选仅提供 Windows x64 目录包。macOS/Linux 成品、安装器、签名、自动更新及真实厂商的全面兼容尚未验证。独立应用与私有依赖的许可证仍待确定，不将此私有试用包视为公开开源发行。
+当前候选仅提供 Windows x64 目录包。macOS/Linux 成品、安装器、签名、自动更新及真实厂商的全面兼容尚未验证。项目采用 MIT；固定 SessionWeave 快照及第三方组件的许可范围见 [LICENSING.md](../LICENSING.md)。
 
 在 [Issues](https://github.com/Ethan-decoy/QuestBranch/issues) 附上版本、系统、连接类型与复现步骤；提供日志或截图前移除密钥和私人研究内容。

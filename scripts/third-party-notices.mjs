@@ -23,11 +23,11 @@ const inventory = JSON.parse(
 const hash = (content) => createHash('sha256').update(content).digest('hex')
 const overrides = JSON.parse(readFileSync(join(root, 'config/third-party-overrides.json'), 'utf8'))
 const packages = new Map()
-const unresolved = new Set()
+const declarationOnly = new Set()
 function collect(directory) {
   const metadata = JSON.parse(readFileSync(join(directory, 'package.json'), 'utf8'))
   const id = `${metadata.name}@${metadata.version}`
-  const license = typeof metadata.license === 'string' ? metadata.license : metadata.license?.type
+  let license = typeof metadata.license === 'string' ? metadata.license : metadata.license?.type
   if (!license) throw new Error(`缺少许可声明：${id}`)
   const texts = readdirSync(directory)
     .filter(
@@ -44,23 +44,38 @@ function collect(directory) {
   if (!texts.length && override?.file) {
     const contents = readFileSync(resolve(root, override.file))
     if (hash(contents) !== override.sha256) throw new Error(`上游许可校验不符：${id}`)
+    if (override.declarationFile) {
+      const declaration = readFileSync(resolve(root, override.declarationFile))
+      if (
+        hash(declaration) !== override.declarationSha256 ||
+        !declaration.equals(readFileSync(join(directory, 'package.json'))) ||
+        license !== override.declaredLicense
+      )
+        throw new Error(`原始包许可声明校验不符：${id}`)
+      declarationOnly.add(id)
+      texts.push(
+        `Original package manifest (${override.declarationFile}):\n${declaration.toString('utf8').trimEnd()}`,
+      )
+    }
     texts.push(
       `Source: ${override.source}\n${override.reason}\n\n${contents.toString('utf8').trimEnd()}`,
-    )
-  }
-  if (!texts.length && override?.unresolved) {
-    unresolved.add(id)
-    texts.push(
-      `UNRESOLVED ORIGINAL NOTICE\nSource inspected: ${override.source}\n${override.reason}`,
     )
   }
   if (!texts.length && id === 'sessionweave@0.0.0' && license === 'UNLICENSED') {
     const source = JSON.parse(readFileSync(join(root, 'vendor/sessionweave-source.json'), 'utf8'))
     if (hash(readFileSync(resolve(root, source.file))) !== source.sha256)
-      throw new Error('SessionWeave 私有快照校验不符')
-    texts.push(
-      `Private local snapshot. No open-source license grant is supplied.\nSource commit: ${source.sourceCommit}\nArchive SHA-256: ${source.sha256}\nPublic redistribution requires a separate licensing decision.`,
+      throw new Error('SessionWeave 固定快照校验不符')
+    const grant = readFileSync(resolve(root, source.licenseGrant.file))
+    if (
+      source.license !== 'MIT' ||
+      source.archiveMetadataLicense !== license ||
+      hash(grant) !== source.licenseGrant.sha256
     )
+      throw new Error('SessionWeave 补充许可校验不符')
+    texts.push(
+      `Fixed source snapshot. Original archive metadata license: ${license}.\nSource commit: ${source.sourceCommit}\nArchive SHA-256: ${source.sha256}\nSupplemental MIT grant dated ${source.licenseGrant.date}: ${source.licenseGrant.scope}\n\n${grant.toString('utf8').trimEnd()}`,
+    )
+    license = source.license
   }
   if (!texts.length) throw new Error(`缺少原始许可文本：${id}；请核对来源后补充该版本的声明`)
   const notice = { license, text: texts.join('\n\n') }
@@ -93,10 +108,11 @@ Electron's accompanying LICENSE.electron.txt and LICENSES.chromium.html must
 also remain with the distributed application. The bundled Codex upstream
 NOTICE follows this inventory.
 
-QuestBranch has no selected project license. SessionWeave is a private,
-UNLICENSED snapshot. These notices do not grant rights to either project.
-${unresolved.size} dependency declarations have no verified original notice below;
-those entries remain unresolved and must be reviewed before public distribution.
+QuestBranch is MIT licensed; see LICENSE and LICENSING.md. The unchanged
+SessionWeave snapshot has an explicit supplemental MIT grant below.
+${declarationOnly.size} packages supply MIT declarations only in their original manifests.
+Those manifests and standard terms are preserved below; no separate upstream
+copyright notice was supplied or invented. Other entries preserve original notices.
 
 Lockfile SHA-256: ${lockHash}
 Packages: ${packages.size}
@@ -105,7 +121,7 @@ Identical notice texts are printed once with all applicable packages listed.
 ${[...notices]
   .map(
     ([body, declarations]) =>
-      `${'='.repeat(80)}\nApplies to:\n\n${declarations.join('\n\n')}\n\nOriginal notice text:\n\n${body}`,
+      `${'='.repeat(80)}\nApplies to:\n\n${declarations.join('\n\n')}\n\nNotice text and licensing evidence:\n\n${body}`,
   )
   .join('\n\n')}
 
@@ -121,6 +137,6 @@ if (process.argv.includes('--check')) {
     throw new Error('第三方声明与本机锁定依赖不同，请运行 pnpm notices 并审查变化')
 } else writeFileSync(target, text)
 console.log(
-  `Third-party notices: ${packages.size} packages; ${unresolved.size} unresolved original texts`,
+  `Third-party notices: ${packages.size} packages; ${declarationOnly.size} manifest-only MIT declarations`,
 )
-for (const id of [...unresolved].sort()) console.log(`Unresolved: ${id}`)
+for (const id of [...declarationOnly].sort()) console.log(`Manifest-only MIT: ${id}`)

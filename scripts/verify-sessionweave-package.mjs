@@ -8,6 +8,13 @@ const provenance = JSON.parse(
 const bytes = readFileSync(resolve(root, provenance.file))
 const actual = createHash('sha256').update(bytes).digest('hex')
 if (actual !== provenance.sha256) throw new Error('SessionWeave 固定产物校验失败')
+if (
+  provenance.license !== 'MIT' ||
+  createHash('sha256')
+    .update(readFileSync(resolve(root, provenance.licenseGrant.file)))
+    .digest('hex') !== provenance.licenseGrant.sha256
+)
+  throw new Error('SessionWeave 固定快照的补充 MIT 许可校验失败')
 const { SessionWeave } = await import('sessionweave')
 const { FileStore } = await import('sessionweave/file-store')
 const { toPiContext } = await import('sessionweave/pi')

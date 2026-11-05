@@ -66,18 +66,30 @@
     "sha256": "aa7c09d3ff3c4302fb26fb696cd1b2e24dcc71846c80406d037b021342e78e0e"
   },
   "@standard-community/standard-json@0.3.7": {
-    "unresolved": true,
+    "file": "licenses/MIT.txt",
+    "sha256": "508a77d2e7b51d98adeed32648ad124b7b30241a8e70b2e72c99f92d8e5874d1",
     "source": "https://github.com/standard-community/standard-json/tree/49890fa93b41138843bac1b2db8dc416ecc89e57",
-    "reason": "The installed package declares MIT but omits the original license text. No license for this package was found in the inspected upstream revision. This entry preserves the declaration only; its original notice remains unresolved."
+    "declarationFile": "licenses/standard-community-standard-json.package.json",
+    "declarationSha256": "139c449a6f441f999bdaef6c40f113fa7d3ed51a2fff6b345299c4995183d6e0",
+    "declaredLicense": "MIT",
+    "reason": "The original package manifest declares the SPDX identifier MIT. The package archive and inspected upstream revision supply no separate license or copyright notice. The original manifest is preserved below, followed by standard MIT terms; no copyright notice has been invented."
   },
   "@standard-community/standard-openapi@0.2.11": {
-    "unresolved": true,
+    "file": "licenses/MIT.txt",
+    "sha256": "508a77d2e7b51d98adeed32648ad124b7b30241a8e70b2e72c99f92d8e5874d1",
     "source": "https://github.com/standard-community/standard-openapi/tree/31194430a8254d606025271e3fe87923835366bf",
-    "reason": "The installed package declares MIT but omits the original license text. No license for this package was found in the inspected upstream revision. This entry preserves the declaration only; its original notice remains unresolved."
+    "declarationFile": "licenses/standard-community-standard-openapi.package.json",
+    "declarationSha256": "6e36f62b3c1e3c747425d669559acaea474a66f594fac467de95cb02ae20e76f",
+    "declaredLicense": "MIT",
+    "reason": "The original package manifest declares the SPDX identifier MIT. The package archive and inspected upstream revision supply no separate license or copyright notice. The original manifest is preserved below, followed by standard MIT terms; no copyright notice has been invented."
   },
   "proxy-agent-negotiate@1.1.0": {
-    "unresolved": true,
+    "file": "licenses/MIT.txt",
+    "sha256": "508a77d2e7b51d98adeed32648ad124b7b30241a8e70b2e72c99f92d8e5874d1",
     "source": "https://github.com/TooTallNate/proxy-agents/tree/84e41e433b422cbe9f073952d8e16052eb9b0251",
-    "reason": "The installed package declares MIT but omits the original license text. No license for this package was found in the inspected upstream revision. This entry preserves the declaration only; its original notice remains unresolved."
+    "declarationFile": "licenses/proxy-agent-negotiate.package.json",
+    "declarationSha256": "7b7c2579ea138d20d4f7699ca78ef16c526f35168dbf694f1d47cc861b0954d4",
+    "declaredLicense": "MIT",
+    "reason": "The original package manifest declares the SPDX identifier MIT. The package archive and inspected upstream revision supply no separate license or copyright notice. The original manifest is preserved below, followed by standard MIT terms; no copyright notice has been invented."
   }
 }

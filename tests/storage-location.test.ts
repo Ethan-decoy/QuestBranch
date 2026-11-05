@@ -93,6 +93,9 @@ describe('自选保存位置与完整迁移', () => {
     store.editNode('visual', '保留修改前的问题历史')
     store.saveSettings({
       ...store.settings(),
+      provider: 'compatible',
+      modelProvider: 'custom',
+      baseUrl: 'http://127.0.0.1:8999/v1',
       model: 'fixture',
       apiKey: 'test-storage-key',
       searchKey: 'test-search-key',

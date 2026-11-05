@@ -3,15 +3,18 @@ import { mkdtempSync, rmSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, join, resolve, sep } from 'node:path'
 import { randomUUID } from 'node:crypto'
+import { DatabaseSync } from 'node:sqlite'
 import { ResearchStore } from '../src/desktop/store'
 import { ResearchService } from '../src/desktop/service'
 import { ancestorPath, buildContext } from '../src/research/context'
-import { generate, listModels } from '../src/research/providers'
 import { defaultSettings, type ResearchRun, type ResearchOutput } from '../src/research/types'
+import { apiStream } from './fixtures/api-stream'
+import { graphPresentation, transitionView } from '../src/ui/research-view'
 
 const stores: ResearchStore[] = [],
   directories: string[] = []
 function store(seed = true) {
+  vi.stubEnv('TAVILY_API_KEY', '')
   const directory = mkdtempSync(join(tmpdir(), 'questbranch-test-'))
   directories.push(directory)
   const result = new ResearchStore(directory, { seed })
@@ -41,14 +44,9 @@ const output: ResearchOutput = {
   report: '## 当前认识\n\n这是一份协议验证用的测试报告，不用于生产数据。',
   followups: [{ title: '布局锚点', question: '如何保持研究点的位置？' }],
 }
-function sse(data: string) {
-  return new Response(
-    `data: ${JSON.stringify({ choices: [{ delta: { content: data } }] })}\n\ndata: [DONE]\n\n`,
-    { headers: { 'Content-Type': 'text/event-stream' } },
-  )
-}
 afterEach(() => {
   vi.unstubAllGlobals()
+  vi.unstubAllEnvs()
   for (const s of stores.splice(0)) s.close()
   for (const path of directories.splice(0)) {
     const absolute = resolve(path)
@@ -61,7 +59,218 @@ afterEach(() => {
   }
 })
 
+describe('按版本读取研究快照', () => {
+  it('版本为零时也能跳过无变化的数据，并保留完整读取入口', () => {
+    const db = store(false)
+    expect(db.snapshot().version).toBe(0)
+    expect(db.snapshot(0)).toBeNull()
+    expect(db.snapshot().reports).toEqual([])
+  })
+  it('变更后返回新快照，不匹配的版本仍能重新同步', () => {
+    const db = store()
+    const before = db.snapshot()
+    const workspace = before.workspaces[0].id
+    db.saveView(workspace, { ...before.views[workspace], selectedId: 'context' })
+    const updated = db.snapshot(before.version)
+    expect(updated?.version).toBeGreaterThan(before.version)
+    expect(updated?.views[workspace].selectedId).toBe('context')
+    expect(db.snapshot(updated!.version)).toBeNull()
+    expect(db.snapshot(updated!.version + 100)?.nodes).toEqual(updated?.nodes)
+  })
+  it('无变化时不解析报告正文或读取完整设置', () => {
+    const db = store()
+    const version = db.snapshot().version
+    const connection = new DatabaseSync(join(db.directory, 'research.sqlite'))
+    try {
+      connection.prepare('UPDATE reports SET payload=?').run('invalid-json-for-read-check')
+    } finally {
+      connection.close()
+    }
+    const settings = vi.spyOn(db, 'settings')
+    expect(db.snapshot(version)).toBeNull()
+    expect(settings).not.toHaveBeenCalled()
+    expect(() => db.snapshot()).toThrow()
+  })
+  it.each([-1, 0.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1])(
+    '拒绝无效客户端版本 %s',
+    async (version) => {
+      const service = new ResearchService(store())
+      await expect(service.snapshot(version)).rejects.toThrow()
+    },
+  )
+})
+
 describe('可追溯的分支上下文', () => {
+  it.each(['database', 'import'] as const)(
+    '从 %s 恢复已移除的大纲时保留图谱视角和研究记录',
+    (source) => {
+      const db = store(),
+        workspace = 'welcome-research',
+        before = db.snapshot(),
+        legacy = {
+          ...before.views[workspace],
+          selectedId: 'layout',
+          drafts: { layout: '未发出的研究指令' },
+          chatDrafts: { layout: '未发出的对话' },
+          readers: { layout: { tab: 'report', scroll: { 'report:': 450 } } },
+          graph: {
+            mode: 'outline',
+            detail: 'compact',
+            focusId: 'visual',
+            history: [{ mode: 'outline', detail: 'summary', selectedId: 'visual' }],
+            scenes: [
+              {
+                mode: 'horizontal',
+                detail: 'compact',
+                focusId: 'visual',
+                viewport: { x: 17, y: 31, zoom: 0.8 },
+              },
+              { mode: 'outline', detail: 'compact', focusId: 'visual', scrollTop: 500 },
+              { mode: 'mindmap', detail: 'summary', positions: { visual: { x: 15, y: 25 } } },
+            ],
+          },
+        }
+      let restored = db
+      if (source === 'database') {
+        const connection = new DatabaseSync(join(db.directory, 'research.sqlite'))
+        try {
+          connection
+            .prepare('UPDATE views SET payload=? WHERE workspace_id=?')
+            .run(JSON.stringify(legacy), workspace)
+        } finally {
+          connection.close()
+        }
+      } else {
+        restored = store(false)
+        restored.importWorkspace({ ...db.exportWorkspace(workspace), view: legacy })
+      }
+      const snapshot = restored.snapshot(),
+        view = snapshot.views[workspace]
+      expect(view).toMatchObject({
+        selectedId: legacy.selectedId,
+        drafts: legacy.drafts,
+        chatDrafts: legacy.chatDrafts,
+        readers: legacy.readers,
+        graph: {
+          mode: 'horizontal',
+          detail: 'compact',
+          focusId: 'visual',
+          history: [{ mode: 'horizontal', selectedId: 'visual' }],
+        },
+      })
+      expect(view.graph?.scenes).toEqual([legacy.graph.scenes[0], legacy.graph.scenes[2]])
+      expect(graphPresentation(view).scene.viewport).toEqual({ x: 17, y: 31, zoom: 0.8 })
+      for (const field of ['nodes', 'reports', 'runs', 'messages'] as const)
+        expect(snapshot[field]).toEqual(before[field])
+      const copy = store(false)
+      copy.importWorkspace(restored.exportWorkspace(workspace))
+      expect(copy.snapshot().views[workspace]).toEqual(view)
+    },
+  )
+  it('恢复视图时过滤跨空间坐标和不可达的分支返回记录', () => {
+    const db = store(),
+      view = db.snapshot().views['welcome-research']
+    db.saveView('welcome-research', {
+      ...view,
+      selectedId: 'context',
+      graph: {
+        mode: 'mindmap',
+        focusId: 'visual',
+        branchSides: { visual: 'left', foreign: 'right' },
+        noticedNodeIds: ['visual', 'foreign', 'visual'],
+        history: [
+          { mode: 'horizontal', detail: 'compact', focusId: 'visual', selectedId: 'layout' },
+          { mode: 'horizontal', detail: 'compact', focusId: 'visual', selectedId: 'context' },
+        ],
+        scenes: [
+          {
+            mode: 'mindmap',
+            detail: 'compact',
+            positions: { visual: { x: 33, y: 44 }, foreign: { x: 99, y: 99 } },
+          },
+        ],
+      },
+    })
+    const restored = db.snapshot().views['welcome-research'].graph!
+    expect(restored.focusId).toBeUndefined()
+    expect(restored.branchSides).toEqual({ visual: 'left' })
+    expect(restored.noticedNodeIds).toEqual(['visual'])
+    expect(restored.history).toHaveLength(1)
+    expect(restored.history![0].selectedId).toBe('layout')
+    expect(restored.scenes![0].positions).not.toHaveProperty('foreign')
+  })
+  it('多视图与聚焦历史持久化和导出恢复，研究数据及模型实际输入保持不变', () => {
+    const db = store(),
+      before = db.snapshot(),
+      workspace = 'welcome-research',
+      inputs = buildContext(before, 'layout', '继续研究').messages
+    let view = { ...before.views[workspace], selectedId: 'visual' }
+    for (const action of [
+      {
+        type: 'scene',
+        patch: {
+          viewport: { x: 44, y: -32, zoom: 0.8 },
+          positions: { visual: { x: 231, y: 118 } },
+        },
+      },
+      { type: 'focus', nodeId: 'visual' },
+      { type: 'mode', mode: 'mindmap' },
+      { type: 'detail', detail: 'compact' },
+      { type: 'scene', patch: { viewport: { x: 0, y: 22, zoom: 1 } } },
+      { type: 'mode', mode: 'horizontal' },
+      { type: 'scene', patch: { viewport: { x: 7, y: 31, zoom: 0.85 } } },
+    ] as const)
+      view = { ...view, ...transitionView(before.nodes, view, action) }
+    db.saveView(workspace, {
+      ...view,
+      graph: { ...view.graph, noticedNodeIds: [before.workspaces[0].rootId, 'visual'] },
+    })
+    const saved = db.snapshot(),
+      copy = store(false)
+    copy.importWorkspace(db.exportWorkspace(workspace))
+    expect(copy.snapshot().views[workspace]).toEqual(saved.views[workspace])
+    expect(copy.snapshot().views[workspace].graph?.noticedNodeIds).toEqual([
+      before.workspaces[0].rootId,
+      'visual',
+    ])
+    expect(graphPresentation(copy.snapshot().views[workspace]).scene.viewport).toEqual({
+      x: 7,
+      y: 31,
+      zoom: 0.85,
+    })
+    expect(buildContext(saved, 'layout', '继续研究').messages).toEqual(inputs)
+    for (const field of ['nodes', 'reports', 'runs', 'messages'] as const)
+      expect(saved[field]).toEqual(before[field])
+  })
+  it('节点阅读位置、报告版本和两种草稿在保存、导出恢复后仍各自保留', () => {
+    const db = store(),
+      view = db.snapshot().views['welcome-research']
+    db.saveView('welcome-research', {
+      ...view,
+      selectedId: 'visual',
+      viewport: { x: 1, y: 2, zoom: 0.012 },
+      drafts: { visual: '尚未发送的研究指令' },
+      chatDrafts: { visual: '尚未发送的对话' },
+      readers: {
+        visual: {
+          tab: 'report',
+          reportId: 'report-visual',
+          scroll: { 'report:report-visual': 842, 'chat:': 129 },
+          composerOpen: false,
+          overviewOpen: true,
+        },
+        context: { tab: 'sources', scroll: { 'sources:report-context': 219 } },
+        'unknown-node': { tab: 'chat' },
+      },
+    })
+    const saved = db.snapshot().views['welcome-research']
+    expect(saved.readers?.visual?.scroll?.['report:report-visual']).toBe(842)
+    expect(saved.readers?.context?.tab).toBe('sources')
+    expect(saved.readers).not.toHaveProperty('unknown-node')
+    const copy = store(false)
+    copy.importWorkspace(db.exportWorkspace('welcome-research'))
+    expect(copy.snapshot().views['welcome-research']).toEqual(saved)
+  })
   it('承接当前路径的报告，其他分支不会默认混入', () => {
     const db = store(),
       snapshot = db.snapshot()
@@ -117,7 +326,7 @@ describe('SQLite 研究历史与恢复', () => {
     expect(snapshot.reports.find((r) => r.id === 'report-visual')).toEqual(original)
     expect(snapshot.reports.find((r) => r.id === id)?.nodeId).toBe('visual')
     expect(snapshot.nodes.find((n) => n.originReportId === id)?.parentId).toBe('visual')
-    expect(() => db.complete(r.id, output)).toThrow('已结束')
+    expect(db.complete(r.id, output)).toBe(id)
     expect(db.snapshot().reports).toHaveLength(4)
   })
   it('取消后不能追加报告或子方向', () => {
@@ -131,8 +340,14 @@ describe('SQLite 研究历史与恢复', () => {
   it('重开恢复问题、视图与草稿，将未完成运行标为中断', () => {
     const first = store(),
       workspace = first.createWorkspace('一个新的研究问题'),
-      root = first.snapshot().workspaces.find((w) => w.id === workspace)!.rootId,
-      child = first.createNode(root, '深入某个角度')
+      root = first.snapshot().workspaces.find((w) => w.id === workspace)!.rootId
+    first.insertReport({
+      ...first.report('report-root'),
+      id: 'new-root-report',
+      workspaceId: workspace,
+      nodeId: root,
+    })
+    const child = first.createNode(root, '深入某个角度', 'new-root-report')
     first.saveView(workspace, {
       selectedId: child,
       collapsed: [],
@@ -206,6 +421,11 @@ describe('SQLite 研究历史与恢复', () => {
     const db = store(),
       settings = {
         ...defaultSettings,
+        modelContextWindow: 128000,
+        sessionStrategy: 'portable' as const,
+        provider: 'compatible' as const,
+        modelProvider: 'custom',
+        baseUrl: 'http://127.0.0.1:8999/v1',
         model: 'fixture-model',
         apiKey: 'fixture-secret-key',
         searchKey: 'fixture-search-key',
@@ -226,65 +446,15 @@ describe('SQLite 研究历史与恢复', () => {
   })
 })
 describe('真实协议接口与运行生命周期', () => {
-  it('兼容接口采用真实请求格式，解析跨字节的 SSE 文本', async () => {
-    const encoded = new TextEncoder().encode(
-        `data: ${JSON.stringify({ choices: [{ delta: { content: '中文报告' } }] })}\n\ndata: [DONE]\n\n`,
-      ),
-      fetcher = vi.fn(
-        async () =>
-          new Response(
-            new ReadableStream({
-              start(controller) {
-                controller.enqueue(encoded.slice(0, 51))
-                controller.enqueue(encoded.slice(51))
-                controller.close()
-              },
-            }),
-          ),
-      )
-    vi.stubGlobal('fetch', fetcher)
-    const result = await generate(
-      { ...defaultSettings, model: 'fixture-model', jsonMode: true },
-      'test-key',
-      [{ role: 'user', content: '研究问题' }],
-      new AbortController().signal,
-      () => {},
-    )
-    expect(result).toBe('中文报告')
-    const [url, init] = fetcher.mock.calls[0] as unknown as [string, RequestInit]
-    expect(url).toBe('https://api.openai.com/v1/chat/completions')
-    expect(JSON.parse(init.body as string).response_format).toEqual({ type: 'json_object' })
-  })
-  it('Ollama 使用独立接口和逐行流，不绑定云厂商', async () => {
-    const fetcher = vi.fn(
-      async (_url: string | URL | Request, _init?: RequestInit) =>
-        new Response(
-          '{"message":{"content":"本地"},"done":false}\n{"message":{"content":"研究"},"done":true}\n',
-        ),
-    )
-    vi.stubGlobal('fetch', fetcher)
-    const settings = {
-      ...defaultSettings,
-      provider: 'ollama' as const,
-      baseUrl: 'http://127.0.0.1:11434',
-      model: 'local',
-    }
-    expect(
-      await generate(
-        settings,
-        '',
-        [{ role: 'user', content: '问题' }],
-        new AbortController().signal,
-        () => {},
-      ),
-    ).toBe('本地研究')
-    expect(fetcher.mock.calls[0][0]).toBe('http://127.0.0.1:11434/api/chat')
-  })
   it('开始 A 研究后切换 B 焦点，完成报告仍归 A', async () => {
     const db = store(),
       service = new ResearchService(db)
     db.saveSettings({
       ...defaultSettings,
+      modelContextWindow: 128000,
+      sessionStrategy: 'portable' as const,
+      provider: 'compatible',
+      modelProvider: 'custom',
       baseUrl: 'http://127.0.0.1:8999/v1',
       model: 'fixture-model',
     })
@@ -308,7 +478,8 @@ describe('真实协议接口与运行生命周期', () => {
       collapsed: [],
       drafts: { context: 'B 的草稿' },
     })
-    finish(sse(JSON.stringify(output)))
+    await vi.waitFor(() => expect(finish).toBeTypeOf('function'))
+    finish(apiStream('openai-chat', JSON.stringify(output)))
     await vi.waitFor(() => expect(db.run(result.id!).status).toBe('completed'))
     const snapshot = db.snapshot()
     expect(snapshot.reports.filter((r) => r.nodeId === 'visual')).toHaveLength(2)
@@ -322,12 +493,16 @@ describe('真实协议接口与运行生命周期', () => {
       service = new ResearchService(db)
     db.saveSettings({
       ...defaultSettings,
+      modelContextWindow: 128000,
+      sessionStrategy: 'portable' as const,
+      provider: 'compatible',
+      modelProvider: 'custom',
       baseUrl: 'http://127.0.0.1:8999/v1',
       model: 'fixture-model',
     })
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () => sse('这不是约定的 JSON 报告')),
+      vi.fn(async () => apiStream('openai-chat', '这不是约定的 JSON 报告')),
     )
     const result = await service.command({
       type: 'start-research',
@@ -345,6 +520,10 @@ describe('真实协议接口与运行生命周期', () => {
       service = new ResearchService(db)
     db.saveSettings({
       ...defaultSettings,
+      modelContextWindow: 128000,
+      sessionStrategy: 'portable' as const,
+      provider: 'compatible',
+      modelProvider: 'custom',
       baseUrl: 'http://127.0.0.1:8999/v1',
       model: 'fixture-model',
     })
@@ -363,19 +542,30 @@ describe('真实协议接口与运行生命周期', () => {
       nodeId: 'layout',
       instruction: '',
     })
+    await vi.waitFor(() => expect(finish).toBeTypeOf('function'))
     await service.command({ type: 'cancel-research', runId: result.id! })
-    finish(sse(JSON.stringify(output)))
+    finish(apiStream('openai-chat', JSON.stringify(output)))
     await new Promise((resolve) => setTimeout(resolve, 20))
     expect(db.run(result.id!).status).toBe('cancelled')
-    expect(db.run(result.id!).output).toBe(JSON.stringify(output))
+    expect(db.run(result.id!).output).toBe('')
     expect(db.snapshot().reports).toHaveLength(3)
     service.shutdown()
   })
   it('连接失败保留服务状态码，便于在设置里诊断', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () => new Response('{"error":{"message":"模型不可用"}}', { status: 404 })),
+      vi.fn(async () => new Response('{"error":{"message":"模型不可用"}}', { status: 401 })),
     )
-    await expect(listModels(defaultSettings, '')).rejects.toThrow('HTTP 404：模型不可用')
+    const db = store()
+    await expect(
+      new ResearchService(db).testConnection({
+        ...defaultSettings,
+        modelContextWindow: 128000,
+        sessionStrategy: 'portable' as const,
+        provider: 'compatible',
+        modelProvider: 'custom',
+        baseUrl: 'http://127.0.0.1:8999/v1',
+      }),
+    ).rejects.toThrow('HTTP 401')
   })
 })

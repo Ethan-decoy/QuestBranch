@@ -1,7 +1,8 @@
 {
   "name": "questbranch",
-  "version": "0.2.1",
+  "version": "0.3.0-dev.2",
   "private": true,
+  "packageManager": "pnpm@11.1.3",
   "type": "module",
   "description": "AI-native branching research workspace",
   "main": "out/main/index.js",
@@ -15,52 +16,89 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "build": "pnpm typecheck && electron-vite build && vite build --config vite.web.config.ts",
-    "package:dir": "pnpm build && electron-builder --dir",
+    "package:dir": "pnpm build && electron-builder --dir --publish never",
     "start": "electron .",
     "format": "prettier --write src tests config scripts *.ts *.json *.yaml",
     "format:check": "prettier --check src tests config scripts *.ts *.json *.yaml",
-    "check": "pnpm format:check && pnpm typecheck && pnpm test",
+    "check": "pnpm format:check && pnpm i18n:check && pnpm typecheck && pnpm test",
     "measure:layout": "tsx scripts/measure-layout.ts",
-    "verify:desktop": "electron scripts/verify-desktop.mjs"
+    "verify:desktop": "electron scripts/verify-desktop.mjs",
+    "verify:workbench": "electron scripts/verify-workbench.mjs",
+    "verify:auth": "electron scripts/verify-auth-recovery.mjs",
+    "verify:network": "electron scripts/verify-network.mjs",
+    "verify:conversation": "electron scripts/verify-conversation-actions.mjs",
+    "verify:graph": "electron scripts/verify-graph-toolbar.mjs",
+    "verify:research": "electron scripts/verify-research-polish.mjs",
+    "verify:session-package": "node scripts/verify-sessionweave-package.mjs",
+    "i18n:extract": "i18next-cli extract",
+    "i18n:check": "i18next-cli extract --ci && i18next-cli status && i18next-cli lint",
+    "notices": "node scripts/third-party-notices.mjs",
+    "notices:check": "node scripts/third-party-notices.mjs --check"
   },
   "build": {
+    "asarUnpack": [
+      "**/node_modules/@openai/codex-*/**/*"
+    ],
     "appId": "org.questbranch.app",
     "productName": "QuestBranch",
     "directories": {
-      "output": "release"
+      "output": "release",
+      "buildResources": "build"
     },
     "files": [
       "out/**/*",
       "package.json"
     ],
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "icon": "build/icon.ico"
     },
     "mac": {
       "target": "dmg",
+      "icon": "build/icon.png",
       "category": "public.app-category.productivity"
     },
     "linux": {
       "target": "AppImage",
+      "icon": "build/icon.png",
       "category": "Office"
-    }
+    },
+    "extraFiles": [
+      {
+        "from": "THIRD_PARTY_NOTICES.txt",
+        "to": "THIRD_PARTY_NOTICES.txt"
+      }
+    ]
   },
   "dependencies": {
+    "@agentclientprotocol/codex-acp": "2.2.2",
+    "@agentclientprotocol/sdk": "2.0.1",
     "@dagrejs/dagre": "3.1.1",
+    "@earendil-works/pi-ai": "1.3.0",
+    "@mastra/core": "1.79.0",
+    "@mastra/memory": "1.39.0",
+    "@modelcontextprotocol/sdk": "1.32.1",
     "@xyflow/react": "12.12.0",
     "clsx": "2.1.1",
+    "electron-log": "5.4.4",
     "lucide-react": "1.57.0",
+    "proper-lockfile": "4.1.2",
     "radix-ui": "1.8.1",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "react-markdown": "10.1.0",
     "remark-gfm": "4.0.1",
+    "sessionweave": "file:vendor/sessionweave-79a076e.tgz",
+    "undici": "7.30.0",
     "zod": "4.6.7",
-    "zustand": "5.0.15"
+    "zustand": "5.0.15",
+    "i18next": "26.7.1",
+    "react-i18next": "17.1.12"
   },
   "devDependencies": {
     "@tailwindcss/vite": "4.3.3",
     "@types/node": "24.19.2",
+    "@types/proper-lockfile": "4.1.4",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "@vitejs/plugin-react": "6.1.2",
@@ -72,6 +110,16 @@
     "tsx": "4.23.15",
     "typescript": "7.0.2",
     "vite": "8.3.4",
-    "vitest": "5.0.4"
+    "vitest": "5.0.4",
+    "i18next-cli": "1.82.0"
+  },
+  "author": "Ethan-decoy",
+  "homepage": "https://github.com/Ethan-decoy/QuestBranch",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Ethan-decoy/QuestBranch.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Ethan-decoy/QuestBranch/issues"
   }
 }

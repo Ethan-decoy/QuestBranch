@@ -1,0 +1,12 @@
+{
+  "file": "vendor/sessionweave-79a076e.tgz",
+  "sha256": "8cc6c9e34aabd060b6147f0c76aee004c8c50b8e89ba3f62a42902aa84667d07",
+  "sourceCommit": "79a076ecdf6d45208762556c609046156444ea4c",
+  "distributionCandidate": "c86db94dcbc32661c0bc85d5fc0fc75675e5e9f1",
+  "verifiedSourceTree": "35d4a4b55ff8da2fee3362ddfcfc14ce058e3bd4",
+  "status": "private local snapshot; not an npm release",
+  "license": "UNLICENSED",
+  "build": "Node 24.13.0; npm ci --ignore-scripts --offline; npm run build; npm pack --ignore-scripts",
+  "contents": "compiled dist and API docs from the exact development commit; no runtime absolute checkout dependency",
+  "peers": { "@mastra/core": "1.79.0", "@mastra/memory": "1.39.0" }
+}

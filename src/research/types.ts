@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import type { AgentClient, AgentConfig, AgentRun, AgentActivity } from './agent'
 
 export const SourceSchema = z.object({
   id: z.string().max(200),
@@ -24,6 +25,8 @@ export type ResearchNode = {
   id: string
   workspaceId: string
   parentId: string | null
+  removedAt?: string
+  removalId?: string
   title: string
   question: string
   summary: string
@@ -33,6 +36,7 @@ export type ResearchNode = {
   createdAt: string
   updatedAt: string
   originReportId?: string
+  referenceReportIds?: string[]
 }
 export type Report = {
   id: string
@@ -48,8 +52,41 @@ export type Report = {
   origin: 'ai' | 'import'
   model: string
   runId?: string
+  saveRequest?: { id: string; fingerprint: string }
 }
 export type RunStatus = 'running' | 'completed' | 'failed' | 'cancelled' | 'interrupted'
+export const ReasoningEffortSchema = z.enum([
+  'none',
+  'minimal',
+  'low',
+  'medium',
+  'high',
+  'xhigh',
+  'max',
+  'ultra',
+])
+export type ReasoningEffort = z.infer<typeof ReasoningEffortSchema>
+export const ModelCapabilitySchema = z.object({
+  model: z.string().min(1),
+  displayName: z.string().min(1),
+  isDefault: z.boolean(),
+  contextWindow: z.number().positive(),
+  maxOutputTokens: z.number().positive(),
+  defaultReasoningEffort: ReasoningEffortSchema,
+  supportedReasoningEfforts: z
+    .array(
+      z.object({
+        reasoningEffort: ReasoningEffortSchema,
+        description: z.string(),
+      }),
+    )
+    .min(1),
+})
+export type ModelCapability = z.infer<typeof ModelCapabilitySchema>
+export type ModelCatalog = {
+  models: ModelCapability[]
+  defaults: { model: string; reasoningEffort: ReasoningEffort }
+}
 export type ContextItem = {
   reportId: string
   nodeId: string
@@ -73,6 +110,9 @@ export type ContextPack = {
   limitations: string[]
 }
 export type ResearchRun = {
+  session?: SessionTrace
+  activities?: AgentActivity[]
+  toolCalls?: { id: string; name: string; arguments: unknown; result?: unknown; error?: string }[]
   id: string
   workspaceId: string
   nodeId: string
@@ -82,13 +122,19 @@ export type ResearchRun = {
   output: string
   error: string
   model: string
+  reasoningEffort?: ReasoningEffort
   context: ContextPack
   createdAt: string
   finishedAt?: string
   reportId?: string
   mode?: 'chat'
-  provider?: Settings['provider']
+  selectedReportId?: string
+  // Historical runs retain their original adapter identity.
+  provider?: Settings['provider'] | 'codex'
+  api?: { protocol: string; baseUrl: string }
   codex?: { threadId: string; turnId?: string }
+  pi?: { provider: string; api: string; responseId?: string }
+  agent?: AgentRun
 }
 export type ConversationMessage = {
   id: string
@@ -99,6 +145,30 @@ export type ConversationMessage = {
   content: string
   createdAt: string
 }
+export type DetailTab = 'chat' | 'report' | 'sources' | 'records'
+// Presentation memory only; reports, messages and research state keep their own ownership.
+export type ReaderState = {
+  tab: DetailTab
+  reportId?: string
+  scroll?: Record<string, number>
+  composerOpen?: boolean // Legacy preference, ignored by the fixed input panel.
+  overviewOpen?: boolean
+  questionOpen?: boolean
+}
+export type GraphMode = 'horizontal' | 'mindmap'
+export type GraphDetail = 'summary' | 'compact'
+export type GraphScene = {
+  mode: GraphMode
+  detail: GraphDetail
+  focusId?: string
+  viewport?: { x: number; y: number; zoom: number }
+  positions?: Record<string, { x: number; y: number }>
+}
+export type GraphFrame = Pick<GraphScene, 'mode' | 'detail' | 'focusId'> & {
+  selectedId: string
+  collapsed?: string[]
+  viewport?: GraphScene['viewport']
+}
 export type ViewState = {
   revision?: number
   selectedId: string
@@ -107,21 +177,86 @@ export type ViewState = {
   chatDrafts?: Record<string, string>
   viewport?: { x: number; y: number; zoom: number }
   positions?: Record<string, { x: number; y: number }>
+  readers?: Record<string, ReaderState>
+  // Display organization never rewrites parentId, relatedIds or past research inputs.
+  graph?: {
+    mode?: GraphMode
+    detail?: GraphDetail
+    focusId?: string
+    branchSides?: Record<string, 'left' | 'right'>
+    // Presentation acknowledgment, independent of research progress or factual certainty.
+    noticedNodeIds?: string[]
+    history?: GraphFrame[]
+    scenes?: GraphScene[]
+  }
 }
+export const ApiProtocolSchema = z.enum(['openai-chat', 'openai-responses', 'anthropic-messages'])
+export type ApiProtocol = z.infer<typeof ApiProtocolSchema>
 export type Settings = {
-  provider: 'compatible' | 'ollama' | 'codex'
+  sessionStrategy?: 'auto' | 'native' | 'portable'
+  sessionInputBudget?: number
+  modelContextWindow?: number
+  backend?: 'model' | 'acp'
+  agent?: AgentConfig
+  provider: 'account' | 'compatible' | 'ollama'
+  // Pi provider ID, or "custom" for an explicitly configured compatible API.
+  modelProvider?: string
   baseUrl: string
+  apiProtocol?: ApiProtocol
+  maxOutputTokens?: number
+  anthropicWorkspaceId?: string
   model: string
   jsonMode: boolean
   contextBudget: number
   hasApiKey: boolean
   hasSearchKey: boolean
-  codexPath?: string
+  reasoningEffort?: ReasoningEffort | ''
+}
+export type SessionTrace = {
+  sessionId: string
+  bootstrapMessageIds: string[]
+  requests: {
+    revision: number
+    strategy: 'portable' | 'native'
+    checkpointId: string | null
+    origin: string
+    modelId: string
+    contextWindow: number
+    inputTokens: number
+    request: unknown
+  }[]
+}
+export type ModelProvider = {
+  id: string
+  name: string
+  apiKey: boolean
+  apiKeyLogin: boolean
+  oauth: boolean
+  oauthName?: string
+  subscription: boolean
+  baseUrl?: string
 }
 export type ConnectionResult = {
   models: string[]
-  account?: { type: 'chatgpt'; plan: string; email: string | null }
-  usage?: { usedPercent: number; windowDurationMins: number | null; resetsAt: number | null }[]
+  modelDiscovery: 'catalog' | 'available' | 'unsupported'
+  catalog: ModelCatalog
+  status: 'configured' | 'login-required'
+  provider: string
+}
+export type AuthSession = {
+  id: string
+  provider: string
+  status: 'pending' | 'connected' | 'cancelled' | 'failed'
+  message: string
+  url?: string
+  userCode?: string
+  prompt?: {
+    id: string
+    type: 'text' | 'secret' | 'select' | 'manual_code'
+    message: string
+    placeholder?: string
+    options?: { id: string; label: string; description?: string }[]
+  }
 }
 export type SettingsInput = Omit<Settings, 'hasApiKey' | 'hasSearchKey'> & {
   apiKey?: string
@@ -157,29 +292,57 @@ export const ResearchOutputSchema = z.object({
 export type ResearchOutput = z.infer<typeof ResearchOutputSchema>
 export type AppCommand =
   | { type: 'create-workspace'; question: string; name?: string; constraints?: string }
-  | { type: 'create-node'; parentId: string; question: string; relatedIds?: string[] }
+  | {
+      type: 'create-node'
+      parentId: string
+      sourceReportId: string
+      question: string
+      requestId?: string
+      relatedIds?: string[]
+      referenceReportIds?: string[]
+    }
   | { type: 'edit-node'; nodeId: string; question: string }
+  | { type: 'remove-branch'; nodeId: string; requestId: string }
+  | { type: 'restore-branch'; nodeId: string; removalId: string }
   | { type: 'save-view'; workspaceId: string; view: ViewState }
   | { type: 'save-settings'; settings: SettingsInput }
-  | { type: 'start-research'; nodeId: string; instruction: string; reportIds?: string[] }
-  | { type: 'send-message'; nodeId: string; message: string }
+  | {
+      type: 'start-research'
+      nodeId: string
+      instruction: string
+      reportIds?: string[]
+      selectedReportId?: string
+    }
+  | { type: 'send-message'; nodeId: string; message: string; selectedReportId?: string }
   | { type: 'cancel-research'; runId: string }
   | { type: 'import-workspace'; data: unknown }
 export interface ResearchClient {
   snapshot(): Promise<Snapshot>
+  snapshot(sinceVersion: number): Promise<Snapshot | null>
   command(command: AppCommand): Promise<{ id?: string }>
-  testConnection(): Promise<ConnectionResult>
+  testConnection(settings?: SettingsInput): Promise<ConnectionResult>
+  modelProviders(): Promise<ModelProvider[]>
+  agent?: AgentClient
+  auth: {
+    start(settings: SettingsInput, type: 'oauth' | 'api_key'): Promise<AuthSession>
+    status(id: string): Promise<AuthSession>
+    respond(id: string, promptId: string, value: string): Promise<void>
+    cancel(id: string): Promise<void>
+    logout(settings: SettingsInput): Promise<void>
+  }
   exportWorkspace(workspaceId: string): Promise<unknown>
+  appearance?: { setTheme(theme: 'light' | 'dark' | 'system'): Promise<void> }
   storage?: {
     chooseDirectory(): Promise<{ directory: string; token: string } | null>
     relocate(token: string): Promise<void>
   }
 }
 export const defaultSettings: Settings = {
-  provider: 'compatible',
-  baseUrl: 'https://api.openai.com/v1',
+  provider: 'account',
+  modelProvider: 'openai',
+  baseUrl: '',
   model: '',
-  jsonMode: false,
+  jsonMode: true,
   contextBudget: 16000,
   hasApiKey: false,
   hasSearchKey: false,

@@ -1,0 +1,39 @@
+diff --git a/dist/api/anthropic-messages.js b/dist/api/anthropic-messages.js
+index befb18b2e7d519b3731f6355921de1cb7892c7ac..866bbab29c048f19f5ee3db5c6ab0982bffe04e0 100644
+--- a/dist/api/anthropic-messages.js
++++ b/dist/api/anthropic-messages.js
+@@ -280,11 +280,16 @@ function nextLineBreakIndex(text) {
+     }
+     return Math.min(carriageReturnIndex, newlineIndex);
+ }
+-function consumeLine(text) {
++function consumeLine(text, final = false) {
+     const lineBreakIndex = nextLineBreakIndex(text);
+     if (lineBreakIndex === -1) {
+         return null;
+     }
++    // A trailing CR may be the first half of CRLF in the next network chunk.
++    // Wait for that chunk; only EOF can make a trailing CR a complete delimiter.
++    if (!final && text[lineBreakIndex] === "\r" && lineBreakIndex === text.length - 1) {
++        return null;
++    }
+     let nextIndex = lineBreakIndex + 1;
+     if (text[lineBreakIndex] === "\r" && text[nextIndex] === "\n") {
+         nextIndex += 1;
+@@ -320,14 +325,14 @@ async function* iterateSseMessages(body, signal) {
+             }
+         }
+         buffer += decoder.decode();
+-        let consumed = consumeLine(buffer);
++        let consumed = consumeLine(buffer, true);
+         while (consumed) {
+             buffer = consumed.rest;
+             const event = decodeSseLine(consumed.line, state);
+             if (event) {
+                 yield event;
+             }
+-            consumed = consumeLine(buffer);
++            consumed = consumeLine(buffer, true);
+         }
+         if (buffer.length > 0) {
+             const event = decodeSseLine(buffer, state);

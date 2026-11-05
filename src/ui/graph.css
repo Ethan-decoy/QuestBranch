@@ -1,0 +1,288 @@
+.research-region {
+  width: 100%;
+  height: 100%;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--branch) 5%, transparent);
+  pointer-events: none;
+}
+.react-flow__node-researchRegion {
+  pointer-events: none !important;
+}
+.research-card,
+.research-card.is-concise {
+  display: flex;
+  flex-direction: column;
+  width: 224px;
+  position: relative;
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  padding: 10px 12px 6px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 8px;
+  background: var(--color-surface);
+  box-shadow: none;
+}
+.research-card:hover {
+  border-color: var(--color-border-hover);
+  box-shadow: var(--shadow-card);
+}
+.research-card.discussed {
+  border-style: dashed;
+}
+.research-card.branch-warm {
+  background: color-mix(in srgb, var(--branch) 5%, var(--color-surface));
+}
+.research-card.is-selected {
+  border: 1.5px solid var(--color-action);
+  background: var(--color-surface-selected);
+  box-shadow: var(--shadow-selected);
+}
+.research-card.failed {
+  border-color: var(--color-error-border);
+}
+.research-card .card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  height: 13px;
+  margin: 0 0 5px;
+}
+.research-card .card-labels {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.research-card .status {
+  font-size: 10px;
+}
+.research-card .status svg {
+  width: 11px;
+  height: 11px;
+}
+.research-card.branch-warm .status.ready {
+  color: var(--branch);
+}
+.research-card h3,
+.research-card.is-concise h3 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow-wrap: anywhere;
+  overflow: hidden;
+  white-space: normal;
+  color: var(--color-text-primary);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.38;
+  margin: 0;
+  -webkit-line-clamp: 3;
+}
+.research-card p {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.5;
+  height: auto;
+  margin-top: 6px;
+  -webkit-line-clamp: 1;
+  letter-spacing: normal;
+}
+.research-card .card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: absolute;
+  bottom: 0;
+  left: 12px;
+  right: 6px;
+  height: 32px;
+  margin: 0;
+  border: 0;
+  font-size: 10px;
+}
+.branch-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  gap: 3px;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+.branch-toggle:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-action-text);
+}
+.branch-toggle:focus-visible {
+  outline-offset: -2px;
+}
+.branch-toggle svg {
+  transition: transform 0.15s ease;
+}
+.branch-toggle[aria-expanded='true'] svg {
+  transform: rotate(90deg);
+}
+.research-card .card-footer > span {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+.research-card.branch-warm .card-footer > span {
+  color: var(--branch);
+}
+.research-card.deep-research.leaf .card-footer,
+.research-card.is-concise.leaf .card-footer {
+  display: none;
+}
+.research-card.deep-research:not(.is-selected) {
+  border-color: transparent;
+}
+.research-card.deep-research.discussed:not(.is-selected) {
+  border-color: var(--color-border-subtle);
+}
+.research-card.compact h3 {
+  font-size: 16px;
+}
+.research-card.compact .card-top,
+.research-card.compact .card-footer,
+.research-card.compact p {
+  visibility: hidden;
+}
+.research-card.on-human-path h3 {
+  font-weight: 650;
+}
+.research-card.is-new {
+  animation: research-created-once 1.25s ease-out 1;
+}
+.graph-new-badge {
+  display: inline-block;
+  flex-shrink: 0;
+  font-size: 9px;
+  font-weight: 500;
+  line-height: 1.2;
+  padding: 2px 4px;
+  border-radius: 3px;
+  background: var(--color-surface-selected);
+  color: var(--color-action-text);
+}
+.graph-reading-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--color-action);
+}
+.graph-ai-signal {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  color: var(--color-running-text);
+  white-space: nowrap;
+}
+.graph-waiting-signal {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  color: var(--color-warning-text);
+  white-space: nowrap;
+}
+.research-thinking-sheen {
+  color: var(--color-text-secondary);
+  background: linear-gradient(
+    105deg,
+    var(--color-text-secondary) 0%,
+    var(--color-text-secondary) 42%,
+    var(--color-text-primary) 49%,
+    var(--color-text-primary) 51%,
+    var(--color-text-secondary) 58%,
+    var(--color-text-secondary) 100%
+  );
+  background-size: 300% 100%;
+  background-position: 100% 50%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: research-nameplate-sheen 3.6s ease-in-out infinite;
+}
+.research-attention-wave,
+.research-attention-glow {
+  fill: none;
+  stroke: var(--color-action);
+  stroke-linecap: round;
+  pointer-events: none;
+  stroke-dasharray: 12 88;
+  animation: research-reading-current 3.8s linear infinite;
+}
+.research-attention-wave {
+  stroke-width: 3;
+  opacity: 0.88;
+}
+.research-attention-glow {
+  stroke-width: 9;
+  stroke-dasharray: 16 84;
+  opacity: 0.12;
+}
+@keyframes research-nameplate-sheen {
+  0%,
+  14% {
+    background-position: 100% 50%;
+  }
+  76%,
+  100% {
+    background-position: 0% 50%;
+  }
+}
+@keyframes research-reading-current {
+  from {
+    stroke-dashoffset: 100;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes research-created-once {
+  0%,
+  20% {
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-action) 22%, transparent);
+  }
+  100% {
+    box-shadow: none;
+  }
+}
+.graph-reduced-motion .research-attention-wave,
+.graph-reduced-motion .research-attention-glow {
+  display: none;
+}
+.graph-reduced-motion .research-thinking-sheen {
+  animation: none;
+  background: none;
+  -webkit-text-fill-color: currentColor;
+  color: var(--color-text-primary);
+}
+.graph-reduced-motion .research-card.is-new {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .research-attention-wave,
+  .research-attention-glow {
+    display: none;
+  }
+  .research-thinking-sheen {
+    animation: none;
+    background: none;
+    -webkit-text-fill-color: currentColor;
+    color: var(--color-text-primary);
+  }
+  .research-card.is-new {
+    animation: none;
+  }
+}

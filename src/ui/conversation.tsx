@@ -1,53 +1,76 @@
+import { uiLocale } from '../i18n'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { useEffect, useRef } from 'react'
 import { LoaderCircle, MessageSquare, FileText } from 'lucide-react'
 import { useApp } from './state'
-import { Button } from './components'
+import { Button, Feedback } from './components'
+import { AgentActivity, ToolActivities } from './agent-activity'
+import { useTranslation } from 'react-i18next'
+import { runtimeLabel } from './i18n-labels'
 
-export function Conversation({ nodeId, onReport }: { nodeId: string; onReport: () => void }) {
+export function Conversation({
+  nodeId,
+  onReadReport,
+}: {
+  nodeId: string
+  onReadReport: () => void
+}) {
+  const { t } = useTranslation()
   const snapshot = useApp((state) => state.snapshot)!
   const messages = snapshot.messages.filter((message) => message.nodeId === nodeId)
   const runs = snapshot.runs.filter((run) => run.nodeId === nodeId)
-  const running = runs.some((run) => run.status === 'running')
+  const reports = snapshot.reports.filter((report) => report.nodeId === nodeId)
+  const latest = runs.at(-1)
+  const activityVersion = JSON.stringify([
+    latest?.agent?.activities.map((activity) => [
+      activity.id,
+      activity.status,
+      activity.content.length,
+    ]),
+    latest?.agent?.requests.map((request) => [request.id, request.status]),
+    latest?.activities?.map((activity) => [activity.id, activity.status, activity.content.length]),
+  ])
   const root = useRef<HTMLElement>(null),
-    follow = useRef(true)
+    follow = useRef(true),
+    lastContent = useRef({ length: messages.length, output: latest?.output, activityVersion })
   useEffect(() => {
-    follow.current = true
-    const container = root.current?.parentElement
+    const container = root.current?.closest('.detail-body')
     if (!container) return
     const scroll = () => {
       follow.current = container.scrollHeight - container.scrollTop - container.clientHeight < 100
     }
+    // An empty conversation can overflow at large text sizes. It has no older
+    // message position to preserve, so its first reply should still be followed.
+    if (messages.length) scroll()
     container.addEventListener('scroll', scroll)
     return () => container.removeEventListener('scroll', scroll)
   }, [nodeId])
   useEffect(() => {
-    const container = root.current?.parentElement
+    const next = { length: messages.length, output: latest?.output, activityVersion }
+    if (
+      lastContent.current.length === next.length &&
+      lastContent.current.output === next.output &&
+      lastContent.current.activityVersion === activityVersion
+    )
+      return
+    lastContent.current = next
+    const container = root.current?.closest('.detail-body')
     if (container && follow.current) container.scrollTop = container.scrollHeight
-  }, [nodeId, messages.length, runs.at(-1)?.output])
+  }, [nodeId, messages.length, latest?.output, activityVersion])
   return (
-    <section ref={root} className="conversation" aria-label="节点对话">
-      <div className="conversation-toolbar">
-        <span>本节点的讨论与原文</span>
-        <Button
-          onClick={onReport}
-          disabled={
-            running || !runs.some((run) => run.mode === 'chat' && run.status === 'completed')
-          }
-        >
-          <FileText size={13} />
-          整理为报告
-        </Button>
-      </div>
+    <section ref={root} className="conversation" aria-label={t('节点对话')}>
       {!messages.length && (
         <div className="conversation-empty">
           <MessageSquare size={25} strokeWidth={1.4} />
-          <h3>从这条思路，开始对话</h3>
-          <p>
-            结合当前问题与相关报告，讨论你还想弄清的部分。形成阶段认识后，可以整理成一份新报告。
-          </p>
-          <small>对话保存在当前节点，切换分支后仍可回来继续。</small>
+          <h3>{t('开始对话')}</h3>
+          <p>{t('在下方输入问题。')}</p>
+          {!!reports.length && (
+            <Button onClick={onReadReport}>
+              <FileText size={14} />
+              {t('阅读已有的 {{length}} 份报告', { length: reports.length })}
+            </Button>
+          )}
         </div>
       )}
       {messages.map((message) => {
@@ -57,16 +80,24 @@ export function Conversation({ nodeId, onReport }: { nodeId: string; onReport: (
         return (
           <article className={`chat-message ${message.role}`} key={message.id}>
             <div className="chat-message-meta">
-              <strong>{assistant ? (run?.provider === 'codex' ? 'Codex' : 'AI') : '你'}</strong>
+              <strong>
+                {assistant
+                  ? run?.agent?.name || (run?.provider === 'codex' ? 'Codex' : 'AI')
+                  : t('你')}
+              </strong>
               <span>
                 {assistant
                   ? run?.model
-                  : new Date(message.createdAt).toLocaleTimeString('zh-CN', {
+                  : new Date(message.createdAt).toLocaleTimeString(uiLocale(), {
                       hour: '2-digit',
                       minute: '2-digit',
                     })}
               </span>
             </div>
+            {assistant && <AgentActivity agent={run?.agent} live={run?.status === 'running'} />}
+            {assistant && (
+              <ToolActivities activities={run?.activities} live={run?.status === 'running'} />
+            )}
             {content && (
               <div className="chat-message-content markdown">
                 <Markdown
@@ -87,25 +118,32 @@ export function Conversation({ nodeId, onReport }: { nodeId: string; onReport: (
             {assistant && run?.status === 'running' && (
               <div className="chat-progress" role="status">
                 <LoaderCircle className="spin" size={13} />
-                {run.phase}
+                {runtimeLabel(run.phase)}
               </div>
             )}
-            {assistant && run?.error && <p className="inline-error">{run.error}</p>}
+            {assistant &&
+              run?.error &&
+              (run.status === 'interrupted' || run.status === 'cancelled' ? (
+                <p className="context-limitation">{run.error}</p>
+              ) : (
+                <Feedback tone="error">{run.error}</Feedback>
+              ))}
             {assistant && (run?.status === 'cancelled' || run?.status === 'interrupted') && (
-              <small className="chat-interrupted">
+              <small
+                className={
+                  run.status === 'interrupted'
+                    ? 'chat-interrupted is-unexpected'
+                    : 'chat-interrupted'
+                }
+              >
                 {run.status === 'cancelled'
-                  ? '这次回复已停止，已有内容保留。'
-                  : '应用关闭时回复中断，已有内容保留。'}
+                  ? t('这次回复已停止，已有内容保留。')
+                  : t('应用关闭时回复中断，已有内容保留。')}
               </small>
             )}
           </article>
         )
       })}
-      {messages.length > 0 && (
-        <p className="conversation-footnote">
-          对话中的分析与主张需要判断；生成报告会保留新的版本。
-        </p>
-      )}
     </section>
   )
 }

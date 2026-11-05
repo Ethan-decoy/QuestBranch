@@ -3,12 +3,19 @@ import { resolve, join, extname } from 'node:path'
 import { readFile, stat } from 'node:fs/promises'
 import { ResearchStore } from '../desktop/store'
 import { ResearchService } from '../desktop/service'
-import type { AppCommand } from '../research/types'
+import { PiModels } from '../desktop/pi-models'
+import { createNodeNetwork } from '../desktop/network-node'
+import { createNetworkLog } from '../desktop/network-log'
+import { installHostFetch } from '../desktop/network'
+import type { AppCommand, SettingsInput } from '../research/types'
+import type { AgentConfig, AgentResponse } from '../research/agent'
 
 const production = process.argv.includes('--production'),
   port = Number(process.env.PORT ?? 5173)
 const store = new ResearchStore(process.env.QUESTBRANCH_DATA_DIR ?? resolve('.questbranch'))
-const service = new ResearchService(store)
+const network = createNodeNetwork(createNetworkLog(join(store.directory, 'logs')))
+const restoreFetch = installHostFetch(network)
+const service = new ResearchService(store, new PiModels(store, { network }), undefined, network)
 const vite = production
   ? null
   : await (
@@ -57,12 +64,75 @@ const server = createServer(async (request, response) => {
       return
     }
     try {
-      if (url.pathname === '/api/state' && request.method === 'GET')
-        json(response, 200, await service.snapshot())
-      else if (url.pathname === '/api/command' && request.method === 'POST')
+      if (url.pathname === '/api/state' && request.method === 'GET') {
+        const sinceVersion = url.searchParams.get('sinceVersion')
+        json(
+          response,
+          200,
+          sinceVersion === null
+            ? await service.snapshot()
+            : await service.snapshot(Number(sinceVersion)),
+        )
+      } else if (url.pathname === '/api/agents/state' && request.method === 'GET')
+        json(response, 200, await service.agent.state(url.searchParams.get('id') ?? ''))
+      else if (url.pathname.startsWith('/api/agents/') && request.method === 'POST') {
+        const input = (await body(request)) as unknown as {
+          config: AgentConfig
+          id: string
+          methodId: string
+          requestId: string
+          configId: string
+          value: string
+          response: AgentResponse
+        }
+        if (url.pathname === '/api/agents/connect')
+          json(response, 200, await service.agent.connect(input.config))
+        else if (url.pathname === '/api/agents/configure')
+          json(response, 200, await service.agent.configure(input.id, input.configId, input.value))
+        else if (url.pathname === '/api/agents/authenticate') {
+          await service.agent.authenticate(input.id, input.methodId)
+          json(response, 200, {})
+        } else if (url.pathname === '/api/agents/respond') {
+          await service.agent.respond(input.id, input.requestId, input.response)
+          json(response, 200, {})
+        } else if (url.pathname === '/api/agents/disconnect') {
+          await service.agent.disconnect(input.id)
+          json(response, 200, {})
+        } else json(response, 404, { error: '此接口不存在' })
+      } else if (url.pathname === '/api/providers' && request.method === 'GET')
+        json(response, 200, await service.modelProviders())
+      else if (url.pathname === '/api/auth/status' && request.method === 'GET')
+        json(response, 200, await service.auth.status(url.searchParams.get('id') ?? ''))
+      else if (url.pathname.startsWith('/api/auth/') && request.method === 'POST') {
+        const input = (await body(request)) as unknown as {
+          settings: SettingsInput
+          type: 'oauth' | 'api_key'
+          id: string
+          promptId: string
+          value: string
+        }
+        if (url.pathname === '/api/auth/start')
+          json(response, 200, await service.auth.start(input.settings, input.type))
+        else if (url.pathname === '/api/auth/respond') {
+          await service.auth.respond(input.id, input.promptId, input.value)
+          json(response, 200, {})
+        } else if (url.pathname === '/api/auth/cancel') {
+          await service.auth.cancel(input.id)
+          json(response, 200, {})
+        } else if (url.pathname === '/api/auth/logout') {
+          await service.auth.logout(input.settings)
+          json(response, 200, {})
+        } else json(response, 404, { error: '此接口不存在' })
+      } else if (url.pathname === '/api/command' && request.method === 'POST')
         json(response, 200, await service.command(await body(request)))
       else if (url.pathname === '/api/test' && request.method === 'POST')
-        json(response, 200, await service.testConnection())
+        json(
+          response,
+          200,
+          await service.testConnection(
+            ((await body(request)) as unknown as { settings?: SettingsInput }).settings,
+          ),
+        )
       else if (url.pathname === '/api/export' && request.method === 'GET')
         json(response, 200, await service.exportWorkspace(url.searchParams.get('id') ?? ''))
       else json(response, 404, { error: '此接口不存在' })
@@ -111,6 +181,8 @@ server.listen(port, '127.0.0.1', () =>
 for (const event of ['SIGINT', 'SIGTERM'] as const)
   process.on(event, () => {
     service.shutdown()
+    network.shutdown()
+    restoreFetch()
     server.close()
     void vite?.close()
     setTimeout(() => process.exit(0), 200).unref()

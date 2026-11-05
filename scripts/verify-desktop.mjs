@@ -1,6 +1,6 @@
 import { app } from 'electron'
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { join, resolve } from 'node:path'
 
 // Deterministic software compositing for screenshot checks on CI and occluded desktops.
 app.disableHardwareAcceleration()
@@ -8,7 +8,11 @@ app.disableHardwareAcceleration()
 // Inspect only a fresh instance of this application; never reuse a person's research database.
 const artifacts = resolve('artifacts')
 mkdirSync(artifacts, { recursive: true })
-process.env.QUESTBRANCH_DATA_DIR = mkdtempSync(resolve(artifacts, 'desktop-verification-'))
+const folder = mkdtempSync(resolve(artifacts, 'desktop-verification-'))
+mkdirSync(join(folder, 'profile'))
+app.setPath('userData', join(folder, 'profile'))
+process.env.QUESTBRANCH_DATA_DIR = join(folder, 'research')
+delete process.env.ELECTRON_RENDERER_URL
 const width = Number(process.argv.find((arg) => arg.startsWith('--width='))?.split('=')[1] ?? 1440)
 const height = Number(process.argv.find((arg) => arg.startsWith('--height='))?.split('=')[1] ?? 900)
 let completed = false

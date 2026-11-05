@@ -6,12 +6,22 @@ import { randomUUID } from 'node:crypto'
 import { DatabaseSync } from 'node:sqlite'
 import { ResearchStore } from '../src/desktop/store'
 import { ResearchService } from '../src/desktop/service'
+import { PiModels, type ModelOutput } from '../src/desktop/pi-models'
 import { buildContext } from '../src/research/context'
-import type { ResearchRun } from '../src/research/types'
+import type { ConnectionResult, ResearchRun } from '../src/research/types'
+
+const connected: ConnectionResult = {
+  models: ['fixture-model'],
+  provider: 'openai',
+  status: 'configured',
+  modelDiscovery: 'catalog',
+  catalog: { models: [], defaults: { model: 'fixture-model', reasoningEffort: 'high' } },
+}
 
 const stores: ResearchStore[] = [],
   directories: string[] = []
 function store() {
+  vi.stubEnv('TAVILY_API_KEY', '')
   const directory = mkdtempSync(join(tmpdir(), 'qb-conversation-test-'))
   directories.push(directory)
   const db = new ResearchStore(directory)
@@ -44,6 +54,8 @@ function chat(
   return db.run(run.id)
 }
 afterEach(() => {
+  vi.restoreAllMocks()
+  vi.unstubAllEnvs()
   for (const db of stores.splice(0)) {
     try {
       db.close()
@@ -161,23 +173,32 @@ describe('节点对话与报告的分别保存', () => {
     chat(reopened)
     expect(reopened.snapshot().messages).toHaveLength(2)
   })
-  it('Codex 对话不读取 API 密钥，切换焦点不改变回复归属', async () => {
+  it('账号对话不复用 API 密钥，切换焦点不改变回复归属', async () => {
     const db = store()
-    db.saveSettings({ ...db.settings(), provider: 'codex', model: '' })
-    const credentials = vi.spyOn(db, 'credentials').mockImplementation(() => {
-      throw new Error('Codex must not read API credentials')
+    db.saveSettings({
+      ...db.settings(),
+      provider: 'compatible',
+      modelProvider: 'custom',
+      baseUrl: 'http://127.0.0.1:8999/v1',
+      apiKey: 'unrelated-key',
+    })
+    db.saveSettings({
+      ...db.settings(),
+      provider: 'account',
+      modelProvider: 'openai',
+      model: 'fixture-model',
+      baseUrl: '',
     })
     let finish: (value: string) => void = () => {}
     const reply = new Promise<string>((resolve) => {
       finish = resolve
     })
-    const service = new ResearchService(db, {
-      test: async () => ({
-        models: [],
-        account: { type: 'chatgpt', plan: 'fixture', email: null },
-      }),
-      generate: async () => reply,
-    })
+    const runtime = new PiModels(db)
+    vi.spyOn(runtime, 'connect').mockResolvedValue(connected)
+    const generate = vi
+      .spyOn(runtime, 'generate')
+      .mockImplementation(async () => ({ raw: await reply }))
+    const service = new ResearchService(db, runtime)
     await service.testConnection()
     const result = await service.command({
       type: 'send-message',
@@ -189,7 +210,61 @@ describe('节点对话与报告的分别保存', () => {
     await vi.waitFor(() => expect(db.run(result.id!).status).toBe('completed'))
     expect(db.snapshot().messages.every((message) => message.nodeId === 'visual')).toBe(true)
     expect(db.snapshot().reports).toHaveLength(3)
-    expect(credentials).not.toHaveBeenCalled()
+    expect(generate.mock.calls[0][1]).toBe('')
+    service.shutdown()
+  })
+  it('连接不保存候选配置，实际思考强度随研究记录导出和恢复', async () => {
+    const db = store()
+    const before = db.settings()
+    const runtime = new PiModels(db)
+    const test = vi.spyOn(runtime, 'connect').mockResolvedValue(connected)
+    vi.spyOn(runtime, 'generate').mockImplementation(
+      async (
+        _settings,
+        _key,
+        _messages,
+        _signal,
+        _onChunk,
+        _schema,
+        onModel,
+      ): Promise<ModelOutput> => {
+        onModel?.({
+          model: 'fixture-model',
+          reasoningEffort: 'high',
+          pi: { provider: 'openai', api: 'openai-responses', responseId: 'fixture-response' },
+        })
+        return { raw: '保留模型实际使用的思考强度。' }
+      },
+    )
+    const service = new ResearchService(db, runtime)
+    await service.testConnection({
+      ...before,
+      provider: 'account',
+      model: 'fixture-model',
+      reasoningEffort: 'high',
+    })
+    expect(db.settings()).toEqual(before)
+    expect(test.mock.calls[0][0]).toMatchObject({ provider: 'account', reasoningEffort: 'high' })
+    await service.command({
+      type: 'save-settings',
+      settings: { ...before, provider: 'account', model: 'fixture-model', reasoningEffort: 'high' },
+    })
+    expect(db.settings().reasoningEffort).toBe('high')
+    const { id } = await service.command({
+      type: 'send-message',
+      nodeId: 'visual',
+      message: '测试设置归属',
+    })
+    await vi.waitFor(() => expect(db.run(id!).status).toBe('completed'))
+    expect(db.run(id!).reasoningEffort).toBe('high')
+    const exported = db.exportWorkspace('welcome-research')
+    expect(exported.runs.find((run) => run.id === id)?.reasoningEffort).toBe('high')
+    const directory = mkdtempSync(join(tmpdir(), 'qb-conversation-restore-'))
+    directories.push(directory)
+    const empty = new ResearchStore(directory, { seed: false })
+    stores.push(empty)
+    empty.importWorkspace(exported)
+    expect(empty.run(id!).reasoningEffort).toBe('high')
     service.shutdown()
   })
 })

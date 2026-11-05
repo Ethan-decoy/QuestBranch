@@ -7,4 +7,5 @@ release/
 .env.*
 !.env.example
 artifacts/
+/data/
 *.log

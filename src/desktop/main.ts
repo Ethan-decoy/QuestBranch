@@ -4,6 +4,11 @@ import { fileURLToPath } from 'node:url'
 import { randomUUID } from 'node:crypto'
 import { ResearchStore } from './store'
 import { ResearchService } from './service'
+import { PiModels } from './pi-models'
+import { createElectronNetwork } from './network-electron'
+import { createNetworkLog } from './network-log'
+import { installHostFetch } from './network'
+import { installNativeAppearance, windowAppearance } from './appearance'
 import {
   loadStorageLocation,
   relocateResearchStorage,
@@ -13,6 +18,8 @@ import {
 const directory = dirname(fileURLToPath(import.meta.url))
 let service: ResearchService
 let store: ResearchStore
+let disposeAppearance: (() => void) | undefined
+let disposeNetwork: (() => void) | undefined
 // A second desktop instance must not treat the first instance's live turns as interrupted.
 const primary = app.requestSingleInstanceLock()
 if (!primary) app.quit()
@@ -24,12 +31,13 @@ app.on('second-instance', () => {
 })
 function createWindow() {
   const window = new BrowserWindow({
+    show: false,
     width: 1536,
     height: 960,
     minWidth: 1050,
     minHeight: 700,
-    backgroundColor: '#f7f8f5',
-    title: 'QuestBranch · 问枝',
+    ...windowAppearance(),
+    title: 'QuestBranch · 问之',
     autoHideMenuBar: true,
     webPreferences: {
       preload: join(directory, '../preload/index.cjs'),
@@ -38,6 +46,7 @@ function createWindow() {
       sandbox: true,
     },
   })
+  window.once('ready-to-show', () => window.show())
   window.webContents.setWindowOpenHandler(({ url }) => {
     if (/^https?:\/\//.test(url)) void shell.openExternal(url)
     return { action: 'deny' }
@@ -54,9 +63,17 @@ function createWindow() {
 // Keep initialization in the callback instead of awaiting ready at module scope.
 void app
   .whenReady()
-  .then(() => {
+  .then(async () => {
     if (!primary) return
+    if (process.platform === 'win32') app.setAppUserModelId('org.questbranch.app')
+    disposeAppearance = installNativeAppearance()
     const userData = app.getPath('userData')
+    const network = await createElectronNetwork(createNetworkLog(join(userData, 'logs')))
+    const restoreFetch = installHostFetch(network)
+    disposeNetwork = () => {
+      network.shutdown()
+      restoreFetch()
+    }
     const location = loadStorageLocation(userData, process.env.QUESTBRANCH_DATA_DIR)
     let relocating = false
     let selection: { directory: string; token: string; sender: number } | undefined
@@ -71,18 +88,56 @@ void app
           }
         : undefined,
     })
-    service = new ResearchService(store)
-    ipcMain.handle('research:snapshot', async () => {
-      const snapshot = await service.snapshot()
-      return { ...snapshot, storage: { ...snapshot.storage!, source: location.source } }
+    service = new ResearchService(
+      store,
+      new PiModels(store, { openAuthUrl: (url) => shell.openExternal(url), network }),
+      undefined,
+      network,
+    )
+    ipcMain.handle('research:snapshot', async (_, sinceVersion?: number) => {
+      const snapshot =
+        sinceVersion === undefined ? await service.snapshot() : await service.snapshot(sinceVersion)
+      return snapshot && { ...snapshot, storage: { ...snapshot.storage!, source: location.source } }
     })
     ipcMain.handle('research:command', (_, command) => {
       writable()
       return service.command(command)
     })
-    ipcMain.handle('research:test', () => {
+    ipcMain.handle('research:test', (_, settings) => {
       writable()
-      return service.testConnection()
+      return service.testConnection(settings)
+    })
+    ipcMain.handle('models:providers', () => service.modelProviders())
+    ipcMain.handle('agents:connect', (_, config) => {
+      writable()
+      return service.agent.connect(config)
+    })
+    ipcMain.handle('agents:state', (_, id) => service.agent.state(id))
+    ipcMain.handle('agents:configure', (_, id, configId, value) => {
+      writable()
+      return service.agent.configure(id, configId, value)
+    })
+    ipcMain.handle('agents:authenticate', (_, id, methodId) => {
+      writable()
+      return service.agent.authenticate(id, methodId)
+    })
+    ipcMain.handle('agents:respond', (_, id, requestId, response) => {
+      writable()
+      return service.agent.respond(id, requestId, response)
+    })
+    ipcMain.handle('agents:disconnect', (_, id) => service.agent.disconnect(id))
+    ipcMain.handle('models:auth-start', (_, settings, type) => {
+      writable()
+      return service.auth.start(settings, type)
+    })
+    ipcMain.handle('models:auth-status', (_, id) => service.auth.status(id))
+    ipcMain.handle('models:auth-respond', (_, id, promptId, value) =>
+      service.auth.respond(id, promptId, value),
+    )
+    ipcMain.handle('models:auth-cancel', (_, id) => service.auth.cancel(id))
+    ipcMain.handle('models:auth-logout', (_, settings) => {
+      writable()
+      return service.auth.logout(settings)
     })
     ipcMain.handle('research:export', (_, id: string) => service.exportWorkspace(id))
     ipcMain.handle('storage:choose-directory', async (event) => {
@@ -90,9 +145,9 @@ void app
       if (location.source === 'environment')
         throw new Error('当前保存位置由 QUESTBRANCH_DATA_DIR 指定，请移除启动覆盖后再选择')
       const window = BrowserWindow.fromWebContents(event.sender)
-      if (!window) throw new Error('请在问枝窗口中选择文件夹')
+      if (!window) throw new Error('请在问之窗口中选择文件夹')
       const result = await dialog.showOpenDialog(window, {
-        title: '选择一个空文件夹保存问枝研究',
+        title: '选择一个空文件夹保存问之研究',
         buttonLabel: '选择保存位置',
         properties: ['openDirectory', 'createDirectory', 'dontAddToRecent'],
       })
@@ -108,7 +163,7 @@ void app
       writable()
       if (!selection || selection.sender !== event.sender.id || token !== selection.token)
         throw new Error('请先选择新的研究保存文件夹')
-      if (service.hasActiveRuns) throw new Error('请等待当前对话或研究结束，或停止研究后再迁移')
+      if (service.hasActiveRuns) throw new Error('请等待当前研究或账号连接结束后再迁移')
       relocating = true
       try {
         await relocateResearchStorage(store, userData, selection.directory)
@@ -120,7 +175,7 @@ void app
         try {
           app.relaunch()
         } catch {
-          dialog.showErrorBox('研究位置已更改', '资料已迁移，请重新打开问枝继续研究。')
+          dialog.showErrorBox('研究位置已更改', '资料已迁移，请重新打开问之继续研究。')
         }
         app.quit()
       }, 400)
@@ -129,7 +184,7 @@ void app
   })
   .catch((error: unknown) => {
     dialog.showErrorBox(
-      '问枝未能打开本地研究空间',
+      '问之未能打开本地研究空间',
       error instanceof Error ? error.message : '初始化失败',
     )
     app.quit()
@@ -140,4 +195,8 @@ app.on('activate', () => {
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
 })
-app.on('before-quit', () => service?.shutdown())
+app.on('before-quit', () => {
+  disposeAppearance?.()
+  service?.shutdown()
+  disposeNetwork?.()
+})

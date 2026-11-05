@@ -1,5 +1,7 @@
 # QuestBranch 问之
 
+简体中文 · [English](README.en.md)
+
 **AI-Native Branching Research Workspace**
 
 提出问题，让研究沿着分支逐渐深入。用可视化的研究图看清每个方向已经了解到什么、还有哪些问题，再选中一个节点让 AI 继续研究。
@@ -19,14 +21,14 @@
 
 从 [Releases](https://github.com/Ethan-decoy/QuestBranch/releases) 获取完整 ZIP 与 `SHA256SUMS.txt`，核对后解压，双击顶层 `Start-QuestBranch.cmd`。无需安装 Node.js 或 pnpm；研究和配置保存在同级 `data/`。
 
-安装、隔离试用和手动升级见 [Windows 试用指南](docs/windows-trial.md)，具体交付范围以发行说明为准。当前未提供签名、自动更新或 macOS/Linux 成品。
+安装、隔离试用和手动升级见 [Windows 试用指南](docs/windows-trial.md)，具体交付范围与已知限制见[发行说明](https://github.com/Ethan-decoy/QuestBranch/releases/tag/v0.3.0-dev.3)。当前未提供签名、自动更新或 macOS/Linux 成品。
 
 ## 功能
 
 - 用研究画布组织问题，展开或收起分支，搜索、比较和综合不同方向的报告。
 - 在节点中持续对话，让 AI 通过工具保存阶段报告与已确定的子分支；保留原始消息和报告历史。
 - 通过 Pi AI 使用账号、API 服务与 Ollama，或通过 ACP 使用智能体自身的工具与技能。
-- 用本地 SQLite 保存研究，支持完整导出与恢复；Windows 桌面可选择研究资料保存位置并迁移数据。
+- 用本地 SQLite 保存研究，支持研究空间导出与恢复；Windows 桌面可选择研究资料保存位置并迁移数据。
 - 桌面优先，同时提供使用相同研究服务的本地浏览器预览。
 - 默认简体中文，可在“设置 → 通用”切换 English 并保存本机偏好；研究内容保持原文。
 

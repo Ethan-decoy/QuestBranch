@@ -73,11 +73,19 @@ function preserveResult(folder, name) {
 }
 
 async function research(root, name, extra = []) {
-  const output = await run(name, process.execPath, [
-    'scripts/verify-branching-mcp.mjs',
-    `--package-root=${root}`,
-    ...extra,
-  ])
+  let output
+  try {
+    output = await run(name, process.execPath, [
+      'scripts/verify-branching-mcp.mjs',
+      `--package-root=${root}`,
+      ...extra,
+    ])
+  } catch (error) {
+    const stdout = readFileSync(join(evidence, `${name}.stdout.log`), 'utf8')
+    const folder = stdout.match(/^Verification folder: (.+)$/m)?.[1]
+    if (folder) preserveResult(folder.trim(), name)
+    throw error
+  }
   const result = JSON.parse(output.stdout.trim().split('\n').at(-1))
   assert.equal(result.success, true)
   const details = preserveResult(result.folder, name)

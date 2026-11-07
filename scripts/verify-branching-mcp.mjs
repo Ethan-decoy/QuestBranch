@@ -23,6 +23,7 @@ const evidence = previous
   : { cases: [], folder }
 const packaged = desktopPackage(option('package-root'))
 const executable = resolve(option('executable') ?? packaged.executable)
+console.log(`Verification folder: ${folder}`)
 const fixture = resolve('tests/fixtures/acp-agent.mjs')
 const portServer = createServer()
 await new Promise((resolve) => portServer.listen(0, '127.0.0.1', resolve))
@@ -141,7 +142,10 @@ async function configure(scenario) {
       model: '',
       agent: {
         kind: 'custom',
-        command: executable,
+        // The launch override may be an AppImage container, rather than a Node
+        // executable. Run the external protocol fixture with the packaged engine;
+        // the application itself still starts through the real container launcher.
+        command: packaged.executable,
         args: [fixture, scenario],
         name: `Fixture ${scenario}`,
       },
@@ -559,6 +563,7 @@ try {
   assert.equal(code, 0)
   Object.assign(evidence, {
     executable,
+    fixtureExecutable: packaged.executable,
     actualPackagedExecutable: true,
     isolatedDatabase: true,
     isolatedNativeHome: true,

@@ -93,6 +93,7 @@ export function graphRegions(items: DrawnResearch[]) {
   const regions: {
     id: string
     familyId: string
+    color: string
     x: number
     y: number
     width: number
@@ -116,6 +117,9 @@ export function graphRegions(items: DrawnResearch[]) {
     const region = {
       id,
       familyId,
+      // Geometry and styling must use the same animation snapshot. The live
+      // directory may already have removed this family before its exit frame.
+      color: byId.get(familyId)!.node.color,
       x: x - padding,
       y: y - padding,
       width: width + padding * 2,

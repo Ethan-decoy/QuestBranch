@@ -14,7 +14,8 @@ export default defineConfig({
     nsSeparator: false,
     defaultValue: (key, _namespace, language, value) =>
       language === 'zh-CN' ? value || key.replace(/_(?:zero|one|two|few|many|other)$/, '') : '',
-    sort: true,
+    // The CLI's code-unit preset is stable across OS languages and ICU locales.
+    sort: 'locize',
     instrumentScorer: (content) => (/\p{Script=Han}/u.test(content) ? 1 : null),
   },
   status: { checkIdentical: 'error' },

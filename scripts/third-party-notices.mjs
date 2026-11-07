@@ -1,8 +1,9 @@
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { dirname, join, resolve } from 'node:path'
+import { productionPackagePaths } from './notice-inventory.ts'
 
 const root = process.cwd()
 const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'))
@@ -14,7 +15,7 @@ if (!manager) throw new Error('请通过 pnpm notices 或 pnpm notices:check 执
 const executable = manager.endsWith('.exe') ? manager : process.execPath
 const args = manager.endsWith('.exe') ? [] : [manager]
 const inventory = JSON.parse(
-  execFileSync(executable, [...args, 'licenses', 'list', '--prod', '--json'], {
+  execFileSync(executable, [...args, 'list', '--prod', '--depth', 'Infinity', '--json'], {
     cwd: root,
     encoding: 'utf8',
     maxBuffer: 16 * 1024 * 1024,
@@ -84,8 +85,9 @@ function collect(directory) {
     throw new Error(`同版本的许可不同：${id}`)
   packages.set(id, notice)
 }
-for (const records of Object.values(inventory))
-  for (const record of records) for (const directory of record.paths) collect(directory)
+for (const directory of productionPackagePaths(inventory))
+  // The lockfile tree also lists optional binaries for platforms not installed here.
+  if (existsSync(directory)) collect(directory)
 const require = createRequire(join(root, 'package.json'))
 // These development packages contribute runtime code or generated styles.
 for (const name of ['tailwindcss', 'electron'])

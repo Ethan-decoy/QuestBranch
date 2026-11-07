@@ -17,11 +17,11 @@ This repository provides the standalone application's source code, releases, and
 
 ## Download and try
 
-**0.3.0-dev.3 · Windows x64 prerelease**
+**Windows x64 developer prereleases**
 
-Download the complete ZIP and `SHA256SUMS.txt` from [Releases](https://github.com/Ethan-decoy/QuestBranch/releases). Verify the checksum, extract the archive, and double-click `Start-QuestBranch.cmd` at the top level. You do not need Node.js or pnpm to run this package. Research and configuration are stored in the adjacent `data/` directory.
+Select a published version from [Releases](https://github.com/Ethan-decoy/QuestBranch/releases), download its Windows installer or complete ZIP, and verify `SHA256SUMS.txt`. The installer supports a current-user installation with a selectable program directory. For an isolated portable trial, extract the ZIP and launch `Start-QuestBranch.cmd`; its research and configuration stay in the adjacent `data/` directory. Neither option requires Node.js or pnpm.
 
-See the [Windows trial guide (Simplified Chinese)](docs/windows-trial.md) for installation, isolated trials, and manual upgrades. The [release notes](https://github.com/Ethan-decoy/QuestBranch/releases/tag/v0.3.0-dev.3) describe the delivered scope and known limitations. Signed packages, automatic updates, and macOS/Linux binaries are not currently provided.
+See the [Windows trial guide (Simplified Chinese)](docs/windows-trial.md) for storage locations, isolated trials, and manual upgrades. Each release's notes identify the actual assets and known limitations. Signed packages, automatic updates, and macOS/Linux binaries are not currently provided.
 
 ## Features
 

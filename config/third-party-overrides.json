@@ -35,6 +35,12 @@
     "reason": "The published npm archive omits a license file. Preserved from this pinned upstream revision; it is not claimed to be the exact npm source commit.",
     "sha256": "4bd6464daafb3cc689d914b91952313b69be04138e83c3cfc47a486835c06e83"
   },
+  "@ai-sdk/provider-utils@4.0.61": {
+    "file": "licenses/vercel-ai.LICENSE",
+    "source": "https://github.com/vercel/ai/blob/8e8033a73dd471f221810ade3c7a355b78cf4d8b/LICENSE",
+    "reason": "The original package manifest and npm registry declare Apache-2.0 and the Vercel AI repository, but the package archive omits a license file and npm supplies no gitHead. Preserved from this pinned upstream revision; it is not claimed to be the exact npm source commit.",
+    "sha256": "4bd6464daafb3cc689d914b91952313b69be04138e83c3cfc47a486835c06e83"
+  },
   "@aws-sdk/credential-provider-http@3.972.76": {
     "file": "licenses/aws-aws-sdk-js-v3.LICENSE",
     "source": "https://github.com/aws/aws-sdk-js-v3/blob/0bde7a791084dfefae6a98ddcf7c9e8da8da3754/LICENSE",

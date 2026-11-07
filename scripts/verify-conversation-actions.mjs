@@ -145,10 +145,18 @@ const deadline = setTimeout(() => {
   app.exit(1)
 }, 60000)
 app.on('browser-window-created', (_, window) => {
+  let rendererFailure
+  window.webContents.on('console-message', ({ level, message }) => {
+    if (level === 'error') rendererFailure ??= new Error(`Renderer error: ${message}`)
+  })
+  window.webContents.on('render-process-gone', (_, details) => {
+    rendererFailure ??= new Error(`Renderer exited: ${details.reason}`)
+  })
   window.setTitle('QuestBranch · 对话行为隔离验收')
   window.setContentSize(1440, 960)
   window.webContents.once('did-finish-load', async () => {
     const evaluate = async (fn, value) => {
+      if (rendererFailure) throw rendererFailure
       const result = await window.webContents.executeJavaScript(
         `(async () => { try { return { value: await (${fn.toString()})(${JSON.stringify(value) ?? ''}) } } catch (error) { return { error: String(error), stack: error.stack } } })()`,
       )

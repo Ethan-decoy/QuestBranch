@@ -20,13 +20,14 @@ for (const directory of [profile, research, codexHome]) mkdirSync(directory, { r
 const evidence = previous
   ? JSON.parse(readFileSync(join(folder, 'result.json'), 'utf8'))
   : { cases: [], folder }
-const executable = resolve('release/win-unpacked/QuestBranch.exe')
+const executable = resolve(option('package-root') ?? 'release/win-unpacked', 'QuestBranch.exe')
 const fixture = resolve('tests/fixtures/acp-agent.mjs')
 const portServer = createServer()
 await new Promise((resolve) => portServer.listen(0, '127.0.0.1', resolve))
 const port = portServer.address().port
 await new Promise((resolve) => portServer.close(resolve))
 const env = { ...process.env, CODEX_HOME: codexHome, QUESTBRANCH_DATA_DIR: research }
+if (process.argv.includes('--saved-location')) delete env.QUESTBRANCH_DATA_DIR
 for (const key of [
   'OPENAI_API_KEY',
   'ANTHROPIC_API_KEY',
@@ -218,8 +219,54 @@ try {
         document.documentElement.dataset.theme === 'light',
     ),
   )
-  if (previous) {
+  if (option('restore') || evidence.restoreInput) {
+    const backupPath = resolve(option('restore') || evidence.restoreInput)
+    const backup = JSON.parse(readFileSync(backupPath, 'utf8'))
+    const imported = previous
+      ? { id: evidence.importedId }
+      : await command({ type: 'import-workspace', data: backup })
+    const restored = await snapshot()
+    assert(restored.workspaces.some((item) => item.id === imported.id))
+    for (const node of backup.nodes) {
+      const actual = restored.nodes.find((item) => item.id === node.id)
+      assert(actual)
+      assert.equal(actual.parentId, node.parentId)
+      assert.equal(actual.originReportId, node.originReportId)
+      assert.deepEqual(actual.referenceReportIds, node.referenceReportIds)
+    }
+    for (const report of backup.reports) {
+      const actual = restored.reports.find((item) => item.id === report.id)
+      assert(actual)
+      assert.equal(actual.markdown, report.markdown)
+      assert.equal(actual.nodeId, report.nodeId)
+    }
+    const exported = await evaluate((id) => window.questbranch.exportWorkspace(id), imported.id)
+    for (const field of ['reports', 'messages', 'runs'])
+      assert.equal(exported[field].length, backup[field].length)
+    assert(!restored.runs.some((run) => run.status === 'running'))
+    assert(!restored.settings.hasApiKey)
+    evidence.restoreInput = backupPath
+    evidence.importedId = imported.id
+    evidence.restored = {
+      nodes: backup.nodes.length,
+      reports: backup.reports.length,
+      messages: backup.messages.length,
+      runs: backup.runs.length,
+      sourcesAndVersions: true,
+      noCredentials: true,
+    }
+    evidence.cases = [
+      'final executable import into a separate profile and database',
+      'reports, conversations, origins and run records preserved',
+      'no automatic execution or model credentials imported',
+    ]
+  } else if (previous) {
     const current = await snapshot()
+    if (process.argv.includes('--saved-location')) {
+      assert.equal(current.storage.source, 'preference')
+      assert.equal(resolve(current.storage.directory), resolve(research))
+      evidence.savedStorageLocationPreserved = true
+    }
     assert.equal(
       current.nodes.find((node) => node.id === evidence.manualChild).originReportId,
       evidence.r1,

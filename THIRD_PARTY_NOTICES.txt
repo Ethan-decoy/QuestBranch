@@ -14,11 +14,14 @@ Those manifests and standard terms are preserved below; no separate upstream
 copyright notice was supplied or invented. Other entries preserve original notices.
 
 Lockfile SHA-256: b979e72686f53851c2becc8b57a3978bc3c3ca52915b40496a5c0b2c9883581f
-Packages: 476
+Packages: 482
 Identical notice texts are printed once with all applicable packages listed.
 
 ================================================================================
 Applies to:
+
+@a2a-js/sdk@0.3.14
+Declared license: Apache-2.0
 
 @a2a-js/sdk@1.0.1
 Declared license: Apache-2.0
@@ -654,6 +657,31 @@ Notice text and licensing evidence:
 ================================================================================
 Applies to:
 
+@ai-sdk/provider-utils@4.0.61
+Declared license: Apache-2.0
+
+Notice text and licensing evidence:
+
+Source: https://github.com/vercel/ai/blob/8e8033a73dd471f221810ade3c7a355b78cf4d8b/LICENSE
+The original package manifest and npm registry declare Apache-2.0 and the Vercel AI repository, but the package archive omits a license file and npm supplies no gitHead. Preserved from this pinned upstream revision; it is not claimed to be the exact npm source commit.
+
+Copyright 2023 Vercel, Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+================================================================================
+Applies to:
+
 @ai-sdk/provider-utils@5.0.62
 Declared license: Apache-2.0
 
@@ -678,6 +706,12 @@ limitations under the License.
 
 ================================================================================
 Applies to:
+
+@ai-sdk/provider@2.0.5
+Declared license: Apache-2.0
+
+@ai-sdk/provider@3.0.19
+Declared license: Apache-2.0
 
 @ai-sdk/provider@4.0.29
 Declared license: Apache-2.0
@@ -10938,6 +10972,9 @@ Applies to:
 undici-types@7.24.6
 Declared license: MIT
 
+undici@6.29.0
+Declared license: MIT
+
 undici@7.30.0
 Declared license: MIT
 
@@ -11063,6 +11100,25 @@ IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
 CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+================================================================================
+Applies to:
+
+uuid@11.1.1
+Declared license: MIT
+
+Notice text and licensing evidence:
+
+--- LICENSE.md ---
+The MIT License (MIT)
+
+Copyright (c) 2010-2020 Robert Kieffer and other contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ================================================================================
 Applies to:

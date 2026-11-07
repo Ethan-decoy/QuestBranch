@@ -17,11 +17,11 @@
 
 ## 下载与试用
 
-**0.3.0-dev.3 · Windows x64 预发布**
+**Windows x64 开发者预发布**
 
-从 [Releases](https://github.com/Ethan-decoy/QuestBranch/releases) 获取完整 ZIP 与 `SHA256SUMS.txt`，核对后解压，双击顶层 `Start-QuestBranch.cmd`。无需安装 Node.js 或 pnpm；研究和配置保存在同级 `data/`。
+从 [Releases](https://github.com/Ethan-decoy/QuestBranch/releases) 选择已发布版本，下载 Windows 安装程序或完整 ZIP，并核对 `SHA256SUMS.txt`。安装程序支持为当前用户安装并选择程序目录；ZIP 解压后双击顶层 `Start-QuestBranch.cmd`，以同级 `data/` 隔离试用。两种方式均无需安装 Node.js 或 pnpm。
 
-安装、隔离试用和手动升级见 [Windows 试用指南](docs/windows-trial.md)，具体交付范围与已知限制见[发行说明](https://github.com/Ethan-decoy/QuestBranch/releases/tag/v0.3.0-dev.3)。当前未提供签名、自动更新或 macOS/Linux 成品。
+安装、资料位置、隔离试用和手动升级见 [Windows 试用指南](docs/windows-trial.md)，具体附件与已知限制以对应版本的发行说明为准。当前未提供签名、自动更新或 macOS/Linux 成品。
 
 ## 功能
 

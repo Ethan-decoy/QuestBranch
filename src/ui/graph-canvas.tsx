@@ -364,7 +364,7 @@ export function GraphContent({
       focusable: false,
       draggable: false,
       style: {
-        '--branch': displayBranchColor(byId.get(region.familyId)!.color, theme),
+        '--branch': displayBranchColor(region.color, theme),
         pointerEvents: 'none',
       } as CSSProperties,
     })

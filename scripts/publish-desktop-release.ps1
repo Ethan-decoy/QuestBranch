@@ -11,7 +11,7 @@ if ($qbVerification.sourceCommit -ne $qbCommit -or $qbVerification.version -ne $
 foreach ($qbPlatform in @('windows-x64','macos-arm64','macos-x64','linux-x64')) {
   if ($qbVerification.platforms.$qbPlatform.sourceCommit -ne $qbCommit) { throw 'Missing accepted native platform' }
 }
-$qbExpectedFiles = @("QuestBranch-Setup-$qbVersion-x64.exe","QuestBranch-$qbVersion-windows-x64.zip","QuestBranch-$qbVersion-macos-arm64.dmg","QuestBranch-$qbVersion-macos-x64.dmg","QuestBranch-$qbVersion-linux-x64.deb","QuestBranch-$qbVersion-linux-x64.AppImage",'README-TRIAL.md','RELEASE-NOTES.md','VERIFICATION.json')
+$qbExpectedFiles = @("QuestBranch-Setup-$qbVersion-x64.exe","QuestBranch-$qbVersion-windows-x64.zip","QuestBranch-$qbVersion-macos-arm64.dmg","QuestBranch-$qbVersion-macos-x64.dmg","QuestBranch-$qbVersion-linux-amd64.deb","QuestBranch-$qbVersion-linux-x86_64.AppImage",'README-TRIAL.md','RELEASE-NOTES.md','VERIFICATION.json')
 $qbChecksums = @{}
 foreach ($qbLine in Get-Content -LiteralPath release/SHA256SUMS.txt) {
   if ($qbLine -notmatch '^([a-f0-9]{64})  ([A-Za-z0-9_.-]+)$') { throw 'Invalid checksum manifest' }

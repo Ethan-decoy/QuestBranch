@@ -5,6 +5,7 @@
   "packageManager": "pnpm@11.1.3",
   "type": "module",
   "description": "AI-native branching research workspace",
+  "desktopName": "org.questbranch.app.desktop",
   "main": "out/main/index.js",
   "engines": {
     "node": ">=24.0.0"
@@ -86,6 +87,7 @@
       "icon": "build/icon.png",
       "category": "Office",
       "executableName": "questbranch",
+      "syncDesktopName": true,
       "artifactName": "QuestBranch-${version}-linux-${arch}.${ext}"
     },
     "toolsets": {

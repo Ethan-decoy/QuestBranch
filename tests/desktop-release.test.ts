@@ -2,14 +2,22 @@ import { execFileSync, spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join, resolve } from 'node:path'
+import { basename, join, resolve, sep } from 'node:path'
 import { afterEach, expect, it } from 'vitest'
 
 const script = resolve('scripts/assemble-desktop-release.mjs')
 const folders: string[] = []
-afterEach(() =>
-  folders.splice(0).forEach((folder) => rmSync(folder, { recursive: true, force: true })),
-)
+afterEach(() => {
+  for (const folder of folders.splice(0)) {
+    const target = resolve(folder)
+    if (
+      !target.startsWith(resolve(tmpdir()) + sep) ||
+      !basename(target).startsWith('qb-desktop-release-')
+    )
+      throw new Error('Unexpected release test cleanup path')
+    rmSync(target, { recursive: true, force: true })
+  }
+})
 function candidate() {
   const folder = mkdtempSync(join(tmpdir(), 'qb-desktop-release-'))
   folders.push(folder)
@@ -41,8 +49,8 @@ function candidate() {
     'macos-arm64': ['QuestBranch-1.0.0-dev.1-macos-arm64.dmg'],
     'macos-x64': ['QuestBranch-1.0.0-dev.1-macos-x64.dmg'],
     'linux-x64': [
-      'QuestBranch-1.0.0-dev.1-linux-x64.deb',
-      'QuestBranch-1.0.0-dev.1-linux-x64.AppImage',
+      'QuestBranch-1.0.0-dev.1-linux-amd64.deb',
+      'QuestBranch-1.0.0-dev.1-linux-x86_64.AppImage',
     ],
   }
   const records = Object.fromEntries(

@@ -8,8 +8,8 @@
 | Windows x64 | `QuestBranch-…-windows-x64.zip` | 完整解压，双击顶层 `Start-QuestBranch.cmd` 隔离试用。 |
 | macOS Apple Silicon | `QuestBranch-…-macos-arm64.dmg` | 打开磁盘映像，将 QuestBranch 拖入“应用程序”。 |
 | macOS Intel | `QuestBranch-…-macos-x64.dmg` | 与 Apple Silicon 安装方式相同，选择 x64 附件。 |
-| Ubuntu / Debian x64 | `QuestBranch-…-linux-x64.deb` | 用系统软件安装器或 `sudo apt install ./文件名.deb` 安装。 |
-| Linux x64 便携版 | `QuestBranch-…-linux-x64.AppImage` | 赋予执行权限后运行：`chmod +x 文件名.AppImage`，再 `./文件名.AppImage`。 |
+| Ubuntu / Debian x64 | `QuestBranch-…-linux-amd64.deb` | 用系统软件安装器或 `sudo apt install ./文件名.deb` 安装。 |
+| Linux x64 便携版 | `QuestBranch-…-linux-x86_64.AppImage` | 赋予执行权限后运行：`chmod +x 文件名.AppImage`，再 `./文件名.AppImage`。 |
 
 首轮 macOS 成品在 macOS 15 的两种原生架构验收；Linux 成品在 Ubuntu 24.04 x64 验收。其他系统版本、发行版、桌面环境和 ARM Linux 尚未覆盖。
 

@@ -7,7 +7,7 @@ Windows、macOS、Linux 开发者预发布，非 Latest。项目采用 MIT；第
 - `QuestBranch-Setup-0.3.0-dev.5-x64.exe`：Windows x64 当前用户安装程序。
 - `QuestBranch-0.3.0-dev.5-windows-x64.zip`：Windows 完整免安装包，解压后用 `Start-QuestBranch.cmd` 隔离试用。
 - `QuestBranch-0.3.0-dev.5-macos-arm64.dmg` / `macos-x64.dmg`：分别用于 Apple Silicon / Intel，拖入“应用程序”安装。
-- `QuestBranch-0.3.0-dev.5-linux-x64.deb` / `linux-x64.AppImage`：Linux x64 安装与便携包，Ubuntu 优先使用 DEB。
+- `QuestBranch-0.3.0-dev.5-linux-amd64.deb` / `linux-x86_64.AppImage`：Linux x64 安装与便携包，Ubuntu 优先使用 DEB。
 - `SHA256SUMS.txt`：全部附件的 SHA-256；`VERIFICATION.json`：公开构建提交、实际成品与验收结果。
 - `README-TRIAL.md`：资料位置、安装、升级和恢复说明。
 

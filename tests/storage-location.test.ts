@@ -6,7 +6,9 @@ import {
   mkdtempSync,
   readFileSync,
   readdirSync,
+  realpathSync,
   statSync,
+  symlinkSync,
   writeFileSync,
 } from 'node:fs'
 import { rm } from 'node:fs/promises'
@@ -24,8 +26,11 @@ import type { ResearchRun } from '../src/research/types'
 const roots: string[] = []
 const stores: ResearchStore[] = []
 function fixture() {
-  const root = mkdtempSync(join(tmpdir(), 'questbranch-storage-test-'))
-  roots.push(root)
+  const temporary = mkdtempSync(join(tmpdir(), 'questbranch-storage-test-'))
+  roots.push(temporary)
+  // macOS /var is an alias for /private/var. Production migration deliberately
+  // persists canonical paths; fixture expectations must use the same identity.
+  const root = realpathSync(temporary)
   const userData = join(root, 'profile')
   const source = join(userData, 'research')
   const target = join(root, '自选保存位置')
@@ -64,6 +69,19 @@ afterEach(async () => {
 })
 
 describe('自选保存位置与完整迁移', () => {
+  it('目录别名迁移保存规范路径，重开保留同一研究且不删除源库', async () => {
+    const { root, userData, source, target, store } = fixture()
+    const alias = join(root, 'destination-alias')
+    symlinkSync(target, alias, process.platform === 'win32' ? 'junction' : 'dir')
+    const before = store.exportWorkspace('welcome-research')
+    await expect(relocateResearchStorage(store, userData, alias)).resolves.toBe(target)
+    expect(loadStorageLocation(userData)).toEqual({ directory: target, source: 'preference' })
+    const reopened = new ResearchStore(loadStorageLocation(userData).directory)
+    stores.push(reopened)
+    expect(reopened.exportWorkspace('welcome-research')).toEqual(before)
+    expect(existsSync(join(source, 'research.sqlite'))).toBe(true)
+  })
+
   it('优先使用显式启动覆盖，默认位置保持兼容', () => {
     const { root, userData, target } = fixture()
     expect(loadStorageLocation(userData)).toEqual({

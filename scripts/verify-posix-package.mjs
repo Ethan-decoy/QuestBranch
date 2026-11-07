@@ -105,7 +105,9 @@ const builtAsar = sha256(built.archive)
 const assets =
   process.platform === 'darwin'
     ? [`QuestBranch-${version}-macos-${process.arch}.dmg`]
-    : [`QuestBranch-${version}-linux-x64.deb`, `QuestBranch-${version}-linux-x64.AppImage`]
+    : [`QuestBranch-${version}-linux-amd64.deb`, `QuestBranch-${version}-linux-x86_64.AppImage`]
+for (const asset of assets)
+  assert(existsSync(join('release', asset)), `Missing native asset: ${asset}`)
 let installed, signature
 if (process.platform === 'darwin') {
   const mount = join(temporary, 'dmg')

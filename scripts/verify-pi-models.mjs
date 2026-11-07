@@ -166,10 +166,16 @@ const timeout = setTimeout(() => {
   app.exit(1)
 }, 60000)
 app.on('browser-window-created', (_, window) => {
+  window.webContents.setBackgroundThrottling(false)
   window.setContentSize(1440, 960)
   window.webContents.once('did-finish-load', async () => {
-    const evaluate = (fn, value) =>
-      window.webContents.executeJavaScript(`(${fn.toString()})(${JSON.stringify(value) ?? ''})`)
+    const evaluate = async (fn, value) => {
+      const result = await window.webContents.executeJavaScript(
+        `(async () => { try { return { value: await (${fn.toString()})(${JSON.stringify(value) ?? ''}) } } catch (error) { return { error: String(error), stack: error.stack } } })()`,
+      )
+      if (result.error) throw new Error(`${result.error}\n${result.stack}\n${fn.toString()}`)
+      return result.value
+    }
     const poll = async (fn, value) => {
       const started = Date.now()
       while (Date.now() - started < 10000) {
@@ -215,6 +221,15 @@ app.on('browser-window-created', (_, window) => {
     const snapshot = () => evaluate(() => window.questbranch.snapshot())
     const command = (command) => evaluate((command) => window.questbranch.command(command), command)
     const capture = async (name) => {
+      window.show()
+      window.focus()
+      window.webContents.focus()
+      await evaluate(
+        () =>
+          new Promise((done) =>
+            requestAnimationFrame(() => requestAnimationFrame(() => done(null))),
+          ),
+      )
       await new Promise((done) => setTimeout(done, 450))
       writeFileSync(join(root, name), (await window.webContents.capturePage()).toPNG())
     }
@@ -271,7 +286,7 @@ app.on('browser-window-created', (_, window) => {
         }
         await capture(`preset-${id}.png`)
         await input('服务地址', id === 'ollama' ? baseUrl.replace('/v1', '/ollama') : baseUrl)
-        if (id !== 'ollama') await input('API Key', 'fixture-key')
+        if (id !== 'ollama') await input('API 密钥', 'fixture-key')
         await click('连接服务')
         await poll(() => document.querySelector('.provider-status.connected'))
         assert.ok(
@@ -351,7 +366,7 @@ app.on('browser-window-created', (_, window) => {
       )
       await capture('manual-model.png')
       await input('服务地址', baseUrl.replace('/v1', '/denied'))
-      await input('API Key', 'fixture-key')
+      await input('API 密钥', 'fixture-key')
       await click('连接服务')
       await poll(() => !!document.querySelector('.modal .inline-error'))
       const error = await evaluate(() => document.querySelector('.modal .inline-error').textContent)
@@ -468,8 +483,9 @@ app.on('browser-window-created', (_, window) => {
       server.close()
       app.quit()
     } catch (error) {
-      await capture('failure.png')
+      writeFileSync(join(root, 'failed.txt'), error.stack)
       console.error(error.stack)
+      await capture('failure.png').catch(() => {})
       clearTimeout(timeout)
       server.close()
       app.exit(1)

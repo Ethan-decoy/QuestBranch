@@ -620,7 +620,11 @@ app.on('browser-window-created', (_, window) => {
       await evaluate(() => document.querySelector('[aria-label="关闭对话框"]').click())
       await evaluate(() => location.reload())
       await until(() =>
-        evaluate(() => document.querySelector('.composer-send')?.title.includes('Ctrl + Enter')),
+        evaluate(
+          (modifier) =>
+            document.querySelector('.composer-send')?.title.includes(`${modifier} + Enter`),
+          process.platform === 'darwin' ? '⌘' : 'Ctrl',
+        ),
       )
       const beforeShortcutSend = (await snapshot()).runs.length
       await fill('组合键模式换行')
@@ -634,9 +638,13 @@ app.on('browser-window-created', (_, window) => {
       window.webContents.sendInputEvent({
         type: 'keyDown',
         keyCode: 'Enter',
-        modifiers: ['control'],
+        modifiers: [process.platform === 'darwin' ? 'meta' : 'control'],
       })
-      window.webContents.sendInputEvent({ type: 'keyUp', keyCode: 'Enter', modifiers: ['control'] })
+      window.webContents.sendInputEvent({
+        type: 'keyUp',
+        keyCode: 'Enter',
+        modifiers: [process.platform === 'darwin' ? 'meta' : 'control'],
+      })
       await until(async () => (await snapshot()).runs.length === beforeShortcutSend + 1)
       await until(async () => !(await snapshot()).runs.some((run) => run.status === 'running'))
       await shortcuts()
@@ -647,7 +655,7 @@ app.on('browser-window-created', (_, window) => {
       await chooseValue('发送消息快捷键', 'enter')
       await evaluate(() => document.querySelector('[aria-label="关闭对话框"]').click())
       cases.push(
-        'shortcut settings persist after reload; Enter inserts newline in modifier mode and Ctrl+Enter sends',
+        'shortcut settings persist after reload; Enter inserts newline in modifier mode and the platform modifier+Enter sends',
       )
 
       await command({

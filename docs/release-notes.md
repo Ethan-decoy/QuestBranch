@@ -11,6 +11,7 @@ Windows、macOS、Linux 开发者预发布，非 Latest。项目采用 MIT；第
 - 空节点提供模型或智能体入口，以及可编辑的示例提问；只填入空草稿，不覆盖输入或自动发送。
 - 明确连接能力和父节点报告要求。报告由 AI 工具保存在节点内，新方向等待你选择研究。
 - 接收已评审的共享主干与回归，保留现有跨平台交付。运行依赖、固定 SessionWeave 快照及研究格式 3 不变。
+- 增加延迟响应下的真实工具回归，对齐集成等待预算和原生成品的父报告提示检查。
 
 ## 下载与开始
 
@@ -44,6 +45,7 @@ This developer prerelease updates the first-research experience and bilingual do
 - Empty nodes offer the existing model/agent connection entry and an editable sample question. Suggestions fill only empty drafts, without overwriting or sending them.
 - Connection capabilities and parent-report prerequisites are clearer. AI tools save reports under their nodes; child directions do not run automatically.
 - Reviewed shared-main changes and regressions are integrated while retaining native packages. Runtime dependencies, the fixed SessionWeave archive and research format 3 are unchanged.
+- Delayed-response tool regressions align integration-test wait budgets, and packaged prerequisite checks match the new parent-report hint.
 
 ### Download and start
 

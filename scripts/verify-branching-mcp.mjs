@@ -372,7 +372,7 @@ try {
     )
     assert.equal(
       await evaluate(() => document.querySelector('[aria-label="为当前研究添加方向"]').title),
-      '先生成研究报告',
+      '在当前节点对话中保存报告后，再添加方向。',
     )
     await evaluate(() => {
       const node = document.querySelector('.react-flow__node.selected')

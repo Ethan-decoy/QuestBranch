@@ -12,6 +12,9 @@ New-Item -ItemType Directory -Path $qbTemporary | Out-Null
 $qbPreviousVersion = '0.3.0-dev.5'
 $qbPreviousDigest = '6615a9b76060ca6416a8e12467e730a2a62e2e4d982429b7fb15120d2ad756eb'
 $qbPreviousInstallerDigest = '20bcba72ca8b4cc083348385a80894b3008e40d207b72b0ce57f6057726697bd'
+$qbPreviousSourceCommit = '838ce8f3ad83d2a12b4415403217be32eda0ad09'
+$qbPreviousVerifier = Join-Path $qbTemporary 'previous-verifier'
+$qbPreviousVerifierArchive = Join-Path $qbTemporary 'previous-verifier.zip'
 $qbPreviousArchive = Join-Path $qbTemporary 'previous.zip'
 $qbPreviousApp = Join-Path $qbTemporary 'previous'
 function Hash-QbFile([string]$Path) { return (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant() }
@@ -37,8 +40,10 @@ function Remove-QbInstallation([string]$Directory) {
   if ($qbProcess.ExitCode -ne 0) { throw 'Uninstaller failed' }
   Wait-Qb { -not (Test-Path -LiteralPath (Join-Path $Directory 'QuestBranch.exe')) }
 }
-function Invoke-QbResearch([string]$Directory, [string]$Name, [string]$Reopen = '', [switch]$SavedLocation) {
-  $qbArguments = @('scripts/verify-branching-mcp.mjs', "--package-root=$Directory")
+function Invoke-QbResearch([string]$Directory, [string]$Name, [string]$Reopen = '', [switch]$SavedLocation, [switch]$PreviousRelease) {
+  # Prepare predecessor data with that release's pinned UI verification contract.
+  $qbVerifierScript = if ($PreviousRelease) { Join-Path $qbPreviousVerifier 'scripts/verify-branching-mcp.mjs' } else { 'scripts/verify-branching-mcp.mjs' }
+  $qbArguments = @($qbVerifierScript, "--package-root=$Directory")
   if ($Reopen) { $qbArguments += "--reopen=$Reopen" }
   if ($SavedLocation) { $qbArguments += '--saved-location' }
   $qbLog = Join-Path $qbEvidence "$Name.log"
@@ -85,9 +90,15 @@ Expand-Archive -LiteralPath $qbPreviousArchive -DestinationPath $qbPreviousApp
 $qbPreviousInstaller = Join-Path $qbTemporary 'previous-setup.exe'
 Invoke-WebRequest -Uri "https://github.com/Ethan-decoy/QuestBranch/releases/download/v$qbPreviousVersion/QuestBranch-Setup-$qbPreviousVersion-x64.exe" -OutFile $qbPreviousInstaller
 if ((Hash-QbFile $qbPreviousInstaller) -ne $qbPreviousInstallerDigest) { throw 'Published predecessor installer checksum mismatch' }
+$qbPreviousPackage = & git show "${qbPreviousSourceCommit}:package.json"
+if ($LASTEXITCODE -ne 0) { throw 'Published predecessor source is missing from distribution history' }
+if ((($qbPreviousPackage -join "`n") | ConvertFrom-Json).version -ne $qbPreviousVersion) { throw 'Predecessor verifier source version mismatch' }
+& git archive --format=zip "--output=$qbPreviousVerifierArchive" $qbPreviousSourceCommit -- scripts/verify-branching-mcp.mjs scripts/desktop-package.mjs
+if ($LASTEXITCODE -ne 0) { throw 'Cannot extract the frozen predecessor verifier' }
+Expand-Archive -LiteralPath $qbPreviousVerifierArchive -DestinationPath $qbPreviousVerifier
 $qbUpgradeDirectory = Join-Path $qbTemporary '升级验收 QuestBranch'
 Install-Qb $qbPreviousInstaller $qbUpgradeDirectory $qbPreviousVersion
-$qbUpgradeStudy = Invoke-QbResearch $qbUpgradeDirectory 'predecessor-research'
+$qbUpgradeStudy = Invoke-QbResearch $qbUpgradeDirectory 'predecessor-research' -PreviousRelease
 $qbPointer = Join-Path $qbUpgradeStudy 'profile/storage-location.json'
 $qbResearchPath = Join-Path $qbUpgradeStudy 'research'
 @{version=1;directory=$qbResearchPath} | ConvertTo-Json | Set-Content -LiteralPath $qbPointer -Encoding utf8
@@ -107,7 +118,7 @@ Install-Qb (Resolve-Path -LiteralPath $Installer).Path $qbFreshDirectory $qbVers
 if ((Hash-QbFile (Join-Path $qbFreshDirectory 'resources/app.asar')) -ne (Hash-QbFile 'release/win-unpacked/resources/app.asar')) { throw 'Fresh install bytes differ from final build' }
 $qbFreshStudy = Invoke-QbResearch $qbFreshDirectory 'fresh-installed-research'
 $null = Invoke-QbResearch $qbFreshDirectory 'fresh-installed-reopen' $qbFreshStudy
-$qbPortableStudy = Invoke-QbResearch (Join-Path $qbPreviousApp 'win-unpacked') 'old-portable-research'
+$qbPortableStudy = Invoke-QbResearch (Join-Path $qbPreviousApp 'win-unpacked') 'old-portable-research' -PreviousRelease
 $qbBackup = Join-Path $qbPortableStudy 'research.questbranch.json'
 & node scripts/verify-branching-mcp.mjs "--package-root=$qbFreshDirectory" "--restore=$qbBackup" *> (Join-Path $qbEvidence 'portable-import.log')
 if ($LASTEXITCODE -ne 0) { throw 'Portable research import failed' }
@@ -122,7 +133,7 @@ $qbEvidenceRecord = [ordered]@{
   version=$qbVersion; sourceCommit=(& git rev-parse HEAD).Trim(); platform='win32/x64';
   workflowRun=$env:GITHUB_RUN_ID; fixtureOnly=$true; realModelRequests=0;
   freshInstall=$true; customInstallPaths=$true; installBytesMatch=$true;
-  previousVersion=$qbPreviousVersion; previousZipSha256=$qbPreviousDigest; predecessorInstallerSha256=$qbPreviousInstallerDigest; predecessorInstaller='Published NSIS installer';
+  previousVersion=$qbPreviousVersion; previousZipSha256=$qbPreviousDigest; predecessorInstallerSha256=$qbPreviousInstallerDigest; predecessorInstaller='Published NSIS installer'; predecessorVerifierSource=$qbPreviousSourceCommit;
   installerUpgrade=$true; reportsConversationsAndOriginsPreserved=$true; savedStorageLocationPreserved=$true;
   oldPortableJsonImportAndReopen=$true; normalExitAndReopen=$true; uninstallPreservesResearch=$true;
   conversationCases=14; branchingCases=15; lightGraphCases=12; darkGraphCases=12;

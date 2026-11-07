@@ -2,7 +2,7 @@
 
 [简体中文](getting-started.md) · English
 
-This guide is for the **standalone application**. For the DSH integration, use its [getting-started guide](https://github.com/Ethan-decoy/QuestBranch-DSH/blob/main/docs/getting-started.en.md): models, tools and native sessions are managed by the host.
+This guide is for the **standalone application**. For the DSH integration, use its [installation and usage instructions](https://github.com/Ethan-decoy/QuestBranch-DSH/blob/main/README.en.md): models, tools and native sessions are managed by the host.
 
 ## 1. Install and choose your workspace
 

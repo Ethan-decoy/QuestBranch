@@ -8,8 +8,9 @@ import {
   fauxToolCall,
   type Context,
 } from '@earendil-works/pi-ai'
-import { SessionWeave } from 'sessionweave'
+import { RevisionConflictError, SessionWeave } from 'sessionweave'
 import { ResearchStore } from '../src/desktop/store'
+import { SqliteSessionStore } from '../src/desktop/session-store'
 import { ResearchService } from '../src/desktop/service'
 import { PiModels } from '../src/desktop/pi-models'
 import { relocateResearchStorage } from '../src/desktop/storage-location'
@@ -76,7 +77,9 @@ it('同节点多轮、跨节点、关闭重开稳定归属；原文不会重复�
   expect(JSON.stringify(a2.session!.requests)).toContain('A-secret-evidence')
   expect(JSON.stringify(a2.session!.requests)).not.toContain('B-secret-evidence')
   expect(JSON.stringify(b.session!.requests)).not.toContain('A-secret-evidence')
-  expect((await store.sessions.load(a.session!.sessionId))!.messages).toHaveLength(4)
+  expect(
+    (await new SqliteSessionStore(store.sessions).load(a.session!.sessionId))!.messages,
+  ).toHaveLength(4)
   service.shutdown()
   const reopened = new ResearchStore(join(directory, 'data'), { seed: false })
   cleanup.push(() => reopened.close())
@@ -85,7 +88,9 @@ it('同节点多轮、跨节点、关闭重开稳定归属；原文不会重复�
   faux.setResponses([fauxAssistantMessage('重开后的继续')])
   const a3 = await send(next, reopened, root, '重开继续')
   expect(a3.session!.sessionId).toBe(a.session!.sessionId)
-  expect((await reopened.sessions.load(a.session!.sessionId))!.messages).toHaveLength(6)
+  expect(
+    (await new SqliteSessionStore(reopened.sessions).load(a.session!.sessionId))!.messages,
+  ).toHaveLength(6)
 })
 
 it('真实 OM SDK 通过 Pi 模型桥接压缩旧记录并恢复检查点；不预裁 16K 历史', async () => {
@@ -121,7 +126,7 @@ it('真实 OM SDK 通过 Pi 模型桥接压缩旧记录并恢复检查点；不�
   }
   faux.setResponses(Array.from({ length: 45 }, () => response))
   const first = await send(service, store, root, '承接所有已有讨论')
-  const state = (await store.sessions.load(first.session!.sessionId))!
+  const state = (await new SqliteSessionStore(store.sessions).load(first.session!.sessionId))!
   expect(state.messages.slice(0, 16).map((message) => message.id)).toEqual(legacyIds)
   expect(first.session!.bootstrapMessageIds).toEqual(legacyIds)
   expect(observations).toBeGreaterThan(0)
@@ -130,7 +135,10 @@ it('真实 OM SDK 通过 Pi 模型桥接压缩旧记录并恢复检查点；不�
   const second = await send(service, store, root, '短追问')
   expect(second.session!.requests[0].checkpointId).toBe(state.workingMemoryCheckpoints!.at(-1)!.id)
   expect(observations).toBe(observed)
-  const reopened = await SessionWeave.open({ sessionId: state.sessionId, store: store.sessions })
+  const reopened = await SessionWeave.open({
+    sessionId: state.sessionId,
+    store: new SqliteSessionStore(store.sessions),
+  })
   expect((await reopened.inspect()).messageCount).toBe(20)
   expect((await reopened.inspect()).workingMemoryCheckpoint!.id).toBe(
     second.session!.requests[0].checkpointId,
@@ -143,7 +151,7 @@ it('真实 OM SDK 通过 Pi 模型桥接压缩旧记录并恢复检查点；不�
       text: 'next evidence '.repeat(500),
     })),
   )
-  const previous = (await store.sessions.load(state.sessionId))!
+  const previous = (await new SqliteSessionStore(store.sessions).load(state.sessionId))!
   faux.setResponses(
     Array.from({ length: 20 }, () =>
       fauxAssistantMessage('truncated observations', { stopReason: 'length' }),
@@ -156,7 +164,7 @@ it('真实 OM SDK 通过 Pi 模型桥接压缩旧记录并恢复检查点；不�
   })
   await vi.waitFor(() => expect(store.run(failed.id!).status).toBe('failed'), { timeout: 15000 })
   expect(store.run(failed.id!).error).toContain('OM_OUTPUT_INCOMPLETE')
-  const retained = (await store.sessions.load(state.sessionId))!
+  const retained = (await new SqliteSessionStore(store.sessions).load(state.sessionId))!
   expect(retained.workingMemoryCheckpoints).toEqual(previous.workingMemoryCheckpoints)
   expect(retained.messages).toHaveLength(previous.messages.length + 1)
 }, 30000)
@@ -214,7 +222,7 @@ it('原生 Responses 使用完整 wire JSON 和计数接口续传，鉴权错误
   const actorRequests = requests.filter((request) => request.url.endsWith('/responses'))
   expect(JSON.stringify(actorRequests[1].body.input)).toContain('opaque-1')
   expect(actorRequests[1].body.include).toEqual(['reasoning.encrypted_content'])
-  const saved = (await store.sessions.load(first.session!.sessionId))!
+  const saved = (await new SqliteSessionStore(store.sessions).load(first.session!.sessionId))!
   expect(saved.messages).toHaveLength(4)
   expect(saved.nativeCheckpoints).toHaveLength(2)
   expect(JSON.stringify(store.exportWorkspace('welcome-research'))).not.toContain('fixture-secret')
@@ -222,9 +230,9 @@ it('原生 Responses 使用完整 wire JSON 和计数接口续传，鉴权错误
   const { id } = await service.command({ type: 'send-message', nodeId: root, message: '连接错误' })
   await vi.waitFor(() => expect(store.run(id!).status).toBe('failed'))
   expect(store.run(id!).error).toContain('401')
-  expect((await store.sessions.load(saved.sessionId))!.nativeCheckpoints).toEqual(
-    saved.nativeCheckpoints,
-  )
+  expect(
+    (await new SqliteSessionStore(store.sessions).load(saved.sessionId))!.nativeCheckpoints,
+  ).toEqual(saved.nativeCheckpoints)
   expect(generated).toBe(2)
 })
 
@@ -259,7 +267,7 @@ it('实际分页报告和原文回读，已保存请求与真实结果组成完�
   const run = await send(service, store, root, '读取报告和原文')
   expect(run.toolCalls![0].result).toMatchObject({ next_offset: 200 })
   expect(run.toolCalls![1].result).toHaveProperty('page.source')
-  const state = (await store.sessions.load(run.session!.sessionId))!
+  const state = (await new SqliteSessionStore(store.sessions).load(run.session!.sessionId))!
   expect(state.messages.map((message) => message.role)).toEqual([
     'user',
     'assistant',
@@ -275,13 +283,13 @@ it('SQLite 迁移保留活动会话；导出恢复保留原始档案并建立独
   const { directory, store, service, faux, root } = setup()
   faux.setResponses([fauxAssistantMessage('迁移前的完整回答')])
   const run = await send(service, store, root, '迁移测试输入')
-  const before = (await store.sessions.load(run.session!.sessionId))!
+  const before = (await new SqliteSessionStore(store.sessions).load(run.session!.sessionId))!
   const target = join(directory, 'target')
   mkdirSync(target)
   await relocateResearchStorage(store, join(directory, 'profile'), target)
   const relocated = new ResearchStore(target, { seed: false })
   cleanup.push(() => relocated.close())
-  expect(await relocated.sessions.load(before.sessionId)).toEqual(before)
+  expect(await new SqliteSessionStore(relocated.sessions).load(before.sessionId)).toEqual(before)
   const recovered = new ResearchStore(join(directory, 'recovered'), { seed: false })
   cleanup.push(() => recovered.close())
   recovered.importWorkspace(store.exportWorkspace('welcome-research'))
@@ -294,7 +302,9 @@ it('SQLite 迁移保留活动会话；导出恢复保留原始档案并建立独
   faux.setResponses([fauxAssistantMessage('导入后继续')])
   const resumed = await send(next, recovered, root, '独立恢复')
   expect(resumed.session!.sessionId).not.toBe(before.sessionId)
-  const current = (await recovered.sessions.load(resumed.session!.sessionId))!
+  const current = (await new SqliteSessionStore(recovered.sessions).load(
+    resumed.session!.sessionId,
+  ))!
   expect(current.messages.slice(0, 2).map((message) => message.text)).toEqual(
     before.messages.map((message) => message.text),
   )
@@ -355,7 +365,9 @@ it('原生 Anthropic 根据同部署 Models 核实能力；工具结果和签名
   expect(JSON.stringify(requests[1])).toContain('signed-opaque')
   expect(JSON.stringify(requests[1])).toContain('tool_result')
   expect(
-    (await store.sessions.load(run.session!.sessionId))!.messages.map((message) => message.role),
+    (await new SqliteSessionStore(store.sessions).load(run.session!.sessionId))!.messages.map(
+      (message) => message.role,
+    ),
   ).toEqual(['user', 'assistant', 'tool', 'assistant'])
   supported = null
   // A new deployment identity cannot inherit the old capability proof.
@@ -403,7 +415,7 @@ it('中断后的 pending 工具与导入恢复只补记账本真实结果，不�
   const run = await send(service, store, root, '建立会话')
   const session = await SessionWeave.open({
     sessionId: run.session!.sessionId,
-    store: store.sessions,
+    store: new SqliteSessionStore(store.sessions),
   })
   const target = store.snapshot().nodes.find((node) => node.parentId === root)!
   const call = {
@@ -434,7 +446,9 @@ it('中断后的 pending 工具与导入恢复只补记账本真实结果，不�
   const repeated = vi.spyOn(recovered, 'removeBranch')
   faux.setResponses([fauxAssistantMessage('从导入收据恢复')])
   const imported = await send(recovery, recovered, root, '核对导入收据')
-  const importedState = (await recovered.sessions.load(imported.session!.sessionId))!
+  const importedState = (await new SqliteSessionStore(recovered.sessions).load(
+    imported.session!.sessionId,
+  ))!
   expect(
     importedState.messages.find((message) => message.role === 'tool' && message.callId === call.id),
   ).toMatchObject({ isError: false })
@@ -443,7 +457,7 @@ it('中断后的 pending 工具与导入恢复只补记账本真实结果，不�
   await send(service, store, root, '继续，先核对')
   expect(remove).not.toHaveBeenCalled()
   expect((await session.inspect()).pendingCallIds).toEqual([])
-  const state = (await store.sessions.load(session.sessionId))!
+  const state = (await new SqliteSessionStore(store.sessions).load(session.sessionId))!
   expect(
     state.messages.filter((message) => message.role === 'tool' && message.callId === call.id),
   ).toHaveLength(1)
@@ -472,7 +486,7 @@ it('整理报告与普通对话共用节点会话，截断回复仅保存到 QB 
     expect(store.run(report.id!).status, store.run(report.id!).error).toBe('completed'),
   )
   expect(store.run(report.id!).session!.sessionId).toBe(chat.session!.sessionId)
-  const before = (await store.sessions.load(chat.session!.sessionId))!
+  const before = (await new SqliteSessionStore(store.sessions).load(chat.session!.sessionId))!
   faux.setResponses([fauxAssistantMessage('这是一段截断草稿', { stopReason: 'length' })])
   const truncated = await service.command({
     type: 'send-message',
@@ -481,7 +495,7 @@ it('整理报告与普通对话共用节点会话，截断回复仅保存到 QB 
   })
   await vi.waitFor(() => expect(store.run(truncated.id!).status).toBe('failed'))
   expect(store.run(truncated.id!).output).toContain('截断草稿')
-  const after = (await store.sessions.load(before.sessionId))!
+  const after = (await new SqliteSessionStore(store.sessions).load(before.sessionId))!
   expect(after.messages).toHaveLength(before.messages.length + 1)
   expect(after.messages.at(-1)!.role).toBe('user')
   expect(after.workingMemoryCheckpoints).toEqual(before.workingMemoryCheckpoints)
@@ -508,7 +522,7 @@ it('SQLite 原子修订与固定前缀候选采用，完整包在重开后仍可
   }
   const session = await SessionWeave.open({
     sessionId: owner.sessionId,
-    store: store.sessions,
+    store: new SqliteSessionStore(store.sessions),
     workingMemory: engine,
   })
   await session.append([
@@ -523,17 +537,32 @@ it('SQLite 原子修订与固定前缀候选采用，完整包在重开后仍可
     model: { id: 'store-fixture', contextWindow: 8000, countTokens: () => 100 },
     outputReserveTokens: 1000,
   })
-  const saved = (await store.sessions.load(owner.sessionId))!
+  const saved = (await new SqliteSessionStore(store.sessions).load(owner.sessionId))!
   expect(saved.version).toBe(3)
   expect(saved.workingMemoryCheckpoints!.at(-1)!.version).toBe(2)
   expect(saved.appendLog).toHaveLength(2)
   expect(
-    (await SessionWeave.open({ sessionId: owner.sessionId, store: store.sessions })).sessionId,
+    (
+      await SessionWeave.open({
+        sessionId: owner.sessionId,
+        store: new SqliteSessionStore(store.sessions),
+      })
+    ).sessionId,
   ).toBe(owner.sessionId)
   await expect(
     session.append([{ id: 'a2', role: 'assistant', text: '错误修订' }], {
       expectedRevision: prepared.revision - 1,
     }),
   ).rejects.toMatchObject({ code: 'REVISION_CONFLICT' })
-  expect(await store.sessions.load(owner.sessionId)).toEqual(saved)
+  expect(await new SqliteSessionStore(store.sessions).load(owner.sessionId)).toEqual(saved)
+  const adapter = new SqliteSessionStore(store.sessions)
+  await expect(adapter.commit(owner.sessionId, saved.revision - 1, {})).rejects.toBeInstanceOf(
+    RevisionConflictError,
+  )
+  const cancelled = new AbortController()
+  cancelled.abort(new Error('cancelled storage write'))
+  await expect(
+    adapter.commit(owner.sessionId, saved.revision, {}, cancelled.signal),
+  ).rejects.toThrow('cancelled storage write')
+  expect(await adapter.load(owner.sessionId)).toEqual(saved)
 })

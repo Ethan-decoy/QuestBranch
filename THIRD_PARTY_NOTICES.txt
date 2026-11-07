@@ -13,7 +13,7 @@ SessionWeave snapshot has an explicit supplemental MIT grant below.
 Those manifests and standard terms are preserved below; no separate upstream
 copyright notice was supplied or invented. Other entries preserve original notices.
 
-Lockfile SHA-256: b979e72686f53851c2becc8b57a3978bc3c3ca52915b40496a5c0b2c9883581f
+Lockfile SHA-256: 7e1b30c5ed11e024e0f4e75e92133cdd0fdb29d41275bd97595477d4dbf963ff
 Packages: 482
 Identical notice texts are printed once with all applicable packages listed.
 

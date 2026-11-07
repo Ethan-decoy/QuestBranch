@@ -2,19 +2,24 @@ import { uiLocale } from '../i18n'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { useEffect, useRef } from 'react'
-import { LoaderCircle, MessageSquare, FileText } from 'lucide-react'
+import { LoaderCircle, MessageSquare, FileText, Sparkles, CornerDownLeft } from 'lucide-react'
 import { useApp } from './state'
 import { Button, Feedback } from './components'
 import { AgentActivity, ToolActivities } from './agent-activity'
 import { useTranslation } from 'react-i18next'
 import { runtimeLabel } from './i18n-labels'
+import { client } from './client'
 
 export function Conversation({
   nodeId,
   onReadReport,
+  onUseSuggestion,
+  hasDraft,
 }: {
   nodeId: string
   onReadReport: () => void
+  onUseSuggestion: (message: string) => void
+  hasDraft: boolean
 }) {
   const { t } = useTranslation()
   const snapshot = useApp((state) => state.snapshot)!
@@ -63,8 +68,35 @@ export function Conversation({
       {!messages.length && (
         <div className="conversation-empty">
           <MessageSquare size={25} strokeWidth={1.4} />
-          <h3>{t('开始对话')}</h3>
-          <p>{t('在下方输入问题。')}</p>
+          <h3>{reports.length ? t('承接已有研究，继续对话') : t('从这个问题开始')}</h3>
+          <p>
+            {reports.length
+              ? t('可以从已有报告继续提问。')
+              : t('先讨论问题，再通过对话保存报告与研究方向。')}
+          </p>
+          {!reports.length && (
+            <div className="research-start-actions">
+              <Button variant="ghost" onClick={() => useApp.getState().open('models')}>
+                <Sparkles size={14} />
+                {client.host ? t('选择 DSH 模型') : t('选择模型或智能体')}
+              </Button>
+              {!hasDraft && (
+                <Button
+                  title={t('填入可修改的提问，不会自动发送')}
+                  onClick={() =>
+                    onUseSuggestion(
+                      t(
+                        '请围绕当前问题明确研究目标与约束，提出可独立深入的方向。将这份研究计划保存为阶段报告，并建立待研究方向；暂时不要继续研究子分支。',
+                      ),
+                    )
+                  }
+                >
+                  <CornerDownLeft size={14} />
+                  {t('填入示例提问')}
+                </Button>
+              )}
+            </div>
+          )}
           {!!reports.length && (
             <Button onClick={onReadReport}>
               <FileText size={14} />

@@ -1,12 +1,14 @@
 import type { Workspace, ResearchNode, Report } from './types'
 
+export const STARTER_WORKSPACE_ID = 'welcome-research'
+
 export function starterResearch(): {
   workspace: Workspace
   nodes: ResearchNode[]
   reports: Report[]
 } {
   const createdAt = new Date().toISOString(),
-    workspaceId = 'welcome-research'
+    workspaceId = STARTER_WORKSPACE_ID
   const workspace: Workspace = {
     id: workspaceId,
     name: '探索 AI 原生研究工作台',

@@ -3,7 +3,7 @@ import { mkdirSync, existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { createCipheriv, createDecipheriv, createHash, randomBytes, randomUUID } from 'node:crypto'
 import { z } from 'zod'
-import { SqliteSessionStore } from './session-store'
+import { SqliteSessionArchive } from './session-archive'
 import {
   defaultSettings,
   palette,
@@ -293,7 +293,7 @@ const exportSchema = z.object({
 export class ResearchStore {
   private db: DatabaseSync
   private codec: CredentialCodec
-  readonly sessions: SqliteSessionStore
+  readonly sessions: SqliteSessionArchive
   private transactionDepth = 0
   constructor(
     readonly directory: string,
@@ -322,7 +322,7 @@ export class ResearchStore {
       CREATE TABLE IF NOT EXISTS messages (id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL REFERENCES workspaces(id), node_id TEXT NOT NULL REFERENCES nodes(id), run_id TEXT NOT NULL REFERENCES runs(id), role TEXT NOT NULL, payload TEXT NOT NULL, UNIQUE(run_id,role));
       CREATE INDEX IF NOT EXISTS messages_node ON messages(node_id);
       PRAGMA user_version=3;`)
-    this.sessions = new SqliteSessionStore(this.db)
+    this.sessions = new SqliteSessionArchive(this.db)
     if (options.seed !== false && !this.all<Workspace>('workspaces').length) {
       const initial = starterResearch()
       this.transaction(() => {

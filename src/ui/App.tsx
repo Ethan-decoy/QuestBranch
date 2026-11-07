@@ -17,8 +17,8 @@ import {
   PanelLeftOpen,
   X,
 } from 'lucide-react'
-import { useApp, download, flushView } from './state'
-import { branchPrerequisite, branchReport } from '../research/branching'
+import { useApp, download, flushView, flushViewNow } from './state'
+import { branchReport } from '../research/branching'
 import { client } from './client'
 import { Button, Logo, SignalIcon, StatusLabel, nodeStatus } from './components'
 import { ResearchGraph } from './graph'
@@ -30,7 +30,7 @@ import { displayBranchColor } from './theme-colors'
 import { PanelResizer } from './panel-resizer'
 import { resizeWorkbenchPane, workbenchLayout, type WorkbenchPane } from './workbench-layout'
 import { useTranslation } from 'react-i18next'
-import { runtimeLabel } from './i18n-labels'
+import { STARTER_WORKSPACE_ID } from '../research/seed'
 
 export function App() {
   const { t } = useTranslation()
@@ -161,6 +161,16 @@ export function App() {
       setExporting(false)
     }
   }
+  async function managePlugin() {
+    try {
+      await flushViewNow()
+      await client.host?.managePlugin()
+    } catch (error) {
+      useApp
+        .getState()
+        .setError(error instanceof Error ? error.message : t('无法打开 DSH 插件管理'))
+    }
+  }
   async function importData(file: File) {
     try {
       if (file.size > 64 * 1024 * 1024)
@@ -240,12 +250,25 @@ export function App() {
                     <GitBranch size={16} />
                   </span>
                   <strong>{w.name}</strong>
+                  {w.id === STARTER_WORKSPACE_ID && (
+                    <span className="workspace-example">{t('示例')}</span>
+                  )}
                   <span className="workspace-node-count" title={t('研究节点数')}>
                     {snapshot.nodes.filter((n) => n.workspaceId === w.id && !n.removedAt).length}
                   </span>
                 </button>
               ))}
             </nav>
+            {workspace.id === STARTER_WORKSPACE_ID && snapshot.workspaces.length === 1 && (
+              <Button
+                className="start-own-research"
+                variant="ghost"
+                onClick={() => open('workspace')}
+              >
+                <Plus size={14} />
+                {t('创建自己的研究')}
+              </Button>
+            )}
           </div>
           <div className="sidebar-section directions">
             <div className="sidebar-label">
@@ -315,12 +338,25 @@ export function App() {
           >
             <ArrowUpFromLine size={15} />
           </button>
-          <span
-            className="local-label"
-            title={t('本地存储 · QuestBranch {{version}}', { version })}
-          >
-            v{version}
-          </span>
+          {client.host ? (
+            <button
+              className="local-label host-version"
+              aria-label={t('在 DSH 中管理 QuestBranch 插件')}
+              title={t('QuestBranch {{version}} · DSH 插件管理', {
+                version: client.host.version,
+              })}
+              onClick={() => void managePlugin()}
+            >
+              v{client.host.version}
+            </button>
+          ) : (
+            <span
+              className="local-label"
+              title={t('本地存储 · QuestBranch {{version}}', { version })}
+            >
+              v{version}
+            </span>
+          )}
         </div>
       </aside>
       <PanelResizer
@@ -413,7 +449,7 @@ export function App() {
               title={
                 branchReport(snapshot, view.selectedId, view)
                   ? t('添加研究方向')
-                  : runtimeLabel(branchPrerequisite)
+                  : t('在当前节点对话中保存报告后，再添加方向。')
               }
               disabled={!branchReport(snapshot, view.selectedId, view)}
               onClick={() => open('node')}

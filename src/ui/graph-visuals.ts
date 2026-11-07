@@ -19,7 +19,10 @@ export function graphSignals(
     waiting = new Set<string>()
   for (const run of snapshot.runs) {
     if (run.status === 'running') {
-      if (run.agent?.requests.some((request) => request.status === 'pending'))
+      if (
+        run.agent?.waitingForResponse ||
+        run.agent?.requests.some((request) => request.status === 'pending')
+      )
         waiting.add(run.nodeId)
       else running.add(run.nodeId)
     }

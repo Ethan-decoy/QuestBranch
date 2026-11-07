@@ -5,6 +5,8 @@ import { Modal, Button, Feedback, nodeStatus, StatusLabel } from './components'
 import { useApp } from './state'
 import { SettingsDialog } from './settings-dialog'
 import { ModelsDialog } from './models/dialog'
+import { HostModelsDialog } from './models/host-picker'
+import { client } from './client'
 import { useTheme } from './theme'
 import { displayBranchColor } from './theme-colors'
 import { searchResearch, type ResearchSearchHit } from './research-search'
@@ -18,10 +20,11 @@ import { useTranslation } from 'react-i18next'
 
 export function AppDialogs() {
   const dialog = useApp((s) => s.dialog)
+  const nodeId = useApp((s) => s.view?.selectedId ?? '')
   if (dialog === 'workspace' || dialog === 'node' || dialog === 'sibling' || dialog === 'edit')
     return <QuestionDialog kind={dialog} key={dialog} />
   if (dialog === 'settings') return <SettingsDialog />
-  if (dialog === 'models') return <ModelsDialog />
+  if (dialog === 'models') return client.host ? <HostModelsDialog key={nodeId} /> : <ModelsDialog />
   if (dialog === 'search') return <SearchDialog />
   if (dialog === 'compare') return <CompareDialog />
   return null
@@ -135,7 +138,9 @@ function QuestionDialog({ kind }: { kind: 'workspace' | 'node' | 'sibling' | 'ed
               onChange={(event) => setSourceReportId(event.target.value)}
               disabled={submitting || !sourceReports.length}
             >
-              {!sourceReports.length && <option value="">{t('先生成研究报告')}</option>}
+              {!sourceReports.length && (
+                <option value="">{t('先在当前父节点对话中保存报告')}</option>
+              )}
               {sourceReports.map((report, index) => (
                 <option key={report.id} value={report.id}>
                   v{index + 1} · {report.title}

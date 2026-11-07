@@ -4,6 +4,8 @@
 
 **AI-Native Branching Research Workspace**
 
+**See where each research branch stands. Continue from what you have learned.**
+
 Start with a question and let your research grow into branches. A visual research map shows what each direction has uncovered and which questions remain. Select a node to continue researching with AI using the material already collected.
 
 Each node represents a research topic and keeps its conversations, full reports, sources, and report history. Follow-up questions become child nodes that you can explore further.
@@ -15,20 +17,32 @@ This repository provides the standalone application's source code, releases, and
   <img src="docs/images/workspace-light.png" alt="QuestBranch research workspace with branch navigation, a research map, and reports">
 </picture>
 
-## Download and try
+## Choose your edition
 
-**Windows, macOS and Linux developer prereleases**
+| Edition                                                                                  | Models and tools                                   | Where to start                                                                                               |
+| ---------------------------------------------------------------------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Standalone app (this repository)                                                         | Your model account, API, Ollama or ACP agent       | [Download](https://github.com/Ethan-decoy/QuestBranch/releases) · [Install](docs/desktop-installation.en.md) |
+| [DSH integration](https://github.com/Ethan-decoy/QuestBranch-DSH/blob/main/README.en.md) | DeepSeek Harness models, tools and native sessions | Use the plugin's installation and compatibility instructions.                                                |
 
-Choose a published version from [Releases](https://github.com/Ethan-decoy/QuestBranch/releases), download the asset matching your OS and CPU, and verify `SHA256SUMS.txt`. Windows offers an installer and an isolated ZIP; macOS has Apple Silicon and Intel DMGs; Linux x64 has DEB and AppImage packages. No Node.js or pnpm installation is required. Available targets depend on the actual assets in each release.
+## Download and start
 
-See the [installation guide (Chinese / English)](docs/desktop-installation.md) and the [Windows isolated trial guide](docs/windows-trial.md). Windows is unsigned; macOS uses ad-hoc signatures without Developer ID or notarization. Automatic updates are not provided.
+Published developer previews provide Windows x64 installer/ZIP, Apple Silicon and Intel macOS DMGs, and Linux x64 DEB/AppImage packages. Choose the actual release asset matching your OS and CPU, then verify SHA256SUMS.txt. Application packages do not require Node.js or pnpm.
+
+See [installation and upgrades](docs/desktop-installation.en.md), the [Windows isolated trial](docs/windows-trial.en.md), and [FAQ](docs/faq.en.md). Windows is unsigned; Mac uses ad-hoc signing without Developer ID or notarization. Tested OS versions and limitations are recorded with each release.
+
+1. Read the example or create your own research space and root question.
+2. Connect a model or an agent. Tools and web search depend on the chosen connection; an account login alone does not enable them.
+3. Discuss in a node. When directions are clear, ask AI to save a stage report and create those pending branches.
+4. Select a direction to continue, compare specific report versions, then quit and reopen to resume.
+
+The example stays available. Chat suggestions only fill editable drafts; child research does not run automatically. Follow the complete [first-research guide](docs/getting-started.en.md).
 
 ## Features
 
 - Organize questions on a research canvas; expand or collapse branches, search, compare reports, and synthesize findings across directions.
 - Continue conversations within a node. AI tools can save stage reports and agreed child branches while preserving original messages and report history.
 - Connect supported accounts, API services, and Ollama through Pi AI, or use an agent's own tools and skills through ACP.
-- Store research locally in SQLite, with workspace export and restore. The desktop app supports choosing a research storage location and migrating data.
+- Store research locally in SQLite, with workspace export and restore. The standalone desktop app supports choosing a research storage location and migrating data.
 - Use a desktop-first workspace, with a local browser preview backed by the same research service.
 - Simplified Chinese is the default interface language. Switch to English in **Settings → General** and save your local preference; research content stays in its original language.
 
@@ -52,13 +66,13 @@ pnpm preview        # Run the built browser preview
 pnpm start          # Run the built Electron application
 pnpm package:dir    # Build the current platform's app directory in release/
 pnpm package:win    # Windows NSIS installer
-pnpm package:mac    # Native macOS DMG
-pnpm package:linux  # Native Linux DEB and AppImage
-pnpm notices        # Generate notices for the installed platform dependencies
+pnpm package:mac    # DMG for the current Mac architecture
+pnpm package:linux  # Linux DEB and AppImage
+pnpm notices        # Generate notices for installed production dependencies
 pnpm notices:check  # Check third-party notices against installed locked dependencies
 ```
 
-Build packages on their target operating system; use `--arm64` or `--x64` for the respective Mac architecture. Package commands generate platform-specific notices and explicitly do not publish. Exit QB before replacing an application directory. The Windows entry point remains `release/win-unpacked/QuestBranch.exe`. See the installation guide and release verification for the actual tested environments.
+Build packages on their target OS; use `--arm64` or `--x64` for Mac architectures. Packaging generates the platform's production-license inventory and explicitly avoids publication. Exit QB before replacing an application directory; the Windows entry is `release/win-unpacked/QuestBranch.exe`. See the [installation guide](docs/desktop-installation.en.md) and release assets for the verified OS/CPU scope.
 
 ## Connect models and save research
 
@@ -68,7 +82,7 @@ For an API service, select a provider and enter your key. Custom services also r
 
 Press Enter to send and Shift+Enter for a new line by default. Change this in **Settings → Shortcuts**. The composer lets you select models and reasoning effort offered by the current connection. When asked to save a report or create agreed research directions, AI uses research tools to save them; child research does not start automatically.
 
-The browser preview uses `.questbranch/` in the project directory by default. The Windows desktop app defaults to `%APPDATA%\questbranch\research`. See the [usage guide (Simplified Chinese)](docs/getting-started.md) for storage migration, export and restore, and environment configuration.
+The browser preview uses `.questbranch/` in the project directory by default. The Windows desktop app defaults to `%APPDATA%\questbranch\research`. See the [usage guide](docs/getting-started.en.md) for storage migration, export and restore, and environment configuration.
 
 ## Source layout
 

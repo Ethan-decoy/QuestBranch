@@ -1,0 +1,49 @@
+# Windows installation and upgrades
+
+[简体中文](https://github.com/Ethan-decoy/QuestBranch/blob/v0.3.0-dev.6/docs/windows-trial.md) · English
+
+Applies to **0.3.0-dev.6 · Windows x64 prerelease**. No Node.js or pnpm is required. Get the actual packages and checksums from [Releases](https://github.com/Ethan-decoy/QuestBranch/releases).
+
+## Installed application
+
+1. Download `QuestBranch-Setup-0.3.0-dev.6-x64.exe` and `SHA256SUMS.txt` for the same release, then verify the hash.
+2. Run the current-user installer and choose a program directory. Administrator installation is not required.
+3. Open QB, read the example or create your own research. Connect your model or agent before starting an AI conversation.
+
+```powershell
+Get-FileHash .\QuestBranch-Setup-0.3.0-dev.6-x64.exe -Algorithm SHA256
+Get-Content .\SHA256SUMS.txt
+```
+
+The installed app uses normal desktop configuration and your saved research location. Inspect or relocate research in Settings → Local storage. Uninstall retains data, including a custom research location; keep independent backups.
+
+## Isolated portable trial
+
+Download `QuestBranch-0.3.0-dev.6-windows-x64.zip`, verify its checksum and extract the entire archive into a writable directory. Keep `win-unpacked/` intact; do not distribute or copy only the EXE. Launch with the top-level `Start-QuestBranch.cmd`.
+
+The script puts research, Electron configuration and bundled Codex configuration into adjacent `data/research/`, `data/profile/` and `data/codex/` directories. They may contain personal content or credentials and should not be shared with feedback.
+
+Directly running `win-unpacked/QuestBranch.exe` uses normal desktop paths and can open daily data. Always use the script for an isolated trial. It sets the research directory, so relocation from Settings is unavailable in this mode. Quit before moving the entire trial directory. Custom ACP backends still follow their own credential and work-directory configuration.
+
+Windows packages are unsigned and may trigger source or SmartScreen notices. The checksum verifies integrity rather than code signing. The release's verification and notes describe the actual status.
+
+## Upgrade an installed application
+
+Stop active work and quit QB. Export important spaces and back up the research directory and configuration. Run the new installer, retaining the intended program and data locations. Reopen and check reports, sources, conversations and connections. This release verifies an upgrade using the actual published `.5` installer.
+
+The portable ZIP's `data/` is separate and is not automatically merged. Export/import research JSON when moving from a portable trial to the installed app; credentials and native state need separate handling.
+
+## Upgrade a portable trial or recover data
+
+1. Quit and back up the complete old `data/` directory.
+2. Extract the new package into an empty directory rather than mixing old and new application files.
+3. Copy the backed-up data into the new trial and use its launch script. Never run two instances against the same directory.
+4. Check the research and reconnect credentials when necessary.
+
+Research format 3 can import formats 1 and 2. JSON contains the research trail, not credentials, external agent files or complete native-session state; it is not a full application backup. Old applications are not guaranteed to read newer data. Roll back with the old app and a complete pre-upgrade backup, rather than just replacing the EXE.
+
+## Scope and help
+
+The release includes the installer and complete ZIP, with fresh-install, custom-path, upgrade, reopen, import and uninstall-retention checks in an isolated runner. Real provider coverage and automatic updates are not guaranteed. Other platforms have their own [installation conditions](https://github.com/Ethan-decoy/QuestBranch/blob/v0.3.0-dev.6/docs/desktop-installation.en.md).
+
+See [your first research](https://github.com/Ethan-decoy/QuestBranch/blob/v0.3.0-dev.6/docs/getting-started.en.md) and [FAQ](https://github.com/Ethan-decoy/QuestBranch/blob/v0.3.0-dev.6/docs/faq.en.md). Report version, OS, connection type and reproducible steps in [Issues](https://github.com/Ethan-decoy/QuestBranch/issues), removing credentials and private research first.

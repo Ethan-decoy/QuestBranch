@@ -1,10 +1,12 @@
 # Windows 安装与升级
 
-适用版本：**0.3.0-dev.5 · Windows x64 预发布**。无需安装 Node.js 或 pnpm。实际附件及校验文件见 [Releases](https://github.com/Ethan-decoy/QuestBranch/releases)。
+简体中文 · [English](https://github.com/Ethan-decoy/QuestBranch/blob/v0.3.0-dev.6/docs/windows-trial.en.md)
+
+适用版本：**0.3.0-dev.6 · Windows x64 预发布**。无需安装 Node.js 或 pnpm。实际附件及校验文件见 [Releases](https://github.com/Ethan-decoy/QuestBranch/releases)。
 
 ## 安装版
 
-1. 下载 `QuestBranch-Setup-0.3.0-dev.5-x64.exe` 与 `SHA256SUMS.txt`，核对 SHA-256。
+1. 下载 `QuestBranch-Setup-0.3.0-dev.6-x64.exe` 与 `SHA256SUMS.txt`，核对 SHA-256。
 2. 运行安装程序，为当前 Windows 用户安装，可选择程序目录，不要求管理员权限。
 3. 安装后通过开始菜单或程序目录中的 QuestBranch 启动，再在“模型与连接”连接自己的服务。
 
@@ -14,12 +16,12 @@
 
 ## 免安装隔离试用
 
-1. 下载完整的 `QuestBranch-0.3.0-dev.5-windows-x64.zip` 和 `SHA256SUMS.txt`，核对校验值。
+1. 下载完整的 `QuestBranch-0.3.0-dev.6-windows-x64.zip` 和 `SHA256SUMS.txt`，核对校验值。
 2. 完整解压到可写目录，例如 `D:\Apps\QuestBranch`。保留 `win-unpacked/` 整个目录，不单独复制 EXE。
 3. 双击顶层 `Start-QuestBranch.cmd`。首次可先新建或浏览研究；对话前在“模型与连接”连接自己的模型或智能体。
 
 ```powershell
-Get-FileHash .\QuestBranch-0.3.0-dev.5-windows-x64.zip -Algorithm SHA256
+Get-FileHash .\QuestBranch-0.3.0-dev.6-windows-x64.zip -Algorithm SHA256
 Get-Content .\SHA256SUMS.txt
 ```
 
@@ -54,8 +56,10 @@ Get-Content .\SHA256SUMS.txt
 
 ## 范围与反馈
 
-本版提供 Windows x64 安装程序和 ZIP。新装、自选路径、升级、研究位置保留、导入与重开和卸载保留资料由隔离 Windows runner 验证。升级验收使用已发布的 v0.3.0-dev.4 安装器和 ZIP，另验证旧 ZIP 的研究迁入安装版。
+本版提供 Windows x64 安装程序和 ZIP。新装、自选路径、升级、研究位置保留、导入与重开和卸载保留资料由隔离 Windows runner 验证。升级验收使用已发布的 v0.3.0-dev.5 安装器和 ZIP，另验证旧 ZIP 的研究迁入安装版。
 
-其他平台的安装与限制见[安装指南](desktop-installation.md)。本版 Windows 未签名，自动更新及真实厂商的全面兼容尚未验证。项目采用 MIT；固定 SessionWeave 快照及第三方组件的许可范围见 [LICENSING.md](../LICENSING.md)。
+其他平台的安装与限制见[安装指南](https://github.com/Ethan-decoy/QuestBranch/blob/v0.3.0-dev.6/docs/desktop-installation.md)。本版 Windows 未签名，自动更新及真实厂商的全面兼容尚未验证。项目采用 MIT；固定 SessionWeave 快照及第三方组件的许可范围见 [LICENSING.md](https://github.com/Ethan-decoy/QuestBranch/blob/v0.3.0-dev.6/LICENSING.md)。
 
 在 [Issues](https://github.com/Ethan-decoy/QuestBranch/issues) 附上版本、系统、连接类型与复现步骤；提供日志或截图前移除密钥和私人研究内容。
+
+继续见[第一次研究](https://github.com/Ethan-decoy/QuestBranch/blob/v0.3.0-dev.6/docs/getting-started.md)与[常见问题](https://github.com/Ethan-decoy/QuestBranch/blob/v0.3.0-dev.6/docs/faq.md)。

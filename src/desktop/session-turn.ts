@@ -14,6 +14,7 @@ import type { ContextPack, SessionTrace, Settings, ResearchRun } from '../resear
 import type { AgentActivity } from '../research/agent'
 import { modelConnectionKey, sessionStrategy } from '../research/api-services'
 import type { ResearchStore } from './store'
+import { SqliteSessionStore } from './session-store'
 import { researchTools, type ResearchToolResult } from './research-tools'
 import type { ModelToolRuntime } from './model-tool-turn'
 import type { Network } from './network'
@@ -51,6 +52,7 @@ export async function sessionTurn(options: {
     options.model.api,
     options.model.baseUrl,
   ])
+  const sessionStore = new SqliteSessionStore(store.sessions)
   const owner = store.sessions.owner(run.workspaceId, run.nodeId, connection)
   const model = {
     ...options.model,
@@ -89,7 +91,7 @@ export async function sessionTurn(options: {
   })
   const session = await SessionWeave.open({
     sessionId: owner.sessionId,
-    store: store.sessions,
+    store: sessionStore,
     workingMemory: memory,
     onEvent(event) {
       if (event.type === 'compaction-started') publish('正在整理会话记忆')
@@ -99,7 +101,7 @@ export async function sessionTurn(options: {
   })
   // First use imports all complete public QB pairs, with stable original IDs. No 16K clipping.
   if (!(await session.inspect()).messageCount) {
-    const imported = store.sessions.importedRaw(run.workspaceId, run.nodeId, connection)
+    const imported = sessionStore.importedRaw(run.workspaceId, run.nodeId, connection)
     if (imported) {
       if (imported.nativeCheckpoints?.some((checkpoint) => !checkpoint.portableComplete))
         throw new Error('导入会话包含无法完整投影的原生内容；源档案已保留，不能静默重建')
@@ -142,7 +144,7 @@ export async function sessionTurn(options: {
   // Interrupted tools are reconciled, never automatically re-executed.
   const pending = (await session.inspect()).pendingCallIds
   if (pending.length) {
-    const state = await store.sessions.load(owner.sessionId)
+    const state = await sessionStore.load(owner.sessionId)
     for (const callId of pending) {
       const call = state?.messages
         .flatMap((message) => (message.role === 'assistant' ? (message.toolCalls ?? []) : []))
@@ -200,7 +202,7 @@ export async function sessionTurn(options: {
     async execute(input: unknown) {
       signal.throwIfAborted()
       const args = this.parameters.parse(input)
-      const state = await store.sessions.load(owner.sessionId)
+      const state = await sessionStore.load(owner.sessionId)
       if (!state?.messages.length) throw new Error('当前会话没有原文')
       const page = await session.readPage(
         {
@@ -328,7 +330,7 @@ export async function sessionTurn(options: {
         options.onResponse?.({ responseId: wire.id, model: wire.model })
       }
       const receipt = await session.accept(context, response, { signal })
-      const state = await store.sessions.load(owner.sessionId)
+      const state = await sessionStore.load(owner.sessionId)
       const parts = state!.messages.filter((message) => receipt.messageIds.includes(message.id))
       if (parts.length !== 1 || parts[0].role !== 'assistant')
         throw new Error('原生响应没有可用的公开回复，完整原生状态已保留')

@@ -4,6 +4,8 @@
 
 **AI-Native Branching Research Workspace**
 
+**看清每条研究分支，接着已有认识继续。**
+
 提出问题，让研究沿着分支逐渐深入。用可视化的研究图看清每个方向已经了解到什么、还有哪些问题，再选中一个节点让 AI 继续研究。
 
 一个节点对应一项研究；节点保存对话、完整报告、来源与报告历史。后续问题成为可以继续深入的子节点。
@@ -15,20 +17,32 @@
   <img src="docs/images/workspace-light.png" alt="问之研究工作台：分支导航、研究图谱与报告">
 </picture>
 
-## 下载与试用
+## 选择使用方式
 
-**Windows、macOS、Linux 开发者预发布**
+| 使用方式                                                   | 模型与工具                                | 开始入口                                                                                           |
+| ---------------------------------------------------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| 独立应用（当前仓库）                                       | 自己的模型账号、API、Ollama 或 ACP 智能体 | [下载](https://github.com/Ethan-decoy/QuestBranch/releases) · [安装](docs/desktop-installation.md) |
+| [DSH 集成](https://github.com/Ethan-decoy/QuestBranch-DSH) | DeepSeek Harness 的模型、工具与原生会话   | 按插件仓库的安装方式与兼容范围使用。                                                               |
 
-从 [Releases](https://github.com/Ethan-decoy/QuestBranch/releases) 选择已发布版本，按系统与处理器架构下载安装包，并核对 `SHA256SUMS.txt`。Windows 提供安装程序和隔离 ZIP，macOS 提供 Apple Silicon / Intel DMG，Linux x64 提供 DEB 与 AppImage。使用安装包无需 Node.js 或 pnpm；各版本提供的平台以实际附件为准。
+## 下载与开始
 
-安装、资料位置与手动升级见[安装指南 / Installation](docs/desktop-installation.md)，Windows 隔离 ZIP 另见 [Windows 指南](docs/windows-trial.md)。Windows 未签名，macOS 使用 ad-hoc 签名、尚无 Developer ID 和公证；自动更新未提供。
+公开开发者预发布提供 Windows x64 安装程序/ZIP、macOS Apple Silicon/Intel DMG、Linux x64 DEB/AppImage。按系统和处理器选择实际发布附件，再核对 SHA256SUMS.txt。运行安装包无需 Node.js 或 pnpm。
+
+安装与手动升级见[安装说明](docs/desktop-installation.md)，隔离 ZIP 见 [Windows 指南](docs/windows-trial.md)，常见条件见 [FAQ](docs/faq.md)。Windows 未签名，Mac 使用 ad-hoc 签名、尚无 Developer ID 和公证；系统实测范围与限制随各版本记录。
+
+1. 阅读示例，或创建自己的研究空间与根问题。
+2. 连接模型或智能体。工具与检索取决于实际连接，账号登录不等于已经开启联网研究。
+3. 在节点中讨论；方向明确后，请 AI 保存阶段报告并建立这些待研究分支。
+4. 选一个方向继续，比较具体报告版本，正常关闭重开后再接着研究。
+
+示例保留可回看；示例提问只填入可编辑草稿，子研究不会自动开始。完整流程见[第一次研究](docs/getting-started.md)。
 
 ## 功能
 
 - 用研究画布组织问题，展开或收起分支，搜索、比较和综合不同方向的报告。
 - 在节点中持续对话，让 AI 通过工具保存阶段报告与已确定的子分支；保留原始消息和报告历史。
 - 通过 Pi AI 使用账号、API 服务与 Ollama，或通过 ACP 使用智能体自身的工具与技能。
-- 用本地 SQLite 保存研究，支持研究空间导出与恢复；桌面可选择研究资料保存位置并迁移数据。
+- 用本地 SQLite 保存研究，支持研究空间导出与恢复；独立桌面可选择研究资料保存位置并迁移数据。
 - 桌面优先，同时提供使用相同研究服务的本地浏览器预览。
 - 默认简体中文，可在“设置 → 通用”切换 English 并保存本机偏好；研究内容保持原文。
 
@@ -58,7 +72,7 @@ pnpm notices        # 按当前平台实际安装的生产依赖生成许可材�
 pnpm notices:check  # 核对本机锁定依赖与第三方声明
 ```
 
-安装包在对应系统构建，Mac 的两种架构分别使用 `--arm64` / `--x64`。打包命令会生成当前平台的许可清单，本地构建显式不发布版本。更新目录包前先退出 QB；Windows 固定入口为 `release/win-unpacked/QuestBranch.exe`。实际系统版本和验证范围见安装指南与发行附件。
+安装包在对应系统构建，Mac 的两种架构分别使用 `--arm64` / `--x64`。打包命令会生成当前平台的许可清单，本地构建显式不发布版本。更新目录包前先退出 QB；Windows 固定入口为 `release/win-unpacked/QuestBranch.exe`。实际系统版本和验证范围见[安装说明](docs/desktop-installation.md)与发行附件。
 
 ## 配置模型与保存研究
 

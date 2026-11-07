@@ -45,7 +45,7 @@ function NodeActions() {
           title={
             branchReport(state.snapshot!, node.id, view)
               ? t('添加子方向 (Ctrl+Enter)')
-              : t('先生成研究报告')
+              : t('在当前节点对话中保存报告后，再添加方向。')
           }
           disabled={!branchReport(state.snapshot!, node.id, view)}
           onClick={() => state.open('node', { returnToGraph: true })}
@@ -59,7 +59,7 @@ function NodeActions() {
               ? t('根问题没有同级方向')
               : branchReport(state.snapshot!, node.parentId, view)
                 ? t('添加同级方向 (Shift+Enter)')
-                : t('先生成研究报告')
+                : t('在父节点对话中保存报告后，再添加同级方向。')
           }
           disabled={!branchReport(state.snapshot!, node.parentId, view)}
           onClick={() => state.open('sibling', { returnToGraph: true })}

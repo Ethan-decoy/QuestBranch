@@ -9,9 +9,9 @@ $qbEvidence = Join-Path $qbRoot 'artifacts/release-evidence'
 New-Item -ItemType Directory -Path $qbEvidence -Force | Out-Null
 $qbTemporary = Join-Path $env:RUNNER_TEMP ('questbranch-installer-' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $qbTemporary | Out-Null
-$qbPreviousVersion = '0.3.0-dev.4'
-$qbPreviousDigest = '1b9b955026e773b16335197dc44da63eaee79e6e8a113faadd2a1d67e03ed9c1'
-$qbPreviousInstallerDigest = 'fa6364d1b0de7de6b8e7a7cadbc3389d874094d89ec55cc3dc399b113ebe0cc8'
+$qbPreviousVersion = '0.3.0-dev.5'
+$qbPreviousDigest = '6615a9b76060ca6416a8e12467e730a2a62e2e4d982429b7fb15120d2ad756eb'
+$qbPreviousInstallerDigest = '20bcba72ca8b4cc083348385a80894b3008e40d207b72b0ce57f6057726697bd'
 $qbPreviousArchive = Join-Path $qbTemporary 'previous.zip'
 $qbPreviousApp = Join-Path $qbTemporary 'previous'
 function Hash-QbFile([string]$Path) { return (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant() }

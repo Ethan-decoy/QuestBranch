@@ -86,6 +86,10 @@ describe('研究图的真实记录与视觉归属', () => {
     expect(signals.running.size).toBe(0)
     expect(signals.waiting.has('budget')).toBe(true)
     expect(signals.descendants.get('context')?.waiting).toBe(1)
+    waiting.agent = { name: 'DSH', activities: [], requests: [], waitingForResponse: true }
+    const host = graphSignals(nodes, { reports: [], runs: [waiting] }, 'visual')
+    expect(host.waiting.has('budget')).toBe(true)
+    expect(host.running.size).toBe(0)
   })
   it('历史工作区不把已有节点误报为新增，查看偏好可跨视图使用', () => {
     const { nodes } = starterResearch(),

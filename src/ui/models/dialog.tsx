@@ -13,7 +13,16 @@ export function ModelsDialog() {
   const [tab, setTab] = useState(backend === 'acp' ? 'acp' : 'model')
   const id = useId()
   return (
-    <Modal title={t('模型与连接')} wide className="models-modal">
+    <Modal
+      title={t('模型与连接')}
+      description={
+        tab === 'acp'
+          ? t('使用智能体的工具与技能；可用能力取决于后端配置。')
+          : t('连接账号、API 或 Ollama；普通模型对话不自动检索网页。')
+      }
+      wide
+      className="models-modal"
+    >
       <div
         className="connection-tabs"
         role="tablist"

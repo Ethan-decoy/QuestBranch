@@ -317,6 +317,13 @@ export type AppCommand =
   | { type: 'cancel-research'; runId: string }
   | { type: 'import-workspace'; data: unknown }
 export interface ResearchClient {
+  host?: {
+    name: string
+    version: string
+    managePlugin(): Promise<void>
+    models(nodeId: string): Promise<import('./agent').NativeModelState>
+    selectModel(nodeId: string, selection: import('./agent').NativeModelSelection): Promise<void>
+  }
   snapshot(): Promise<Snapshot>
   snapshot(sinceVersion: number): Promise<Snapshot | null>
   command(command: AppCommand): Promise<{ id?: string }>

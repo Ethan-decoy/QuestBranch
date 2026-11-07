@@ -11,6 +11,7 @@ import type { ReasoningEffort, Settings } from '../../research/types'
 import type { AgentConnection } from '../../research/agent'
 import { Button, Feedback } from '../components'
 import { restoreAgentSelection } from './agent-selection'
+import { HostModelPicker } from './host-picker'
 import { useTranslation } from 'react-i18next'
 
 function pickerIdentity(settings: Settings) {
@@ -26,6 +27,14 @@ function pickerIdentity(settings: Settings) {
 }
 
 export function ComposerModelPicker({ onBusyChange }: { onBusyChange(busy: boolean): void }) {
+  const nodeId = useApp((s) => s.view?.selectedId ?? '')
+  return client.host ? (
+    <HostModelPicker key={nodeId} onBusyChange={onBusyChange} />
+  ) : (
+    <ProviderModelPicker onBusyChange={onBusyChange} />
+  )
+}
+function ProviderModelPicker({ onBusyChange }: { onBusyChange(busy: boolean): void }) {
   const { t } = useTranslation()
   const settings = useApp((s) => s.snapshot!.settings)
   const researching = useApp((s) => s.snapshot!.runs.some((run) => run.status === 'running'))

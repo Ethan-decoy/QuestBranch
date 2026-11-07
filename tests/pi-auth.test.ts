@@ -10,6 +10,7 @@ import {
   type OAuthAuth,
 } from '@earendil-works/pi-ai'
 import { ResearchStore } from '../src/desktop/store'
+import { SqliteSessionStore } from '../src/desktop/session-store'
 import { PiModels } from '../src/desktop/pi-models'
 import { PiCredentialStore } from '../src/desktop/pi-credentials'
 import { ResearchService } from '../src/desktop/service'
@@ -393,7 +394,9 @@ describe('Pi 账号授权与持久凭据', () => {
           const run = reopened.run(second.id!)
           expect(run.status, run.error).toBe('completed')
           expect(run.session!.sessionId).toBe(first.session!.sessionId)
-          const state = await reopened.sessions.load(first.session!.sessionId)
+          const state = await new SqliteSessionStore(reopened.sessions).load(
+            first.session!.sessionId,
+          )
           expect(state!.messages.filter((message) => message.role === 'assistant')).toHaveLength(2)
           expect(state!.messages.map((message) => message.text)).toContain('账号已承接研究。')
         } finally {

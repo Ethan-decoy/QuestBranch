@@ -266,6 +266,18 @@ button p {
   color: var(--color-text-secondary);
   font-variant-numeric: tabular-nums;
 }
+.workspace-example {
+  color: var(--color-text-secondary);
+  font-size: 10px;
+  flex-shrink: 0;
+}
+.start-own-research {
+  width: 100%;
+  justify-content: flex-start;
+  margin-top: 5px;
+  padding: 7px 6px;
+  font-size: 11px;
+}
 .root-link {
   display: flex;
   align-items: flex-start;
@@ -497,6 +509,16 @@ button p {
   color: var(--color-text-muted);
   font-size: 10px;
   white-space: nowrap;
+}
+.sidebar-bottom > .host-version {
+  width: auto;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+}
+.sidebar-bottom > .host-version:hover {
+  background: var(--color-surface-hover);
 }
 .save-dot {
   display: inline-block;
@@ -3204,6 +3226,15 @@ details[open] > summary .disclosure-marker {
 }
 .conversation-empty .button {
   margin: 18px auto 0;
+}
+.research-start-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.research-start-actions .button {
+  margin: 0;
+  font-size: 12px;
 }
 .flow-surface {
   position: absolute;

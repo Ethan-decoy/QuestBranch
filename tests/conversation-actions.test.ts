@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fauxAssistantMessage, fauxProvider, fauxToolCall } from '@earendil-works/pi-ai'
 import { ResearchStore } from '../src/desktop/store'
+import { SqliteSessionStore } from '../src/desktop/session-store'
 import { ResearchService } from '../src/desktop/service'
 import { PiModels } from '../src/desktop/pi-models'
 import { researchTools } from '../src/desktop/research-tools'
@@ -173,7 +174,9 @@ it('保存工具提交后停止回复仍保留完整报告、分支与真实结�
   const report = store.snapshot().reports.find((report) => report.runId === runId)!
   expect(report.markdown).toBe(savedResearch.report)
   expect(store.snapshot().nodes.filter((node) => node.originReportId === report.id)).toHaveLength(4)
-  const state = await store.sessions.load(store.run(runId).session!.sessionId)
+  const state = await new SqliteSessionStore(store.sessions).load(
+    store.run(runId).session!.sessionId,
+  )
   const result = state!.messages.find((message) => message.role === 'tool')!
   expect(store.sessions.result(state!.sessionId, result.callId!)!.value).toMatchObject({
     report_id: report.id,

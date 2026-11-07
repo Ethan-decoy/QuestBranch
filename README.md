@@ -17,18 +17,18 @@
 
 ## 下载与试用
 
-**Windows x64 开发者预发布**
+**Windows、macOS、Linux 开发者预发布**
 
-从 [Releases](https://github.com/Ethan-decoy/QuestBranch/releases) 选择已发布版本，下载 Windows 安装程序或完整 ZIP，并核对 `SHA256SUMS.txt`。安装程序支持为当前用户安装并选择程序目录；ZIP 解压后双击顶层 `Start-QuestBranch.cmd`，以同级 `data/` 隔离试用。两种方式均无需安装 Node.js 或 pnpm。
+从 [Releases](https://github.com/Ethan-decoy/QuestBranch/releases) 选择已发布版本，按系统与处理器架构下载安装包，并核对 `SHA256SUMS.txt`。Windows 提供安装程序和隔离 ZIP，macOS 提供 Apple Silicon / Intel DMG，Linux x64 提供 DEB 与 AppImage。使用安装包无需 Node.js 或 pnpm；各版本提供的平台以实际附件为准。
 
-安装、资料位置、隔离试用和手动升级见 [Windows 试用指南](docs/windows-trial.md)，具体附件与已知限制以对应版本的发行说明为准。当前未提供签名、自动更新或 macOS/Linux 成品。
+安装、资料位置与手动升级见[安装指南 / Installation](docs/desktop-installation.md)，Windows 隔离 ZIP 另见 [Windows 指南](docs/windows-trial.md)。Windows 未签名，macOS 使用 ad-hoc 签名、尚无 Developer ID 和公证；自动更新未提供。
 
 ## 功能
 
 - 用研究画布组织问题，展开或收起分支，搜索、比较和综合不同方向的报告。
 - 在节点中持续对话，让 AI 通过工具保存阶段报告与已确定的子分支；保留原始消息和报告历史。
 - 通过 Pi AI 使用账号、API 服务与 Ollama，或通过 ACP 使用智能体自身的工具与技能。
-- 用本地 SQLite 保存研究，支持研究空间导出与恢复；Windows 桌面可选择研究资料保存位置并迁移数据。
+- 用本地 SQLite 保存研究，支持研究空间导出与恢复；桌面可选择研究资料保存位置并迁移数据。
 - 桌面优先，同时提供使用相同研究服务的本地浏览器预览。
 - 默认简体中文，可在“设置 → 通用”切换 English 并保存本机偏好；研究内容保持原文。
 
@@ -51,10 +51,14 @@ pnpm build          # Electron 与浏览器构建
 pnpm preview        # 启动构建后的浏览器预览
 pnpm start          # 启动构建后的 Electron 应用
 pnpm package:dir    # 构建并覆盖 release/ 中当前平台的应用目录
+pnpm package:win    # Windows：NSIS
+pnpm package:mac    # macOS：当前架构 DMG
+pnpm package:linux  # Linux：当前架构 DEB 与 AppImage
+pnpm notices        # 按当前平台实际安装的生产依赖生成许可材料
 pnpm notices:check  # 核对本机锁定依赖与第三方声明
 ```
 
-Windows 应用目录的固定入口为 `release/win-unpacked/QuestBranch.exe`。更新前先退出 QB，再次运行 `pnpm package:dir` 覆盖同一目录，本地构建不会发布版本。当前已验证 Windows 本地运行，macOS、Linux 的实际运行和安装包尚未验证；目前未提供签名安装包。
+安装包在对应系统构建，Mac 的两种架构分别使用 `--arm64` / `--x64`。打包命令会生成当前平台的许可清单，本地构建显式不发布版本。更新目录包前先退出 QB；Windows 固定入口为 `release/win-unpacked/QuestBranch.exe`。实际系统版本和验证范围见安装指南与发行附件。
 
 ## 配置模型与保存研究
 

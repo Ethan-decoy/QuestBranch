@@ -9,11 +9,11 @@ $qbEvidence = Join-Path $qbRoot 'artifacts/release-evidence'
 New-Item -ItemType Directory -Path $qbEvidence -Force | Out-Null
 $qbTemporary = Join-Path $env:RUNNER_TEMP ('questbranch-installer-' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $qbTemporary | Out-Null
-$qbPreviousVersion = '0.3.0-dev.3'
-$qbPreviousDigest = '964338f818341512142825484caf3d1916584864bef09ae07e1619dc40adf399'
+$qbPreviousVersion = '0.3.0-dev.4'
+$qbPreviousDigest = '1b9b955026e773b16335197dc44da63eaee79e6e8a113faadd2a1d67e03ed9c1'
+$qbPreviousInstallerDigest = 'fa6364d1b0de7de6b8e7a7cadbc3389d874094d89ec55cc3dc399b113ebe0cc8'
 $qbPreviousArchive = Join-Path $qbTemporary 'previous.zip'
 $qbPreviousApp = Join-Path $qbTemporary 'previous'
-$qbPreviousSource = Join-Path $qbTemporary 'previous-source'
 function Hash-QbFile([string]$Path) { return (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant() }
 function Wait-Qb([scriptblock]$Condition) {
   $qbDeadline = [DateTime]::UtcNow.AddSeconds(45)
@@ -82,20 +82,11 @@ $qbDefaultMarkerHash = Hash-QbFile $qbDefaultMarker
 Invoke-WebRequest -Uri "https://github.com/Ethan-decoy/QuestBranch/releases/download/v$qbPreviousVersion/QuestBranch-$qbPreviousVersion-windows-x64.zip" -OutFile $qbPreviousArchive
 if ((Hash-QbFile $qbPreviousArchive) -ne $qbPreviousDigest) { throw 'Published predecessor archive checksum mismatch' }
 Expand-Archive -LiteralPath $qbPreviousArchive -DestinationPath $qbPreviousApp
-$qbPreviousSourceZip = Join-Path $qbTemporary 'previous-source.zip'
-& git archive --format=zip "--output=$qbPreviousSourceZip" "v$qbPreviousVersion"
-if ($LASTEXITCODE -ne 0) { throw 'Frozen predecessor source unavailable' }
-Expand-Archive -LiteralPath $qbPreviousSourceZip -DestinationPath $qbPreviousSource
-
-# v0.3.0-dev.3 shipped only a ZIP. This NSIS predecessor is a QA fixture,
-# never a claimed historical release or a new attachment to the old version.
-$qbPreviousInstallerOutput = Join-Path $qbTemporary 'previous-installer'
-& pnpm exec electron-builder "--projectDir=$qbPreviousSource" "--prepackaged=$(Join-Path $qbPreviousApp 'win-unpacked')" --win nsis --x64 --publish never "--config.directories.output=$qbPreviousInstallerOutput" --config.nsis.runAfterFinish=false --config.nsis.createDesktopShortcut=false --config.nsis.createStartMenuShortcut=false --config.nsis.oneClick=false --config.nsis.perMachine=false --config.nsis.allowElevation=false --config.nsis.allowToChangeInstallationDirectory=true *> (Join-Path $qbEvidence 'predecessor-installer.log')
-if ($LASTEXITCODE -ne 0) { Get-Content -LiteralPath (Join-Path $qbEvidence 'predecessor-installer.log') -Tail 30; throw 'QA predecessor installer build failed' }
-$qbPreviousInstallers = @(Get-ChildItem -LiteralPath $qbPreviousInstallerOutput -File -Filter '*.exe')
-if ($qbPreviousInstallers.Count -ne 1) { throw 'Expected one QA predecessor installer' }
+$qbPreviousInstaller = Join-Path $qbTemporary 'previous-setup.exe'
+Invoke-WebRequest -Uri "https://github.com/Ethan-decoy/QuestBranch/releases/download/v$qbPreviousVersion/QuestBranch-Setup-$qbPreviousVersion-x64.exe" -OutFile $qbPreviousInstaller
+if ((Hash-QbFile $qbPreviousInstaller) -ne $qbPreviousInstallerDigest) { throw 'Published predecessor installer checksum mismatch' }
 $qbUpgradeDirectory = Join-Path $qbTemporary '升级验收 QuestBranch'
-Install-Qb $qbPreviousInstallers[0].FullName $qbUpgradeDirectory $qbPreviousVersion
+Install-Qb $qbPreviousInstaller $qbUpgradeDirectory $qbPreviousVersion
 $qbUpgradeStudy = Invoke-QbResearch $qbUpgradeDirectory 'predecessor-research'
 $qbPointer = Join-Path $qbUpgradeStudy 'profile/storage-location.json'
 $qbResearchPath = Join-Path $qbUpgradeStudy 'research'
@@ -131,7 +122,7 @@ $qbEvidenceRecord = [ordered]@{
   version=$qbVersion; sourceCommit=(& git rev-parse HEAD).Trim(); platform='win32/x64';
   workflowRun=$env:GITHUB_RUN_ID; fixtureOnly=$true; realModelRequests=0;
   freshInstall=$true; customInstallPaths=$true; installBytesMatch=$true;
-  previousVersion=$qbPreviousVersion; previousZipSha256=$qbPreviousDigest; predecessorInstaller='QA-only NSIS fixture from the published ZIP and tag';
+  previousVersion=$qbPreviousVersion; previousZipSha256=$qbPreviousDigest; predecessorInstallerSha256=$qbPreviousInstallerDigest; predecessorInstaller='Published NSIS installer';
   installerUpgrade=$true; reportsConversationsAndOriginsPreserved=$true; savedStorageLocationPreserved=$true;
   oldPortableJsonImportAndReopen=$true; normalExitAndReopen=$true; uninstallPreservesResearch=$true;
   conversationCases=14; branchingCases=15; lightGraphCases=12; darkGraphCases=12;

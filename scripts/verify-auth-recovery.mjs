@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { resolve, join } from 'node:path'
 import { pathToFileURL } from 'node:url'
+import { desktopPackage } from './desktop-package.mjs'
 
 // Real UI, isolated storage, simulated OAuth only. Never opens a real authorization page.
 mkdirSync(resolve('artifacts/auth-recovery'), { recursive: true })
@@ -16,7 +17,7 @@ delete process.env.ELECTRON_RENDERER_URL
 const packageRoot = process.argv
   .find((argument) => argument.startsWith('--package-root='))
   ?.slice(15)
-const appRoot = packageRoot ? join(resolve(packageRoot), 'resources/app.asar') : resolve('.')
+const appRoot = packageRoot ? desktopPackage(packageRoot).archive : resolve('.')
 const sessions = new Map()
 const calls = {}
 const cases = []

@@ -1,9 +1,10 @@
-import { app } from 'electron'
+import { app, safeStorage } from 'electron'
 import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve, sep } from 'node:path'
 import { pathToFileURL } from 'node:url'
+import { desktopPackage, option } from './desktop-package.mjs'
 
 // All requests stay on this process's mock server. Never use a person's QB
 // profile, account credentials, or research content for this check.
@@ -19,14 +20,7 @@ for (const name of ['OPENAI_API_KEY', 'OPENAI_BASE_URL', 'OPENAI_MODEL', 'TAVILY
   delete process.env[name]
 const requests = []
 const packaged = process.argv.includes('--packaged')
-const appRoot = packaged
-  ? resolve(
-      process.argv
-        .find((arg) => arg.startsWith('--package-root='))
-        ?.slice('--package-root='.length) ?? 'release/win-unpacked',
-      'resources/app.asar',
-    )
-  : resolve('.')
+const appRoot = packaged ? desktopPackage(option('package-root')).archive : resolve('.')
 const sdkVersions = Object.fromEntries(
   ['@earendil-works/pi-ai'].map((name) => {
     const path = join(appRoot, 'node_modules', name, 'package.json')
@@ -446,6 +440,13 @@ app.on('browser-window-created', (_, window) => {
             requests,
             sdkVersions,
             completedRuns: 14,
+            credentialStorage: {
+              encryptionAvailable: safeStorage.isEncryptionAvailable(),
+              backend:
+                process.platform === 'linux'
+                  ? safeStorage.getSelectedStorageBackend()
+                  : process.platform,
+            },
             accountCatalog: true,
             nativeCredentialPromptAndCancel: true,
             accountApiSeparation: true,

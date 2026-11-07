@@ -4,9 +4,10 @@ import assert from 'node:assert/strict'
 import { mkdirSync, mkdtempSync, readdirSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
+import { desktopPackage } from './desktop-package.mjs'
 
 assert(process.versions.electron, 'Use the packaged Electron executable')
-const root = resolve('release/win-unpacked/resources/app.asar')
+const root = desktopPackage().archive
 const chunks = join(root, 'out/main/chunks')
 const matches = readdirSync(chunks).filter((name) => /^om-.*\.js$/.test(name))
 assert.equal(matches.length, 1, 'The OM SDK graph must be bundled before dependency flattening')

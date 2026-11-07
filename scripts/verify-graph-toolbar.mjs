@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
+import { desktopPackage } from './desktop-package.mjs'
 
 mkdirSync(resolve('artifacts/graph-toolbar'), { recursive: true })
 const folder = mkdtempSync(resolve('artifacts/graph-toolbar/check-'))
@@ -19,7 +20,7 @@ const option = (name, fallback) =>
     .slice(1)
     .join('=') ?? fallback
 const packageRoot = option('package-root', '')
-const appRoot = packageRoot ? resolve(packageRoot, 'resources/app.asar') : resolve('.')
+const appRoot = packageRoot ? desktopPackage(packageRoot).archive : resolve('.')
 const width = Number(option('width', '1440'))
 const height = Number(option('height', '900'))
 const zoom = Number(option('zoom', '1'))

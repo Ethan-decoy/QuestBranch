@@ -4,6 +4,7 @@ import { createServer } from 'node:http'
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
+import { desktopPackage } from './desktop-package.mjs'
 
 // Production desktop entry + real Chromium proxy transport, isolated profile,
 // synthetic credentials and local fixture responses. No model/account is used.
@@ -22,7 +23,7 @@ for (const name of [
 ])
   delete process.env[name]
 const packageRoot = process.argv.find((value) => value.startsWith('--package-root='))?.slice(15)
-const appRoot = packageRoot ? join(resolve(packageRoot), 'resources/app.asar') : resolve('.')
+const appRoot = packageRoot ? desktopPackage(packageRoot).archive : resolve('.')
 const previousFetch = globalThis.fetch
 const opened = []
 shell.openExternal = async (url) => {

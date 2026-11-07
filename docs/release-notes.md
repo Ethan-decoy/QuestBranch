@@ -1,11 +1,13 @@
-# QuestBranch v0.3.0-dev.4
+# QuestBranch v0.3.0-dev.5
 
-Windows x64 开发者预发布，非 Latest。项目采用 MIT；第三方组件保留各自许可。
+Windows、macOS、Linux 开发者预发布，非 Latest。项目采用 MIT；第三方组件保留各自许可。
 
 ## 下载
 
-- `QuestBranch-Setup-0.3.0-dev.4-x64.exe`：当前用户安装程序，可选择程序目录，安装后从开始菜单启动。
-- `QuestBranch-0.3.0-dev.4-windows-x64.zip`：完整免安装包，解压后用 `Start-QuestBranch.cmd` 隔离试用。
+- `QuestBranch-Setup-0.3.0-dev.5-x64.exe`：Windows x64 当前用户安装程序。
+- `QuestBranch-0.3.0-dev.5-windows-x64.zip`：Windows 完整免安装包，解压后用 `Start-QuestBranch.cmd` 隔离试用。
+- `QuestBranch-0.3.0-dev.5-macos-arm64.dmg` / `macos-x64.dmg`：分别用于 Apple Silicon / Intel，拖入“应用程序”安装。
+- `QuestBranch-0.3.0-dev.5-linux-x64.deb` / `linux-x64.AppImage`：Linux x64 安装与便携包，Ubuntu 优先使用 DEB。
 - `SHA256SUMS.txt`：全部附件的 SHA-256；`VERIFICATION.json`：公开构建提交、实际成品与验收结果。
 - `README-TRIAL.md`：资料位置、安装、升级和恢复说明。
 
@@ -13,26 +15,28 @@ Windows x64 开发者预发布，非 Latest。项目采用 MIT；第三方组件
 
 ## 修复与变化
 
-- 修复移除分支时研究画布变空，保留移除结果和撤销能力。
-- 补全多版本、别名依赖的许可清单，词库排序不再依赖系统区域设置。
-- 新增成品构建、安装、升级与附件回下载校验。依赖版本、固定 SessionWeave 快照及研究数据格式 3 不变。
+- 补齐 macOS 和 Linux 的原生成品及验收，沿用同一研究核心和界面。
+- 各平台按实际依赖生成许可，检查内置智能体二进制、编译内容及实际 OM SDK。
+- 使用 Windows `.4` 的合成研究验证跨系统导入、原文与来源保留；依赖版本、固定 SessionWeave 快照及数据格式 3 不变。
 
 ## 验证范围
 
-Windows runner 验证实际安装器新装、含空格与中文的路径、旧版安装基线升级、研究及自选保存位置保留、旧 ZIP 研究导入与重开、卸载保留资料。另验证 14 项对话、15 项 ACP/MCP 研究闭环、亮/深各 12 项画布操作、实际 OM SDK 的本地固定响应，以及编译和许可文件与构建输入的一致性。
+四个原生目标：Windows x64、macOS 15 Apple Silicon、macOS 15 Intel、Ubuntu 24.04 x64。验证安装后的研究闭环、14 项对话、15 项 ACP/MCP、亮/深各 12 项画布、实际 OM SDK 固定响应及成品与构建输入的一致性。macOS/Linux 另执行模型、代理和 OAuth 的本地固定响应，以及 Windows 研究导入与重开。
 
-v0.3.0-dev.3 只发布过 ZIP；用于安装器升级的旧版 NSIS 是测试基线，未发布或替换旧版附件。版本与实际验收来源以附件中的 `VERIFICATION.json` 为准。
+Windows 从已发布 `.4` 安装器升级；macOS/Linux 是首次原生成品，验证新装、同版本重装和移除应用后资料保留。AppImage 验证实际启动器的研究与重开。版本、架构与结果以 `VERIFICATION.json` 为准。
 
 ## 限制与反馈
 
-安装程序未签名，未提供自动更新、热更新或 macOS/Linux 成品。模型与智能体使用固定响应验收，没有调用真实账号，不代表所有厂商、套餐或长时间研究均已验证。
+Windows 未签名；macOS 的 ad-hoc 签名已验证，尚无 Developer ID 和 Apple 公证，首次打开可能需在系统设置允许。未提供自动更新与热更新。模型、授权与智能体使用本地固定响应，没有调用真实账号，不代表所有厂商、keyring 后端、桌面环境或长时间研究均已验证。
+
+Linux 首轮覆盖 Ubuntu 24.04 x64；DEB 复用系统 sandbox/AppArmor 集成。AppImage 的 FUSE2-free 启动器按用户命名空间能力选择 sandbox，受限系统可能回退 `--no-sandbox`。请阅读 `README-TRIAL.md` 的平台条件与安装方式。
 
 反馈入口：[Issues](https://github.com/Ethan-decoy/QuestBranch/issues)。请提供版本、系统、连接方式和步骤，并移除凭据及私人研究内容。
 
 ## English
 
-This Windows x64 developer prerelease adds a per-user installer with a selectable program directory, alongside the isolated portable ZIP. Verify `SHA256SUMS.txt` before use. The installer preserves research on upgrade and uninstall. To move from an old isolated ZIP trial, export research JSON and import it into the installed app; the old `data/` directory is not merged automatically.
+This developer prerelease adds native Apple Silicon / Intel macOS DMGs and Linux x64 DEB / AppImage packages alongside the Windows installer and isolated ZIP. Verify `SHA256SUMS.txt`; `VERIFICATION.json` identifies the accepted source and four native targets. Windows upgrades from the published `.4` installer. First-time macOS/Linux packages are tested for installation, reinstall, research retention and removal, including import/reopen of Windows-produced synthetic research.
 
-This release fixes a blank canvas when removing branches and completes third-party notices. Disposable Windows CI checks fresh installation, an upgrade from a QA-only predecessor installer, retained storage preferences, research import/reopen, and uninstall retention. The predecessor installer was never a published v0.3.0-dev.3 asset. Accepted binaries are uploaded, downloaded and hash-checked before publication.
+Acceptance includes research, conversation, both canvas themes, real packaged OM SDK fixtures and native agent version checks. macOS/Linux additionally exercise local model, proxy and OAuth fixtures. Accepted binaries are uploaded, downloaded and hash-checked before publication. Runtime dependencies and research format 3 remain unchanged.
 
-Packages are unsigned. Automatic updates, macOS/Linux binaries, real-provider coverage and long-running research quality are not validated. See `VERIFICATION.json` for the public source commit and actual acceptance results.
+Windows is unsigned; macOS has verified ad-hoc signatures without Developer ID or notarization. Linux is tested on Ubuntu 24.04 x64; prefer the DEB there. The FUSE2-free AppImage launcher may fall back to `--no-sandbox` if user namespaces are unavailable. Other OS versions, distributions, keyring backends, real-provider coverage, long-running research and automatic updates are not validated.

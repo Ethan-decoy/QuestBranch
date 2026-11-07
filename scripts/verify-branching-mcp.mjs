@@ -1,10 +1,11 @@
 // Actual fixed Windows directory package, fresh profile/database and a deterministic
 // ACP agent. No daily database, global agent config, login or paid model is used.
-import { spawn } from 'node:child_process'
+import { execFileSync, spawn } from 'node:child_process'
 import { createServer } from 'node:net'
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { resolve, join, sep } from 'node:path'
 import assert from 'node:assert/strict'
+import { desktopPackage } from './desktop-package.mjs'
 
 const option = (name) =>
   process.argv.find((arg) => arg.startsWith(`--${name}=`))?.slice(name.length + 3)
@@ -20,7 +21,8 @@ for (const directory of [profile, research, codexHome]) mkdirSync(directory, { r
 const evidence = previous
   ? JSON.parse(readFileSync(join(folder, 'result.json'), 'utf8'))
   : { cases: [], folder }
-const executable = resolve(option('package-root') ?? 'release/win-unpacked', 'QuestBranch.exe')
+const packaged = desktopPackage(option('package-root'))
+const executable = resolve(option('executable') ?? packaged.executable)
 const fixture = resolve('tests/fixtures/acp-agent.mjs')
 const portServer = createServer()
 await new Promise((resolve) => portServer.listen(0, '127.0.0.1', resolve))
@@ -50,6 +52,13 @@ const child = spawn(
   ],
   { env, shell: false, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] },
 )
+async function quitOwnedApp() {
+  if (process.platform === 'darwin') {
+    // Closing the last window intentionally keeps a macOS app running. Use its
+    // native Quit Apple event, addressed to this test's exact bundle path.
+    execFileSync('osascript', ['-e', `tell application ${JSON.stringify(packaged.root)} to quit`])
+  } else await evaluate(() => window.close()).catch(() => {})
+}
 let logs = '',
   socket,
   evaluate,
@@ -540,7 +549,7 @@ try {
       'dark source navigation',
     ]
   }
-  await evaluate(() => window.close()).catch(() => {})
+  await quitOwnedApp()
   const code = await Promise.race([
     exited,
     new Promise((_, reject) =>
@@ -568,7 +577,7 @@ try {
       for (const run of current.runs.filter((run) => run.status === 'running'))
         await command({ type: 'cancel-research', runId: run.id })
       await capture('failed')
-      await evaluate(() => window.close()).catch(() => {})
+      await quitOwnedApp()
     } catch {
       /* Preserve the diagnostic from the original failure. */
     }

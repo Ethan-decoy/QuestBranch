@@ -17,18 +17,18 @@ This repository provides the standalone application's source code, releases, and
 
 ## Download and try
 
-**Windows x64 developer prereleases**
+**Windows, macOS and Linux developer prereleases**
 
-Select a published version from [Releases](https://github.com/Ethan-decoy/QuestBranch/releases), download its Windows installer or complete ZIP, and verify `SHA256SUMS.txt`. The installer supports a current-user installation with a selectable program directory. For an isolated portable trial, extract the ZIP and launch `Start-QuestBranch.cmd`; its research and configuration stay in the adjacent `data/` directory. Neither option requires Node.js or pnpm.
+Choose a published version from [Releases](https://github.com/Ethan-decoy/QuestBranch/releases), download the asset matching your OS and CPU, and verify `SHA256SUMS.txt`. Windows offers an installer and an isolated ZIP; macOS has Apple Silicon and Intel DMGs; Linux x64 has DEB and AppImage packages. No Node.js or pnpm installation is required. Available targets depend on the actual assets in each release.
 
-See the [Windows trial guide (Simplified Chinese)](docs/windows-trial.md) for storage locations, isolated trials, and manual upgrades. Each release's notes identify the actual assets and known limitations. Signed packages, automatic updates, and macOS/Linux binaries are not currently provided.
+See the [installation guide (Chinese / English)](docs/desktop-installation.md) and the [Windows isolated trial guide](docs/windows-trial.md). Windows is unsigned; macOS uses ad-hoc signatures without Developer ID or notarization. Automatic updates are not provided.
 
 ## Features
 
 - Organize questions on a research canvas; expand or collapse branches, search, compare reports, and synthesize findings across directions.
 - Continue conversations within a node. AI tools can save stage reports and agreed child branches while preserving original messages and report history.
 - Connect supported accounts, API services, and Ollama through Pi AI, or use an agent's own tools and skills through ACP.
-- Store research locally in SQLite, with workspace export and restore. The Windows desktop app supports choosing a research storage location and migrating data.
+- Store research locally in SQLite, with workspace export and restore. The desktop app supports choosing a research storage location and migrating data.
 - Use a desktop-first workspace, with a local browser preview backed by the same research service.
 - Simplified Chinese is the default interface language. Switch to English in **Settings → General** and save your local preference; research content stays in its original language.
 
@@ -51,10 +51,14 @@ pnpm build          # Build Electron and the browser preview
 pnpm preview        # Run the built browser preview
 pnpm start          # Run the built Electron application
 pnpm package:dir    # Build the current platform's app directory in release/
+pnpm package:win    # Windows NSIS installer
+pnpm package:mac    # Native macOS DMG
+pnpm package:linux  # Native Linux DEB and AppImage
+pnpm notices        # Generate notices for the installed platform dependencies
 pnpm notices:check  # Check third-party notices against installed locked dependencies
 ```
 
-The Windows application entry point is `release/win-unpacked/QuestBranch.exe`. Exit QB before rebuilding; `pnpm package:dir` updates the same directory and does not publish a release. Windows local operation has been verified. Native operation and packages on macOS and Linux remain unverified; signed installers are not currently provided.
+Build packages on their target operating system; use `--arm64` or `--x64` for the respective Mac architecture. Package commands generate platform-specific notices and explicitly do not publish. Exit QB before replacing an application directory. The Windows entry point remains `release/win-unpacked/QuestBranch.exe`. See the installation guide and release verification for the actual tested environments.
 
 ## Connect models and save research
 

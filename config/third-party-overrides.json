@@ -97,5 +97,35 @@
     "declarationSha256": "7b7c2579ea138d20d4f7699ca78ef16c526f35168dbf694f1d47cc861b0954d4",
     "declaredLicense": "MIT",
     "reason": "The original package manifest declares the SPDX identifier MIT. The package archive and inspected upstream revision supply no separate license or copyright notice. The original manifest is preserved below, followed by standard MIT terms; no copyright notice has been invented."
+  },
+  "@openai/codex@0.160.1-darwin-arm64": {
+    "file": "licenses/openai-codex.LICENSE",
+    "source": "https://github.com/openai/codex/blob/d27764b82f7118f674371e6d6e76271d9d606edb/LICENSE",
+    "reason": "The published npm archive omits a license file. Preserved from the pinned upstream revision shown here.",
+    "sha256": "d17f227e4df5da1600391338865ce0f3055211760a36688f816941d58232d8dc"
+  },
+  "@openai/codex@0.160.1-darwin-x64": {
+    "file": "licenses/openai-codex.LICENSE",
+    "source": "https://github.com/openai/codex/blob/d27764b82f7118f674371e6d6e76271d9d606edb/LICENSE",
+    "reason": "The published npm archive omits a license file. Preserved from the pinned upstream revision shown here.",
+    "sha256": "d17f227e4df5da1600391338865ce0f3055211760a36688f816941d58232d8dc"
+  },
+  "@openai/codex@0.160.1-linux-x64": {
+    "file": "licenses/openai-codex.LICENSE",
+    "source": "https://github.com/openai/codex/blob/d27764b82f7118f674371e6d6e76271d9d606edb/LICENSE",
+    "reason": "The published npm archive omits a license file. Preserved from the pinned upstream revision shown here.",
+    "sha256": "d17f227e4df5da1600391338865ce0f3055211760a36688f816941d58232d8dc"
+  },
+  "@openai/codex@0.160.1-linux-arm64": {
+    "file": "licenses/openai-codex.LICENSE",
+    "source": "https://github.com/openai/codex/blob/d27764b82f7118f674371e6d6e76271d9d606edb/LICENSE",
+    "reason": "The published npm archive omits a license file. Preserved from the pinned upstream revision shown here.",
+    "sha256": "d17f227e4df5da1600391338865ce0f3055211760a36688f816941d58232d8dc"
+  },
+  "@openai/codex@0.160.1-win32-arm64": {
+    "file": "licenses/openai-codex.LICENSE",
+    "source": "https://github.com/openai/codex/blob/d27764b82f7118f674371e6d6e76271d9d606edb/LICENSE",
+    "reason": "The published npm archive omits a license file. Preserved from the pinned upstream revision shown here.",
+    "sha256": "d17f227e4df5da1600391338865ce0f3055211760a36688f816941d58232d8dc"
   }
 }

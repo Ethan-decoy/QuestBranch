@@ -7,8 +7,11 @@ $qbTag = "v$qbVersion"
 if ($env:GITHUB_REF_NAME -ne $qbTag -or $qbVersion -notmatch '^\d+\.\d+\.\d+-[0-9A-Za-z.-]+$') { throw 'Tag must match the prerelease package version' }
 $qbCommit = (& git rev-parse HEAD).Trim()
 $qbVerification = Get-Content -LiteralPath release/VERIFICATION.json -Raw | ConvertFrom-Json
-if ($qbVerification.sourceCommit -ne $qbCommit -or $qbVerification.version -ne $qbVersion -or $qbVerification.installer.workflowRun -ne $CandidateRunId) { throw 'Downloaded artifact is not the accepted candidate for this tag' }
-$qbExpectedFiles = @("QuestBranch-Setup-$qbVersion-x64.exe","QuestBranch-$qbVersion-windows-x64.zip",'README-TRIAL.md','RELEASE-NOTES.md','VERIFICATION.json')
+if ($qbVerification.sourceCommit -ne $qbCommit -or $qbVerification.version -ne $qbVersion -or $qbVerification.workflowRun -ne $CandidateRunId) { throw 'Downloaded artifacts are not the accepted candidate for this tag' }
+foreach ($qbPlatform in @('windows-x64','macos-arm64','macos-x64','linux-x64')) {
+  if ($qbVerification.platforms.$qbPlatform.sourceCommit -ne $qbCommit) { throw 'Missing accepted native platform' }
+}
+$qbExpectedFiles = @("QuestBranch-Setup-$qbVersion-x64.exe","QuestBranch-$qbVersion-windows-x64.zip","QuestBranch-$qbVersion-macos-arm64.dmg","QuestBranch-$qbVersion-macos-x64.dmg","QuestBranch-$qbVersion-linux-x64.deb","QuestBranch-$qbVersion-linux-x64.AppImage",'README-TRIAL.md','RELEASE-NOTES.md','VERIFICATION.json')
 $qbChecksums = @{}
 foreach ($qbLine in Get-Content -LiteralPath release/SHA256SUMS.txt) {
   if ($qbLine -notmatch '^([a-f0-9]{64})  ([A-Za-z0-9_.-]+)$') { throw 'Invalid checksum manifest' }
@@ -26,7 +29,7 @@ if ($LASTEXITCODE -eq 0) {
   if ($qbRelease.target_commitish -ne $qbCommit) { throw 'Existing draft targets another source commit' }
 } else {
   if (($qbExisting -join "`n") -notmatch '404') { throw 'Unable to check existing release' }
-  & gh release create $qbTag --verify-tag --draft --prerelease --latest=false --target $qbCommit --title "QuestBranch $qbTag · Windows x64" --notes-file release/RELEASE-NOTES.md
+  & gh release create $qbTag --verify-tag --draft --prerelease --latest=false --target $qbCommit --title "QuestBranch $qbTag" --notes-file release/RELEASE-NOTES.md
   if ($LASTEXITCODE -ne 0) { throw 'Unable to create release draft' }
 }
 $qbAssets = @($qbExpectedFiles | ForEach-Object { Join-Path 'release' $_ }) + @('release/SHA256SUMS.txt')

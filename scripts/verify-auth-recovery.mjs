@@ -8,6 +8,7 @@ import { desktopPackage } from './desktop-package.mjs'
 // Real UI, isolated storage, simulated OAuth only. Never opens a real authorization page.
 mkdirSync(resolve('artifacts/auth-recovery'), { recursive: true })
 const folder = mkdtempSync(resolve('artifacts/auth-recovery/check-'))
+console.log(`Verification folder: ${folder}`)
 const profile = join(folder, 'profile')
 mkdirSync(profile)
 app.setPath('userData', profile)

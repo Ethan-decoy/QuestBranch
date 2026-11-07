@@ -11,6 +11,7 @@ import { desktopPackage, option } from './desktop-package.mjs'
 const artifacts = resolve('artifacts')
 mkdirSync(artifacts, { recursive: true })
 const root = mkdtempSync(join(artifacts, 'pi-models-verification-'))
+console.log(`Verification folder: ${root}`)
 const profile = join(root, 'profile')
 mkdirSync(profile)
 app.setPath('userData', profile)

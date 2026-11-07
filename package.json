@@ -94,9 +94,12 @@
       "appimage": "1.0.3"
     },
     "deb": {
-      "maintainer": "Ethan-decoy <276539009+Ethan-decoy@users.noreply.github.com>"
+      "maintainer": "Ethan-decoy <276539009+Ethan-decoy@users.noreply.github.com>",
+      "recommends": [
+        "fonts-noto-cjk"
+      ]
     },
-    "extraFiles": [
+    "extraResources": [
       {
         "from": "THIRD_PARTY_NOTICES.txt",
         "to": "THIRD_PARTY_NOTICES.txt"

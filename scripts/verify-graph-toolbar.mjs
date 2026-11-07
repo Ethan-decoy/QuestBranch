@@ -7,6 +7,7 @@ import { desktopPackage } from './desktop-package.mjs'
 
 mkdirSync(resolve('artifacts/graph-toolbar'), { recursive: true })
 const folder = mkdtempSync(resolve('artifacts/graph-toolbar/check-'))
+console.log(`Verification folder: ${folder}`)
 const profile = join(folder, 'profile')
 mkdirSync(profile)
 app.setPath('userData', profile)

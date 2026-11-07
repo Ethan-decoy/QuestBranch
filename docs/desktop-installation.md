@@ -19,6 +19,8 @@ Windows 安装程序未签名。macOS 使用 ad-hoc 签名并校验包内完整�
 
 Ubuntu 优先使用 DEB。它复用 electron-builder 的桌面入口、sandbox helper 和 AppArmor 集成。AppImage 使用无需 FUSE2 的运行时；其 Chromium sandbox 由上游启动器按系统的用户命名空间能力选择，受限系统上可能回退为 `--no-sandbox`。这不等同于所有 Linux 环境都具备相同隔离条件。
 
+DEB 推荐安装 `fonts-noto-cjk` 以显示中文。AppImage 依赖系统字体；如果中文显示为方框，请通过发行版包管理器安装 CJK 字体，例如 Ubuntu 的 `fonts-noto-cjk`。
+
 ## 研究资料
 
 普通安装版使用系统应用配置目录，研究默认放在其 `research/` 子目录。可在“设置 → 本地存储”查看实际路径并迁移到另一磁盘。程序目录与研究目录分别管理。
@@ -46,6 +48,8 @@ Download the asset matching your OS and CPU from [Releases](https://github.com/E
 Native checks cover macOS 15 on both architectures and Ubuntu 24.04 x64. Other OS versions, Linux distributions and desktop environments are not covered. Windows is unsigned. macOS uses verified ad-hoc signatures without Developer ID or notarization, so first launch may require approval in System Settings → Privacy & Security. Checksums do not replace publisher signatures.
 
 Prefer the DEB on Ubuntu. Its standard packaging includes desktop, sandbox-helper and AppArmor integration. The AppImage uses a FUSE2-free runtime; its upstream launcher may fall back to `--no-sandbox` when user namespaces are unavailable. Linux credential protection depends on the desktop keyring configuration.
+
+The DEB recommends `fonts-noto-cjk` for Chinese text. AppImage users need a system CJK font; install one through your distribution's package manager if Chinese characters appear as boxes.
 
 Quit before updating and back up both settings and research. Export/import research JSON to move between operating systems; it does not include credentials, external agent files or complete native-session state. Reconnect providers when needed. Removing the installed application preserves research. No automatic or hot updates are provided.
 

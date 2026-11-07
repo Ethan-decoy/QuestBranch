@@ -18,4 +18,6 @@ The historical archive and its package metadata remain unchanged. Its embedded `
 
 [THIRD_PARTY_NOTICES.txt](THIRD_PARTY_NOTICES.txt) preserves the installed production inventory, original notices and explicit supplemental license evidence. Electron's accompanying `LICENSE.electron.txt` and `LICENSES.chromium.html` must remain with the application.
 
+Binary packages preserve the project license, this licensing guide, third-party notices, the `licenses/` directory and SessionWeave provenance in the platform resources directory: `QuestBranch.app/Contents/Resources/` on macOS and `resources/` on Windows/Linux. This keeps data files in the standard macOS bundle resource location; their contents are checked against the build inputs.
+
 Three packages declare MIT in their original package manifests but provide no separate license or copyright file: `@standard-community/standard-json@0.3.7`, `@standard-community/standard-openapi@0.2.11`, and `proxy-agent-negotiate@1.1.0`. Their original declarations are preserved under `licenses/`, together with the standard MIT terms. Those entries identify this evidence and do not claim that an upstream copyright notice was found.

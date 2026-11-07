@@ -10,6 +10,7 @@ import { desktopPackage } from './desktop-package.mjs'
 // synthetic credentials and local fixture responses. No model/account is used.
 mkdirSync(resolve('artifacts/network'), { recursive: true })
 const folder = mkdtempSync(resolve('artifacts/network/check-'))
+console.log(`Verification folder: ${folder}`)
 const profile = join(folder, 'profile')
 mkdirSync(profile)
 app.setPath('userData', profile)

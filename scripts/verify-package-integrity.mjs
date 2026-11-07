@@ -8,7 +8,7 @@ import { desktopPackage } from './desktop-package.mjs'
 
 assert(process.versions.electron, 'Run with the packaged executable and ELECTRON_RUN_AS_NODE=1')
 const root = resolve('.')
-const { contents: app, archive } = desktopPackage()
+const { resources: app, archive } = desktopPackage()
 const rawRead = createRequire(import.meta.url)('original-fs').readFileSync
 const sha256 = (path) => createHash('sha256').update(rawRead(path)).digest('hex')
 const files = (directory) =>

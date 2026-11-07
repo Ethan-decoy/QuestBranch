@@ -8,6 +8,7 @@ import { desktopPackage } from './desktop-package.mjs'
 
 mkdirSync(resolve('artifacts/conversation-actions'), { recursive: true })
 const folder = mkdtempSync(resolve('artifacts/conversation-actions/check-'))
+console.log(`Verification folder: ${folder}`)
 const profile = join(folder, 'profile')
 mkdirSync(profile)
 app.setPath('userData', profile)
@@ -147,7 +148,18 @@ const deadline = setTimeout(() => {
 }, 60000)
 app.on('browser-window-created', (_, window) => {
   let rendererFailure
+  let deferredResizeNotifications = 0
   window.webContents.on('console-message', ({ level, message }) => {
+    // The ResizeObserver specification reports deferred delivery as an error
+    // event even when the layout settles on the next paint. Measure settling
+    // below; retain fatal handling for every other renderer error.
+    if (
+      level === 'error' &&
+      message === 'ResizeObserver loop completed with undelivered notifications.'
+    ) {
+      deferredResizeNotifications++
+      return
+    }
     if (level === 'error') rendererFailure ??= new Error(`Renderer error: ${message}`)
   })
   window.webContents.on('render-process-gone', (_, details) => {
@@ -174,6 +186,19 @@ app.on('browser-window-created', (_, window) => {
       throw new Error('Conversation UI condition timed out')
     }
     const snapshot = () => evaluate(() => window.questbranch.snapshot())
+    const settleLayout = async () => {
+      for (let attempt = 0; attempt < 25; attempt++) {
+        const before = deferredResizeNotifications
+        await evaluate(
+          () =>
+            new Promise((done) =>
+              requestAnimationFrame(() => requestAnimationFrame(() => done(null))),
+            ),
+        )
+        if (before === deferredResizeNotifications) return
+      }
+      throw new Error('ResizeObserver delivery did not settle across 50 animation frames')
+    }
     const command = (value) => evaluate((value) => window.questbranch.command(value), value)
     const clickText = (text, selector = 'button') =>
       evaluate(
@@ -201,6 +226,7 @@ app.on('browser-window-created', (_, window) => {
       window.show()
       window.focus()
       window.webContents.focus()
+      await settleLayout()
       await evaluate(async () => {
         const finite = document
           .getAnimations()
@@ -783,6 +809,8 @@ app.on('browser-window-created', (_, window) => {
             reportsAfter: final.reports.length,
             isolatedDatabase: true,
             noRealModelOrAccount: true,
+            deferredResizeNotifications,
+            resizeObserverSettled: true,
           },
           null,
           2,
@@ -795,7 +823,10 @@ app.on('browser-window-created', (_, window) => {
       server.close()
       app.quit()
     } catch (error) {
-      await capture('failed').catch(() => {})
+      await window.webContents
+        .capturePage()
+        .then((capture) => writeFileSync(join(folder, 'failed.png'), capture.toPNG()))
+        .catch(() => {})
       console.error(error.stack)
       clearTimeout(deadline)
       for (const socket of sockets) socket.destroy()

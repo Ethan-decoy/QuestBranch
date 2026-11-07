@@ -63,11 +63,12 @@ function preserveResult(folder, name) {
   folder = resolve(folder)
   assert(folder.startsWith(join(source, 'artifacts') + sep))
   const resultName = existsSync(join(folder, 'result.json')) ? 'result.json' : 'verified.json'
-  const result = json(join(folder, resultName))
+  const result = existsSync(join(folder, resultName)) ? json(join(folder, resultName)) : null
   const target = join(evidence, name)
   mkdirSync(target)
   for (const file of readdirSync(folder))
-    if (file === resultName || file.endsWith('.png')) cpSync(join(folder, file), join(target, file))
+    if (file === resultName || file.endsWith('.png') || file === 'failed.txt')
+      cpSync(join(folder, file), join(target, file))
   return result
 }
 
@@ -89,11 +90,15 @@ const engine =
     ? resolve('node_modules/electron/dist/Electron.app/Contents/MacOS/Electron')
     : resolve('node_modules/electron/dist/electron')
 async function gui(root, script, name, extra = []) {
-  const output = await run(name, engine, [
-    `scripts/${script}.mjs`,
-    `--package-root=${root}`,
-    ...extra,
-  ])
+  let output
+  try {
+    output = await run(name, engine, [`scripts/${script}.mjs`, `--package-root=${root}`, ...extra])
+  } catch (error) {
+    const stdout = readFileSync(join(evidence, `${name}.stdout.log`), 'utf8')
+    const folder = stdout.match(/^Verification folder: (.+)$/m)?.[1]
+    if (folder) preserveResult(folder.trim(), name)
+    throw error
+  }
   const line = output.stdout.trim().split('\n').at(-1)
   const folder = line.startsWith('{') ? JSON.parse(line).folder : line.match(/: (.+)$/)?.[1]
   assert(folder, `No result folder from ${name}`)
@@ -108,7 +113,7 @@ const assets =
     : [`QuestBranch-${version}-linux-amd64.deb`, `QuestBranch-${version}-linux-x86_64.AppImage`]
 for (const asset of assets)
   assert(existsSync(join('release', asset)), `Missing native asset: ${asset}`)
-let installed, signature
+let installed, signature, fontFamily
 if (process.platform === 'darwin') {
   const mount = join(temporary, 'dmg')
   mkdirSync(mount)
@@ -139,6 +144,12 @@ if (process.platform === 'darwin') {
 } else {
   await run('deb-install', 'sudo', ['apt-get', 'install', '-y', resolve('release', assets[0])])
   installed = '/opt/QuestBranch'
+  fontFamily = (await run('linux-cjk-font', 'fc-match', ['-f', '%{family}', ':lang=zh-cn'])).stdout
+  assert.match(fontFamily, /Noto.*CJK/)
+  const recommends = (
+    await run('deb-font-metadata', 'dpkg-query', ['-W', '-f=${Recommends}', 'questbranch'])
+  ).stdout
+  assert.match(recommends, /fonts-noto-cjk/)
 }
 const actual = desktopPackage(installed)
 assert.equal(sha256(actual.archive), builtAsar, 'Installed bytes differ from the built package')
@@ -242,6 +253,7 @@ const record = {
     return { realOmSdk: sdk.realOmSdk, calls: sdk.calls, identity: sdk.identity, fixtureOnly: true }
   })(),
   credentialStorage: models.credentialStorage,
+  fontFamily,
   signing:
     process.platform === 'darwin'
       ? { adHocVerified: true, developerId: false, notarized: false }

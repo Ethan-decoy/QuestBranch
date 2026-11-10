@@ -8,11 +8,13 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  readlinkSync,
+  realpathSync,
   readdirSync,
   rmSync,
   writeFileSync,
 } from 'node:fs'
-import { join, resolve, sep } from 'node:path'
+import { dirname, join, resolve, sep } from 'node:path'
 import { desktopPackage } from './desktop-package.mjs'
 
 assert.equal(process.env.GITHUB_ACTIONS, 'true', 'Use a disposable Actions runner')
@@ -272,17 +274,29 @@ if (process.platform === 'linux') {
         const pid = Number(
           execFileSync('xdotool', ['getwindowpid', window], { encoding: 'utf8' }).trim(),
         )
-        const variables = readFileSync(`/proc/${pid}/environ`, 'utf8').split('\0')
+        const executable = readlinkSync(`/proc/${pid}/exe`)
+        const archive = join(dirname(executable), 'resources/app.asar')
+        const database = realpathSync(join(data, 'research.sqlite'))
+        const databaseOpen = readdirSync(`/proc/${pid}/fd`).some((descriptor) => {
+          try {
+            return readlinkSync(`/proc/${pid}/fd/${descriptor}`) === database
+          } catch {
+            return false // A descriptor may close while the process remains live.
+          }
+        })
+        const acceptedBytes = databaseOpen && existsSync(archive) && sha256(archive) === builtAsar
         windowChecks.push({
           window,
           pid,
-          appImage: variables.find((value) => value.startsWith('APPIMAGE=')),
-          data: variables.find((value) => value.startsWith('QUESTBRANCH_DATA_DIR=')),
+          executable,
+          archive,
+          acceptedBytes,
+          database,
+          databaseOpen,
         })
-        if (
-          variables.includes(`APPIMAGE=${predecessor}`) &&
-          variables.includes(`QUESTBRANCH_DATA_DIR=${data}`)
-        ) {
+        // Check the running application's actual bytes and open data, rather than
+        // relying on environment entries remaining readable through /proc.
+        if (acceptedBytes) {
           relaunchedPid = pid
           break
         }
@@ -306,7 +320,8 @@ if (process.platform === 'linux') {
   assert.equal(nativeUpdate.shutdownBySdk, true)
   assert.equal(nativeUpdate.downloadVerifiedBySdk, true)
   nativeUpdate.relaunched = true
-  nativeUpdate.cleanup = 'SIGTERM after verifying the new window and its isolated data path'
+  nativeUpdate.cleanup =
+    'SIGTERM after verifying the new window, accepted ASAR and open isolated database'
   writeFileSync(
     join(evidence, 'native-update-linux.json'),
     JSON.stringify(nativeUpdate, null, 2) + '\n',

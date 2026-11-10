@@ -1,23 +1,23 @@
 {
-  "file": "vendor/sessionweave-79a076e.tgz",
-  "sha256": "8cc6c9e34aabd060b6147f0c76aee004c8c50b8e89ba3f62a42902aa84667d07",
-  "sourceCommit": "79a076ecdf6d45208762556c609046156444ea4c",
-  "distributionCandidate": "c86db94dcbc32661c0bc85d5fc0fc75675e5e9f1",
-  "verifiedSourceTree": "35d4a4b55ff8da2fee3362ddfcfc14ce058e3bd4",
-  "status": "fixed source snapshot; not an npm release",
+  "file": "vendor/sessionweave-0.1.0-beta.3.tgz",
+  "version": "0.1.0-beta.3",
+  "sha256": "5a42974d5726076fee0a1a017960ce50738e6ae42596d0787131e90c27122149",
+  "sourceCommit": "d7cd3f06172ed297edd2e866eb347c46fd54a3da",
+  "tag": "v0.1.0-beta.3",
+  "tagObject": "b91a3ce2f9aed148bcfcea83a8ec22eb5f605cbe",
+  "release": "https://github.com/Ethan-decoy/session_weave/releases/tag/v0.1.0-beta.3",
+  "download": "https://github.com/Ethan-decoy/session_weave/releases/download/v0.1.0-beta.3/sessionweave-0.1.0-beta.3.tgz",
+  "status": "published GitHub prerelease; not an npm registry release",
   "license": "MIT",
-  "build": "Node 24.13.0; npm ci --ignore-scripts --offline; npm run build; npm pack --ignore-scripts",
-  "contents": "compiled dist and API docs from the exact development commit; no runtime absolute checkout dependency",
+  "contents": "unchanged official release archive; compiled ESM, declarations, examples, API docs and MIT license",
   "peers": {
     "@mastra/core": "1.79.0",
     "@mastra/memory": "1.39.0"
   },
-  "archiveMetadataLicense": "UNLICENSED",
+  "archiveMetadataLicense": "MIT",
   "repository": "https://github.com/Ethan-decoy/session_weave",
-  "licenseGrant": {
-    "date": "2026-11-05",
+  "licenseText": {
     "file": "licenses/sessionweave.LICENSE",
-    "sha256": "1f05b4ed4133de00dc697998b863b5b62550c2cb98a6d5d6e49cd72a2f4680f1",
-    "scope": "The owner authorized MIT licensing and public redistribution of this exact snapshot, including existing QuestBranch source history and v0.3.0-dev.2. The original archive remains byte-for-byte unchanged."
+    "sha256": "1f05b4ed4133de00dc697998b863b5b62550c2cb98a6d5d6e49cd72a2f4680f1"
   }
 }

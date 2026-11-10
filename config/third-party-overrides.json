@@ -127,5 +127,14 @@
     "source": "https://github.com/openai/codex/blob/d27764b82f7118f674371e6d6e76271d9d606edb/LICENSE",
     "reason": "The published npm archive omits a license file. Preserved from the pinned upstream revision shown here.",
     "sha256": "d17f227e4df5da1600391338865ce0f3055211760a36688f816941d58232d8dc"
+  },
+  "lazy-val@1.0.5": {
+    "file": "licenses/MIT.txt",
+    "sha256": "508a77d2e7b51d98adeed32648ad124b7b30241a8e70b2e72c99f92d8e5874d1",
+    "source": "https://github.com/develar/lazy-val/tree/b69ad4119f1b19bdab13c61ee2fcc88d46b89071",
+    "declarationFile": "licenses/develar-lazy-val.package.json",
+    "declarationSha256": "a5096f95098452cf6fe5c8ac9be8f13f59ab7c9f605ba5ef92c91b2c505744f0",
+    "declaredLicense": "MIT",
+    "reason": "The original npm manifest and its upstream npm gitHead declare MIT. The package archive and inspected upstream files supply no separate license or copyright notice. The original published manifest is preserved below, followed by standard MIT terms; no copyright notice is invented."
   }
 }

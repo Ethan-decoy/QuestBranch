@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict'
-import { spawn } from 'node:child_process'
+import { execFileSync, spawn } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import {
   cpSync,
+  chmodSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -170,6 +171,7 @@ for (const [script, name] of [
   })
 
 const fresh = await research(installed, 'installed-research')
+await run('update-sdk', engine, ['scripts/verify-updates.mjs', `--package-root=${installed}`])
 assert.equal(fresh.details.cases.length, 15)
 const pointer = join(fresh.folder, 'profile/storage-location.json')
 writeFileSync(pointer, JSON.stringify({ version: 1, directory: join(fresh.folder, 'research') }))
@@ -219,7 +221,87 @@ if (process.platform === 'linux') {
     `--executable=${image}`,
     `--reopen=${imageStudy.folder}`,
   ])
-  appImage = { realLauncher: true, researchAndReopen: true }
+  const predecessor = join(temporary, 'QuestBranch-upgrade.AppImage')
+  await run('appimage-predecessor', 'curl', [
+    '--fail',
+    '--location',
+    '--retry',
+    '2',
+    '--output',
+    predecessor,
+    'https://github.com/Ethan-decoy/QuestBranch/releases/download/v0.3.0-dev.6/QuestBranch-0.3.0-dev.6-linux-x86_64.AppImage',
+  ])
+  assert.equal(
+    sha256(predecessor),
+    '304882cb6827a2982b597a43fac8b846fd5cdbeebd08cbad901de5025c6feafe',
+  )
+  chmodSync(predecessor, 0o755)
+  const data = join(imageStudy.folder, 'research')
+  await run(
+    'native-update',
+    engine,
+    [
+      'scripts/verify-native-update.mjs',
+      `--previous-root=${predecessor}`,
+      `--installer=${image}`,
+      '--previous-version=0.3.0-dev.6',
+    ],
+    {
+      env: { ...environment, QUESTBRANCH_DATA_DIR: data },
+    },
+  )
+  assert.equal(
+    sha256(predecessor),
+    sha256(image),
+    'AppImage replacement differs from accepted bytes',
+  )
+  let relaunchedPid
+  const deadline = Date.now() + 60_000
+  while (!relaunchedPid && Date.now() < deadline) {
+    try {
+      const windows = execFileSync(
+        'xdotool',
+        ['search', '--onlyvisible', '--name', '^QuestBranch'],
+        { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] },
+      )
+        .trim()
+        .split('\n')
+      for (const window of windows) {
+        const pid = Number(
+          execFileSync('xdotool', ['getwindowpid', window], { encoding: 'utf8' }).trim(),
+        )
+        const variables = readFileSync(`/proc/${pid}/environ`, 'utf8').split('\0')
+        if (
+          variables.includes(`APPIMAGE=${predecessor}`) &&
+          variables.includes(`QUESTBRANCH_DATA_DIR=${data}`)
+        ) {
+          relaunchedPid = pid
+          break
+        }
+      }
+    } catch {
+      /* A visible window is not yet available. */
+    }
+    if (!relaunchedPid) await new Promise((done) => setTimeout(done, 200))
+  }
+  assert(relaunchedPid, 'Updated AppImage did not relaunch its research window')
+  const nativeUpdate = json(join(evidence, 'native-update-linux.json'))
+  assert.equal(nativeUpdate.installRequested, true)
+  assert.equal(nativeUpdate.shutdownBySdk, true)
+  assert.equal(nativeUpdate.downloadVerifiedBySdk, true)
+  nativeUpdate.relaunched = true
+  nativeUpdate.cleanup = 'SIGTERM after verifying the new window and its isolated data path'
+  writeFileSync(
+    join(evidence, 'native-update-linux.json'),
+    JSON.stringify(nativeUpdate, null, 2) + '\n',
+  )
+  process.kill(relaunchedPid, 'SIGTERM')
+  await new Promise((done) => setTimeout(done, 1000))
+  await research(built.root, 'appimage-updated-reopen', [
+    `--executable=${predecessor}`,
+    `--reopen=${imageStudy.folder}`,
+  ])
+  appImage = { realLauncher: true, researchAndReopen: true, nativeUpdater: nativeUpdate }
   await run('deb-uninstall', 'sudo', ['apt-get', 'remove', '-y', 'questbranch'])
   assert(!existsSync(actual.executable))
 } else {
@@ -267,7 +349,7 @@ const record = {
       ? { adHocVerified: true, developerId: false, notarized: false }
       : { signed: false },
   appImage,
-  automaticUpdatesProvided: false,
+  automaticInstallOnQuit: false,
   assets: assets.map((name) => ({ name, sha256: sha256(join('release', name)) })),
 }
 writeFileSync(join('release', `VERIFICATION-${key}.json`), JSON.stringify(record, null, 2) + '\n')

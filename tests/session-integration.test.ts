@@ -1,5 +1,6 @@
 import { afterEach, expect, it, vi } from 'vitest'
-import { mkdtempSync, mkdirSync, rmSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, rmSync, readFileSync, existsSync } from 'node:fs'
+import { DatabaseSync } from 'node:sqlite'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
@@ -11,6 +12,8 @@ import {
 import { RevisionConflictError, SessionWeave } from 'sessionweave'
 import { ResearchStore } from '../src/desktop/store'
 import { SqliteSessionStore } from '../src/desktop/session-store'
+import { updateSessionMaterials } from '../src/desktop/session-materials'
+import legacySession from './fixtures/sessionweave-v3.json'
 import { ResearchService } from '../src/desktop/service'
 import { PiModels } from '../src/desktop/pi-models'
 import { relocateResearchStorage } from '../src/desktop/storage-location'
@@ -27,7 +30,9 @@ function setup(contextWindow = 128000) {
   const directory = mkdtempSync(join(tmpdir(), 'qb-session-'))
   cleanup.push(() => rmSync(directory, { recursive: true, force: true }))
   const store = new ResearchStore(join(directory, 'data'))
-  cleanup.push(() => store.close())
+  cleanup.push(() => {
+    if (store.isOpen) store.close()
+  })
   const faux = fauxProvider({
     provider: 'fixture-session',
     models: [{ id: 'fixture', contextWindow, maxTokens: 8192 }],
@@ -93,6 +98,291 @@ it('同节点多轮、跨节点、关闭重开稳定归属；原文不会重复�
   ).toHaveLength(6)
 })
 
+it('持久材料保持身份与已有请求前缀，不变的研究背景不会重复追加', async () => {
+  const { store, service, faux, root } = setup()
+  const received: Context[] = []
+  faux.setResponses(
+    [1, 2].map(() => (context) => {
+      received.push(structuredClone(context))
+      return fauxAssistantMessage('承接当前研究材料。')
+    }),
+  )
+  const first = await send(service, store, root, '材料第一轮')
+  const firstState = (await new SqliteSessionStore(store.sessions).load(first.session!.sessionId))!
+  const second = await send(service, store, root, '材料第二轮')
+  const next = (await new SqliteSessionStore(store.sessions).load(second.session!.sessionId))!
+  expect(firstState.version).toBe(4)
+  expect(firstState.materialRevisions).toHaveLength(1)
+  expect(next.materialRevisions).toEqual(firstState.materialRevisions)
+  expect(received[1].messages.slice(0, received[0].messages.length)).toEqual(received[0].messages)
+  expect(next.messages).toHaveLength(4)
+})
+
+it('图谱变化追加同一材料的新版本，已发送前缀与旧分支材料仍保留', async () => {
+  const { store, service, faux, root } = setup()
+  const received: Context[] = []
+  faux.setResponses(
+    [1, 2].map(() => (context) => {
+      received.push(structuredClone(context))
+      return fauxAssistantMessage('使用图谱中的实际分支。')
+    }),
+  )
+  const first = await send(service, store, root, '第一轮图谱')
+  const report = store.snapshot().reports.find((report) => report.nodeId === root)!
+  store.createNode(root, '新增的材料版本测试方向', report.id)
+  await send(service, store, root, '承接新增方向')
+  const state = (await new SqliteSessionStore(store.sessions).load(first.session!.sessionId))!
+  expect(state.materialRevisions).toHaveLength(2)
+  const [previous, current] = state.materialRevisions!
+  expect(current.id).toBe(previous.id)
+  expect(current.previousVersion).toBe(previous.version)
+  expect(current.version).not.toBe(previous.version)
+  expect(previous.action === 'set' && previous.text).not.toContain('新增的材料版本测试方向')
+  expect(current.action === 'set' && current.text).toContain('新增的材料版本测试方向')
+  expect(received[1].messages.slice(0, received[0].messages.length)).toEqual(received[0].messages)
+})
+
+it('旧固定快照生成的 v3 会话原样恢复，材料升级保留原文、记忆检查点和原格式备份', async () => {
+  const { store, root, directory } = setup()
+  const owner = store.sessions.owner('welcome-research', root, 'legacy-v3-fixture')
+  const legacy = structuredClone(legacySession.state)
+  const previousSessionId = owner.sessionId
+  owner.sessionId = legacy.sessionId
+  const db = new DatabaseSync(join(directory, 'data', 'research.sqlite'))
+  try {
+    db.prepare(
+      'UPDATE model_sessions SET session_id=?,owner=?,state=?,revision=? WHERE session_id=?',
+    ).run(
+      owner.sessionId,
+      JSON.stringify(owner),
+      JSON.stringify(legacy),
+      legacy.revision,
+      previousSessionId,
+    )
+  } finally {
+    db.close()
+  }
+  const adapter = new SqliteSessionStore(store.sessions)
+  const session = await SessionWeave.open({ sessionId: owner.sessionId, store: adapter })
+  expect((await session.inspect()).messageCount).toBe(legacy.messages.length)
+  expect(await adapter.load(owner.sessionId)).toEqual(legacy)
+  await updateSessionMaterials(
+    session,
+    store,
+    '升级后选用的研究材料。',
+    new AbortController().signal,
+  )
+  const upgraded = (await adapter.load(owner.sessionId))!
+  expect(upgraded.version).toBe(4)
+  expect(upgraded.messages).toEqual(legacy.messages)
+  expect(upgraded.workingMemoryCheckpoints).toEqual(legacy.workingMemoryCheckpoints)
+  const backup = new DatabaseSync(
+    join(directory, 'data', 'backups', 'before-sessionweave-materials-v4', 'research.sqlite'),
+    { readOnly: true },
+  )
+  try {
+    expect(
+      JSON.parse(
+        String(
+          backup
+            .prepare('SELECT state FROM model_sessions WHERE session_id=?')
+            .get(owner.sessionId)!.state,
+        ),
+      ),
+    ).toEqual(legacy)
+  } finally {
+    backup.close()
+  }
+})
+
+it('研究材料更新和改回旧内容仍保留新修订，原始版本不被覆盖', async () => {
+  const { store, service, faux, root } = setup()
+  faux.setResponses(
+    Array.from({ length: 3 }, () => fauxAssistantMessage('使用最新有效的研究材料。')),
+  )
+  const first = await send(service, store, root, '使用原材料')
+  const adapter = new SqliteSessionStore(store.sessions)
+  const original = (await adapter.load(first.session!.sessionId))!.materialRevisions![0]
+  const session = await SessionWeave.open({ sessionId: first.session!.sessionId, store: adapter })
+  await session.updateMaterials([
+    { id: original.id, version: 'manual-correction', action: 'set', text: '临时替换的材料。' },
+  ])
+  await send(service, store, root, '重新选用 QB 原有材料')
+  const updated = (await adapter.load(first.session!.sessionId))!
+  expect(updated.materialRevisions).toHaveLength(3)
+  expect(updated.materialRevisions![0]).toEqual(original)
+  expect(updated.materialRevisions!.at(-1)).toMatchObject({
+    id: original.id,
+    text: original.action === 'set' ? original.text : '',
+    previousVersion: 'manual-correction',
+  })
+  expect(updated.materialRevisions!.at(-1)!.version).not.toBe(original.version)
+  expect(
+    await session.read({
+      sessionId: session.sessionId,
+      materialId: original.id,
+      version: original.version,
+    }),
+  ).toEqual(original)
+})
+
+it('首次材料升级先保存含 WAL 与凭据密钥的完整备份，后续会话不覆盖备份', async () => {
+  const { store, service, faux, root, directory } = setup()
+  const backupDirectory = join(directory, 'data', 'backups', 'before-sessionweave-materials-v4')
+  expect(existsSync(backupDirectory)).toBe(false)
+  faux.setResponses(Array.from({ length: 2 }, () => fauxAssistantMessage('已保存研究材料。')))
+  const first = await send(service, store, root, '首次升级前的输入')
+  const bytes = readFileSync(join(backupDirectory, 'research.sqlite'))
+  expect(readFileSync(join(backupDirectory, '.credential-key'))).toEqual(
+    readFileSync(join(directory, 'data', '.credential-key')),
+  )
+  const backup = new DatabaseSync(join(backupDirectory, 'research.sqlite'), { readOnly: true })
+  try {
+    expect(backup.prepare('PRAGMA quick_check').get()?.quick_check).toBe('ok')
+    const row = backup
+      .prepare('SELECT state FROM model_sessions WHERE session_id=?')
+      .get(first.session!.sessionId)!
+    const prior = JSON.parse(String(row.state))
+    expect(prior.version).toBe(1)
+    expect(prior.materialRevisions).toBeUndefined()
+    expect(prior.messages.at(-1).text).toBe('首次升级前的输入')
+    expect(backup.prepare('SELECT COUNT(*) AS count FROM reports').get()!.count).toBeGreaterThan(0)
+  } finally {
+    backup.close()
+  }
+  await send(service, store, root, '升级后的继续')
+  expect(readFileSync(join(backupDirectory, 'research.sqlite'))).toEqual(bytes)
+})
+
+it('升级备份失败不发布新材料，保留输入并允许重新尝试', async () => {
+  const { store, service, faux, root } = setup()
+  vi.spyOn(store.sessions, 'backup').mockRejectedValueOnce(new Error('fixture backup failure'))
+  const { id } = await service.command({
+    type: 'send-message',
+    nodeId: root,
+    message: '备份失败的输入',
+  })
+  await vi.waitFor(() => expect(store.run(id!).status).toBe('failed'))
+  expect(store.run(id!).error).toContain('fixture backup failure')
+  const prior = (await new SqliteSessionStore(store.sessions).load(
+    store.run(id!).session!.sessionId,
+  ))!
+  expect(prior.materialRevisions).toBeUndefined()
+  expect(prior.messages.at(-1)!.text).toBe('备份失败的输入')
+  expect(faux.state.callCount).toBe(0)
+  faux.setResponses([fauxAssistantMessage('备份成功后继续。')])
+  await send(service, store, root, '重新尝试')
+})
+
+it('退出后迟到的备份失败不再写已关闭数据库，重开保留中断状态', async () => {
+  const { store, service, root, directory } = setup()
+  let failBackup!: (error: Error) => void
+  const backup = vi.spyOn(store.sessions, 'backup').mockImplementation(
+    () =>
+      new Promise<void>((_resolve, reject) => {
+        failBackup = reject
+      }),
+  )
+  const { id } = await service.command({
+    type: 'send-message',
+    nodeId: root,
+    message: '备份过程中退出',
+  })
+  await vi.waitFor(() => expect(backup).toHaveBeenCalled())
+  service.shutdown()
+  store.close()
+  failBackup(new Error('delayed backup failure'))
+  await vi.waitFor(() => expect(service.hasActiveRuns).toBe(false))
+  const reopened = new ResearchStore(join(directory, 'data'), { seed: false })
+  cleanup.push(() => reopened.close())
+  expect(reopened.run(id!).status).toBe('interrupted')
+})
+
+it('缓存标识送达模型调用，同节点重开稳定，跨节点隔离；用量随运行导出保留', async () => {
+  const { store, service, faux, root, directory } = setup()
+  const keys: (string | undefined)[] = []
+  faux.setResponses(
+    [1, 2, 3].map(() => (_context, options) => {
+      keys.push(options?.sessionId)
+      return fauxAssistantMessage('有提供商用量的固定回复')
+    }),
+  )
+  const first = await send(service, store, root, '第一轮')
+  const source = store.snapshot().reports.find((report) => report.nodeId === root)!
+  const child = store.createNode(root, '隔离方向', source.id)
+  await send(service, store, child, '独立讨论')
+  service.shutdown()
+  const reopened = new ResearchStore(join(directory, 'data'), { seed: false })
+  cleanup.push(() => reopened.close())
+  const next = new ResearchService(reopened, new PiModels(reopened, { providers: [faux.provider] }))
+  cleanup.push(() => next.shutdown())
+  const resumed = await send(next, reopened, root, '继续第一轮')
+  expect(keys[0]).toMatch(/^qb-[a-f0-9]{48}$/)
+  expect(keys[2]).toBe(keys[0])
+  expect(keys[1]).not.toBe(keys[0])
+  expect(resumed.modelCalls).toHaveLength(1)
+  expect(resumed.modelCalls![0]).toMatchObject({
+    phase: 'reply',
+    status: 'completed',
+    source: 'pi',
+  })
+  expect(resumed.modelCalls![0].usage!.outputTokens).toBeGreaterThan(0)
+  const restored = new ResearchStore(join(directory, 'restored-usage'), { seed: false })
+  cleanup.push(() => restored.close())
+  const importedId = restored.importWorkspace(reopened.exportWorkspace(first.workspaceId))
+  expect(
+    restored
+      .snapshot()
+      .runs.find((run) => run.workspaceId === importedId && run.instruction === '继续第一轮')!
+      .modelCalls,
+  ).toEqual(resumed.modelCalls)
+})
+
+it('模型失败和用户取消仍保留调用记录及已返回用量，不将草稿当成完整回复', async () => {
+  const { store, service, faux, root } = setup()
+  faux.setResponses([
+    fauxAssistantMessage('失败前的部分回复', {
+      stopReason: 'error',
+      errorMessage: 'fixture failure',
+    }),
+  ])
+  const failed = await service.command({ type: 'send-message', nodeId: root, message: '模拟失败' })
+  await vi.waitFor(() => expect(store.run(failed.id!).status).toBe('failed'), { timeout: 15000 })
+  expect(store.run(failed.id!).modelCalls![0]).toMatchObject({ phase: 'reply', status: 'failed' })
+  expect(store.run(failed.id!).modelCalls![0].usage!.outputTokens).toBeGreaterThan(0)
+  let release!: () => void
+  const wait = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  faux.setResponses([
+    async () => {
+      await wait
+      return fauxAssistantMessage('取消之后不可提交的回复')
+    },
+  ])
+  const cancelled = await service.command({
+    type: 'send-message',
+    nodeId: root,
+    message: '模拟取消',
+  })
+  await vi.waitFor(() => expect(store.run(cancelled.id!).modelCalls).toHaveLength(1), {
+    timeout: 15000,
+  })
+  await service.command({ type: 'cancel-research', runId: cancelled.id! })
+  expect(store.run(cancelled.id!).modelCalls![0].status).toBe('cancelled')
+  release()
+  await vi.waitFor(() => expect(service.hasActiveRuns).toBe(false), { timeout: 15000 })
+  expect(store.run(cancelled.id!).modelCalls![0].status).toBe('cancelled')
+  expect(store.run(cancelled.id!).status).toBe('cancelled')
+  expect(
+    (await new SqliteSessionStore(store.sessions).load(
+      store.run(cancelled.id!).session!.sessionId,
+    ))!.messages.some(
+      (message) => message.role === 'assistant' && message.text.includes('取消之后'),
+    ),
+  ).toBe(false)
+})
+
 it('真实 OM SDK 通过 Pi 模型桥接压缩旧记录并恢复检查点；不预裁 16K 历史', async () => {
   const { store, service, faux, root } = setup(32000)
   const legacyIds: string[] = []
@@ -130,6 +420,17 @@ it('真实 OM SDK 通过 Pi 模型桥接压缩旧记录并恢复检查点；不�
   expect(state.messages.slice(0, 16).map((message) => message.id)).toEqual(legacyIds)
   expect(first.session!.bootstrapMessageIds).toEqual(legacyIds)
   expect(observations).toBeGreaterThan(0)
+  expect(first.modelCalls!.filter((call) => call.phase === 'memory')).toHaveLength(observations)
+  for (const call of first.modelCalls!.filter((call) => call.phase === 'memory'))
+    expect(call.sessionContext).toMatchObject({
+      sessionId: state.sessionId,
+      phase: 'observer',
+      checkpointId: null,
+      callId: expect.any(String),
+      sourceRevision: expect.any(Number),
+    })
+  expect(first.modelCalls!.find((call) => call.phase === 'reply')!.sessionContext).toBeUndefined()
+  expect(first.modelCalls!.filter((call) => call.phase === 'reply')).toHaveLength(1)
   expect(state.workingMemoryCheckpoints!.at(-1)!.identity.policy).toContain('research-retention@2')
   const observed = observations
   const second = await send(service, store, root, '短追问')
@@ -164,6 +465,11 @@ it('真实 OM SDK 通过 Pi 模型桥接压缩旧记录并恢复检查点；不�
   })
   await vi.waitFor(() => expect(store.run(failed.id!).status).toBe('failed'), { timeout: 15000 })
   expect(store.run(failed.id!).error).toContain('OM_OUTPUT_INCOMPLETE')
+  expect(
+    store
+      .run(failed.id!)
+      .modelCalls!.some((call) => call.phase === 'memory' && call.status === 'failed'),
+  ).toBe(true)
   const retained = (await new SqliteSessionStore(store.sessions).load(state.sessionId))!
   expect(retained.workingMemoryCheckpoints).toEqual(previous.workingMemoryCheckpoints)
   expect(retained.messages).toHaveLength(previous.messages.length + 1)
@@ -182,19 +488,29 @@ it('原生 Responses 使用完整 wire JSON 和计数接口续传，鉴权错误
   })
   const requests: { url: string; body: Record<string, unknown> }[] = []
   let generated = 0,
-    forbidden = false
+    forbidden = false,
+    forceCompaction = false
   const transport = vi.fn<typeof fetch>(async (url, init) => {
     const path = String(url),
       body = JSON.parse(String(init?.body))
     requests.push({ url: path, body })
     if (forbidden) return Response.json({ error: { code: 'invalid_api_key' } }, { status: 401 })
     if (path.endsWith('/input_tokens'))
-      return Response.json({ object: 'response.input_tokens', input_tokens: 1000 })
+      return Response.json({
+        object: 'response.input_tokens',
+        input_tokens:
+          forceCompaction &&
+          JSON.stringify(body).includes('原生回复') &&
+          !JSON.stringify(body).includes('opaque-compaction')
+            ? 120000
+            : 1000,
+      })
     if (path.endsWith('/compact'))
       return Response.json({
         id: `cmp-${requests.length}`,
         object: 'response.compaction',
         output: [{ type: 'compaction', encrypted_content: 'opaque-compaction' }],
+        usage: { input_tokens: 9000, output_tokens: 300 },
       })
     generated++
     return Response.json({
@@ -222,9 +538,26 @@ it('原生 Responses 使用完整 wire JSON 和计数接口续传，鉴权错误
   const actorRequests = requests.filter((request) => request.url.endsWith('/responses'))
   expect(JSON.stringify(actorRequests[1].body.input)).toContain('opaque-1')
   expect(actorRequests[1].body.include).toEqual(['reasoning.encrypted_content'])
+  const report = store.snapshot().reports.find((report) => report.nodeId === root)!
+  store.createNode(root, '需要原生材料重建的新方向', report.id)
+  const third = await send(service, store, root, '使用更新后的图谱')
+  expect(third.session!.requests[0].origin).toBe('rebuilt')
+  const rebuilt = requests.filter((request) => request.url.endsWith('/responses'))[2].body
+  expect(JSON.stringify(rebuilt.input)).toContain('需要原生材料重建的新方向')
+  expect(JSON.stringify(rebuilt.input)).not.toContain('opaque-2')
+  forceCompaction = true
+  const fourth = await send(service, store, root, '触发原生容量整理')
+  const compression = fourth.modelCalls!.find((call) => call.phase === 'compaction')!
+  expect(compression.sessionContext).toMatchObject({
+    sessionId: first.session!.sessionId,
+    phase: 'native-compaction',
+    sourceRevision: expect.any(Number),
+    callId: expect.any(String),
+  })
+  expect(compression.usage).toMatchObject({ inputTokens: 9000, outputTokens: 300 })
   const saved = (await new SqliteSessionStore(store.sessions).load(first.session!.sessionId))!
-  expect(saved.messages).toHaveLength(4)
-  expect(saved.nativeCheckpoints).toHaveLength(2)
+  expect(saved.messages).toHaveLength(8)
+  expect(saved.nativeCheckpoints!.length).toBeGreaterThanOrEqual(4)
   expect(JSON.stringify(store.exportWorkspace('welcome-research'))).not.toContain('fixture-secret')
   forbidden = true
   const { id } = await service.command({ type: 'send-message', nodeId: root, message: '连接错误' })
@@ -233,7 +566,7 @@ it('原生 Responses 使用完整 wire JSON 和计数接口续传，鉴权错误
   expect(
     (await new SqliteSessionStore(store.sessions).load(saved.sessionId))!.nativeCheckpoints,
   ).toEqual(saved.nativeCheckpoints)
-  expect(generated).toBe(2)
+  expect(generated).toBe(4)
 })
 
 it('unknown 不伪装为 unsupported；用户可明确选择 portable', async () => {
@@ -290,6 +623,11 @@ it('SQLite 迁移保留活动会话；导出恢复保留原始档案并建立独
   const relocated = new ResearchStore(target, { seed: false })
   cleanup.push(() => relocated.close())
   expect(await new SqliteSessionStore(relocated.sessions).load(before.sessionId)).toEqual(before)
+  const upgradeBackup = join('backups', 'before-sessionweave-materials-v4')
+  for (const file of ['research.sqlite', '.credential-key', 'backup.json'])
+    expect(readFileSync(join(target, upgradeBackup, file))).toEqual(
+      readFileSync(join(store.directory, upgradeBackup, file)),
+    )
   const recovered = new ResearchStore(join(directory, 'recovered'), { seed: false })
   cleanup.push(() => recovered.close())
   recovered.importWorkspace(store.exportWorkspace('welcome-research'))
@@ -565,4 +903,31 @@ it('SQLite 原子修订与固定前缀候选采用，完整包在重开后仍可
     adapter.commit(owner.sessionId, saved.revision, {}, cancelled.signal),
   ).rejects.toThrow('cancelled storage write')
   expect(await adapter.load(owner.sessionId)).toEqual(saved)
+  await expect(
+    session.updateMaterials(
+      [{ id: 'cas-material', version: 'v1', action: 'set', text: '材料原件' }],
+      {
+        expectedRevision: saved.revision - 1,
+      },
+    ),
+  ).rejects.toMatchObject({ code: 'REVISION_CONFLICT' })
+  await expect(
+    session.updateMaterials(
+      [{ id: 'cas-material', version: 'v1', action: 'set', text: '材料原件' }],
+      {
+        signal: cancelled.signal,
+      },
+    ),
+  ).rejects.toThrow('cancelled storage write')
+  expect(await adapter.load(owner.sessionId)).toEqual(saved)
+  await session.updateMaterials([
+    { id: 'cas-material', version: 'v1', action: 'set', text: '材料原件' },
+  ])
+  const materialState = (await adapter.load(owner.sessionId))!
+  expect(materialState.version).toBe(4)
+  expect(materialState.messages).toEqual(saved.messages)
+  expect(materialState.workingMemoryCheckpoints).toEqual(saved.workingMemoryCheckpoints)
+  expect((await SessionWeave.open({ sessionId: owner.sessionId, store: adapter })).sessionId).toBe(
+    owner.sessionId,
+  )
 })

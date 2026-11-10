@@ -110,6 +110,8 @@ export type ContextPack = {
   limitations: string[]
 }
 export type ResearchRun = {
+  recovery?: 'agent-session'
+  modelCalls?: import('./usage').ModelCall[]
   session?: SessionTrace
   activities?: AgentActivity[]
   toolCalls?: { id: string; name: string; arguments: unknown; result?: unknown; error?: string }[]
@@ -315,8 +317,10 @@ export type AppCommand =
     }
   | { type: 'send-message'; nodeId: string; message: string; selectedReportId?: string }
   | { type: 'cancel-research'; runId: string }
+  | { type: 'reset-agent-session'; nodeId: string }
   | { type: 'import-workspace'; data: unknown }
 export interface ResearchClient {
+  updates?: import('../app-updates').AppUpdates
   host?: {
     name: string
     version: string

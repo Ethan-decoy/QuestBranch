@@ -48,7 +48,7 @@ $qbVerification = [ordered]@{
   installer=$qbInstallResult; package=$qbPackageResult; zipEntries=$qbFiles.Count+2; zipContentMatchesAcceptedPackage=$true;
   om=@{realSdk=$true;fixtureOnly=$true;calls=$qbOmResult.calls;identity=$qbOmResult.identity};
   actualInstallerSignature=(Get-AuthenticodeSignature -LiteralPath $qbInstaller).Status.ToString();
-  realProviderCalls=0; automaticUpdatesProvided=$false;
+  realProviderCalls=0; automaticInstallOnQuit=$false;
   assets=@(@{name=(Split-Path -Leaf $qbInstaller);sha256=(Get-FileHash -LiteralPath $qbInstaller -Algorithm SHA256).Hash.ToLowerInvariant()},@{name=(Split-Path -Leaf $qbZip);sha256=(Get-FileHash -LiteralPath $qbZip -Algorithm SHA256).Hash.ToLowerInvariant()})
 }
 $qbVerification | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath release/VERIFICATION.json -Encoding utf8

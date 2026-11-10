@@ -350,12 +350,13 @@ export function App() {
               v{client.host.version}
             </button>
           ) : (
-            <span
+            <button
               className="local-label"
-              title={t('本地存储 · QuestBranch {{version}}', { version })}
+              title={t('关于')}
+              onClick={() => open('settings', { settingsSection: 'updates' })}
             >
               v{version}
-            </span>
+            </button>
           )}
         </div>
       </aside>

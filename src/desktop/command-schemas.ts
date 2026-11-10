@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { viewSchema } from './store'
+import { viewSchema } from './storage-schemas'
 import { ReasoningEffortSchema, ApiProtocolSchema } from '../research/types'
 import { AgentConfigSchema } from '../research/agent'
 
@@ -76,6 +76,7 @@ export const commandSchema = z.discriminatedUnion('type', [
     selectedReportId: id.optional(),
   }),
   z.object({ type: z.literal('cancel-research'), runId: id }),
+  z.object({ type: z.literal('reset-agent-session'), nodeId: id }),
   z.object({
     type: z.literal('send-message'),
     nodeId: id,

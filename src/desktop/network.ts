@@ -2,7 +2,7 @@ import { AsyncLocalStorage } from 'node:async_hooks'
 import { randomUUID } from 'node:crypto'
 
 export type NetworkOperation =
-  'auth-login' | 'token-refresh' | 'model-discovery' | 'model-stream' | 'web-search'
+  'auth-login' | 'token-refresh' | 'model-discovery' | 'model-stream' | 'web-search' | 'app-update'
 export type NetworkContext = { operation: NetworkOperation; provider: string }
 export type NetworkRoute =
   'system-proxy' | 'system-direct' | 'environment' | 'direct' | 'local-direct' | 'unknown'

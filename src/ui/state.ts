@@ -18,7 +18,7 @@ type NavigationTarget = Pick<
 
 type Dialog =
   'workspace' | 'node' | 'sibling' | 'edit' | 'settings' | 'models' | 'search' | 'compare' | null
-export type SettingsSection = 'general' | 'appearance' | 'shortcuts' | 'storage'
+export type SettingsSection = 'general' | 'appearance' | 'shortcuts' | 'storage' | 'updates'
 type State = {
   snapshot: Snapshot | null
   workspaceId: string

@@ -1,0 +1,99 @@
+{
+  "sourceCommit": "79a076ecdf6d45208762556c609046156444ea4c",
+  "state": {
+    "version": 3,
+    "sessionId": "qb-legacy-v3",
+    "revision": 3,
+    "messages": [
+      {
+        "id": "legacy-u1",
+        "role": "user",
+        "text": "Keep the original research constraint.",
+        "sequence": 1,
+        "createdAt": "2026-11-10T07:41:42.974Z"
+      },
+      {
+        "id": "legacy-a1",
+        "role": "assistant",
+        "text": "The original decision and rationale.",
+        "sequence": 2,
+        "createdAt": "2026-11-10T07:41:42.976Z"
+      },
+      {
+        "id": "legacy-u2",
+        "role": "user",
+        "text": "Continue from the saved decision.",
+        "sequence": 3,
+        "createdAt": "2026-11-10T07:41:42.979Z"
+      }
+    ],
+    "checkpoints": [],
+    "usage": [],
+    "nativeCheckpoints": [],
+    "workingMemoryCheckpoints": [
+      {
+        "complete": true,
+        "sourceRevision": 1,
+        "sourceThroughId": "legacy-a1",
+        "activeThroughId": "legacy-a1",
+        "identity": {
+          "engine": "qb-legacy-fixture@1",
+          "codec": "fixture-json@1",
+          "policy": "fixture@1"
+        },
+        "engineState": {
+          "legacyFixture": true
+        },
+        "projection": "Legacy research decision retained.",
+        "sources": [
+          {
+            "sessionId": "qb-legacy-v3",
+            "startId": "legacy-u1",
+            "endId": "legacy-a1"
+          }
+        ],
+        "version": 2,
+        "id": "ad88625b-d544-48c4-8f6f-dfce83ab05be",
+        "createdAt": "2026-11-10T07:41:42.981Z",
+        "previousId": null,
+        "sourceThroughSequence": 2,
+        "activeThroughSequence": 2,
+        "sourceDigest": "a6ebe3c10a46214c2b63cd0baf23211c729fba575707c6cbfbe0f2a665b58538",
+        "publishedFromRevision": 2,
+        "publishedMessageCount": 3,
+        "publishedRawDigest": "3ac15a0247dac96c29c78a4158dbbea7f9b522b89cc5e3606027b517a3d36451",
+        "provenance": {
+          "sourceMessageCount": 2,
+          "sourceRawDigest": "a6ebe3c10a46214c2b63cd0baf23211c729fba575707c6cbfbe0f2a665b58538",
+          "sourceMetadataDigest": "7a34920550d111fdb702425862342a891e40d69349ace7e839efdb7ff4d92b2d",
+          "base": {
+            "handoffId": null,
+            "nativeId": null,
+            "workingMemoryId": null,
+            "digest": "bc6b738a65047019d737d5691e2cf81b5acff1deb9d3f9639d8f1bc310eb3adc"
+          },
+          "previousUsedId": null,
+          "appendReceipts": [
+            {
+              "revision": 2,
+              "startSequence": 3,
+              "endSequence": 3
+            }
+          ]
+        }
+      }
+    ],
+    "appendLog": [
+      {
+        "revision": 1,
+        "startSequence": 1,
+        "endSequence": 2
+      },
+      {
+        "revision": 2,
+        "startSequence": 3,
+        "endSequence": 3
+      }
+    ]
+  }
+}

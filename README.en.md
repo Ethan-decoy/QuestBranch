@@ -45,6 +45,7 @@ The example stays available. Chat suggestions only fill editable drafts; child r
 - Store research locally in SQLite, with workspace export and restore. The standalone desktop app supports choosing a research storage location and migrating data.
 - Use a desktop-first workspace, with a local browser preview backed by the same research service.
 - Simplified Chinese is the default interface language. Switch to English in **Settings → General** and save your local preference; research content stays in its original language.
+- Check versions in **Settings → About**, then download/restart or open official manual downloads as supported by your installation.
 
 ## Run from source
 
@@ -96,4 +97,4 @@ tests/         Behavioral tests
 
 Report problems through [Issues](https://github.com/Ethan-decoy/QuestBranch/issues). See the [changelog (Simplified Chinese)](CHANGELOG.md) for version history. Remove keys and private research content before sharing feedback.
 
-This project is licensed under [MIT](LICENSE). See [LICENSING.md](LICENSING.md) for the scope covering the fixed SessionWeave snapshot and historical versions, and [THIRD_PARTY_NOTICES.txt](THIRD_PARTY_NOTICES.txt) for third-party notices.
+This project is licensed under [MIT](LICENSE). See [LICENSING.md](LICENSING.md) for SessionWeave and historical licensing, and [THIRD_PARTY_NOTICES.txt](THIRD_PARTY_NOTICES.txt) for third-party notices.

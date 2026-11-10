@@ -18,6 +18,10 @@ The single-user app does not require a QB account. Reading and organizing resear
 
 Ordinary direct-model chat does not automatically search. An optional Tavily key can supply web material for report generation, or you can use an ACP agent configured with the required search tools. An account login alone does not establish web access. Check the actual activity record for tools that ran.
 
+## How do I check for and install updates?
+
+Open **Settings → About**, or click the sidebar version, for the update options supported by your installation. From dev.6 or earlier, install this release manually once. See [installation and upgrades](desktop-installation.en.md) for platform differences, backup and recovery.
+
 ## How do I save a report and create branches?
 
 Ask in the current node's chat: “Save a stage report and create the pending directions we just agreed on.” AI uses QB tools to save the report and branches while preserving earlier messages and report versions. A report-only request need not create branches. Child research does not start automatically. The empty-chat suggestion fills an editable draft; you decide when to send.
@@ -37,6 +41,8 @@ The research database is local. Cloud models and external tools receive relevant
 ## Where is research stored, and how do I move it?
 
 Inspect the actual path in Settings → Local storage. The standalone desktop app can copy and check the database into an empty directory, then restart; the source is retained as a backup. Research JSON moves reports, conversations and sources across systems, but omits credentials, complete native state and external work files. See the [usage guide](getting-started.en.md) for full backups. DSH has its own storage and session-backup instructions.
+
+Before the first durable-material upgrade, `backups/before-sessionweave-materials-v4/` under your research directory stores the pre-upgrade database, local credential key if present, and `backup.json`. Older SW readers cannot open the new session format. To restore an older app, quit QB, separately back up your current research, then restore the complete pre-upgrade database and key together. This older backup excludes later research; lowering a version field or deleting material records is not a downgrade.
 
 ## Does stopping or closing the app undo completed work?
 

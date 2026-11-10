@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import type { DatabaseSync } from 'node:sqlite'
+import { backup, type DatabaseSync } from 'node:sqlite'
 
 export type SessionOwner = {
   sessionId: string
@@ -60,6 +60,10 @@ export class SqliteSessionArchive {
       .get(sessionId)
     if (!row) throw new Error('研究会话不存在')
     return row.state ? JSON.parse(String(row.state)) : null
+  }
+  /** Online backup includes committed WAL data from the shared research database. */
+  async backup(destination: string) {
+    await backup(this.db, destination)
   }
   async update<T extends { revision: number }>(
     sessionId: string,

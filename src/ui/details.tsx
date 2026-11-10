@@ -2,7 +2,6 @@ import { uiLocale } from '../i18n'
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import {
   ArrowUpRight,
-  ArrowUp,
   BookOpen,
   Check,
   ChevronDown,
@@ -12,11 +11,8 @@ import {
   Link2,
   LoaderCircle,
   Pencil,
-  Square,
-  Sparkles,
   ListChecks,
   CircleHelp,
-  CirclePause,
   PanelRightClose,
   PanelRightOpen,
   Copy,
@@ -24,177 +20,28 @@ import {
   Focus,
 } from 'lucide-react'
 import { useApp } from './state'
-import {
-  Button,
-  EmptyState,
-  ExternalLink,
-  Feedback,
-  SignalIcon,
-  nodeStatus,
-  StatusLabel,
-} from './components'
-import type { DetailTab, ReaderState, ResearchRun } from '../research/types'
+import { EmptyState, nodeStatus, StatusLabel } from './components'
+import type { DetailTab, ReaderState } from '../research/types'
 import { Conversation } from './conversation'
 import { AgentActivity, ToolActivities } from './agent-activity'
 import { useTheme } from './theme'
 import { displayBranchColor } from './theme-colors'
 import { ReportMarkdown, reportHeadings } from './report-markdown'
-import { ComposerModelPicker } from './models/composer-picker'
-import { shouldSendMessage, sendShortcutLabel, useShortcuts } from './shortcuts'
 import { useTranslation } from 'react-i18next'
 import { runtimeLabel } from './i18n-labels'
 import { suggestChatDraft } from './research-start'
+import { RunRecord } from './details/run-record'
+import { ResearchComposer } from './details/research-composer'
+import { ReportSources } from './details/report-sources'
+import { ReportOverview } from './details/report-overview'
 
-function RunRecord({ run }: { run: ResearchRun }) {
-  const { t } = useTranslation()
-  const Container = import.meta.env.DEV ? 'details' : 'article',
-    Header = import.meta.env.DEV ? 'summary' : 'div'
-  return (
-    <Container className="run-record">
-      <Header className="run-record-summary">
-        <div>
-          <span className={`record-icon ${run.status}`}>
-            {run.status === 'failed' ? (
-              <SignalIcon tone="error" size={18} />
-            ) : run.status === 'interrupted' ? (
-              <CirclePause size={14} />
-            ) : (
-              <Sparkles size={14} />
-            )}
-          </span>
-          <div>
-            <strong>{run.instruction || t('研究当前问题')}</strong>
-            <small>
-              {new Date(run.createdAt).toLocaleString(uiLocale(), {
-                month: 'short',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-              })}{' '}
-              · {run.model}
-              {run.reasoningEffort ? ` · ${run.reasoningEffort}` : ''}
-            </small>
-          </div>
-        </div>
-        <span className={`record-state ${run.status}`}>
-          {run.status === 'completed'
-            ? t('已完成')
-            : run.status === 'running'
-              ? run.mode === 'chat'
-                ? t('回复中')
-                : t('生成报告中')
-              : run.status === 'cancelled'
-                ? t('已取消')
-                : run.status === 'interrupted'
-                  ? t('已中断')
-                  : t('未完成')}
-        </span>
-      </Header>
-      {run.error &&
-        (run.status === 'interrupted' || run.status === 'cancelled' ? (
-          <p className="context-limitation">{run.error}</p>
-        ) : (
-          <Feedback tone="error">{run.error}</Feedback>
-        ))}
-      <AgentActivity agent={run.agent} live={run.status === 'running'} />
-      <ToolActivities activities={run.activities} live={run.status === 'running'} />
-      {import.meta.env.DEV && <RunDiagnostics run={run} />}
-    </Container>
-  )
-}
-function RunDiagnostics({ run }: { run: ResearchRun }) {
-  const { t } = useTranslation()
-  const snapshot = useApp((s) => s.snapshot)!,
-    changed = run.context.items
-      .filter((item) => item.included)
-      .filter((item) => {
-        const latest = snapshot.reports.filter((r) => r.nodeId === item.nodeId).at(-1)
-        return latest && latest.id !== item.reportId
-      })
-  return (
-    <>
-      <h4>
-        {run.agent?.name === 'DeepSeek Harness' ? t('研究材料选择记录') : t('实际使用的上下文')}
-      </h4>
-      <p className="muted small-text">
-        {t('约 {{used}} / {{budget}} tokens', {
-          used: run.context.estimatedTokens.toLocaleString(uiLocale()),
-          budget: run.context.budget.toLocaleString(uiLocale()),
-        })}{' '}
-        · {run.context.policy}
-      </p>
-      <ul className="context-items">
-        <li>
-          <Check size={12} /> {t('根问题、目标与全局约束')}
-        </li>
-        <li>
-          <Check size={12} /> {t('当前问题、研究路径与本次指令')}
-        </li>
-        {run.context.items.map((item) => (
-          <li key={item.reportId}>
-            <span>{item.included ? <Check size={12} /> : <span>−</span>}</span>
-            <div>
-              {item.title}
-              <small>
-                {item.reason} ·{' '}
-                {item.included ? (item.excerpted ? t('采用摘要') : t('采用全文')) : t('因预算省略')}
-              </small>
-              <code>{item.reportId.slice(0, 16)}</code>
-            </div>
-          </li>
-        ))}
-      </ul>
-      {!!run.context.conversation?.includedMessageIds.length && (
-        <p className="context-limitation">
-          {t('承接本节点 {{count}} 轮对话；消息原文保存在“对话”中。', {
-            count: run.context.conversation.includedMessageIds.length / 2,
-          })}
-        </p>
-      )}
-      {changed.length > 0 && (
-        <Feedback tone="warning">
-          <strong>{t('上游报告有更新')}</strong>
-          {t('{{count}} 份上游报告已有新版本；本次记录仍保留研究当时采用的版本。', {
-            count: changed.length,
-          })}
-        </Feedback>
-      )}
-      {run.context.limitations.map((item, i) => (
-        <p className="context-limitation" key={i}>
-          {item}
-        </p>
-      ))}
-      <details className="raw-details">
-        <summary>{t('查看实际发送的输入')}</summary>
-        <pre>
-          {run.agent?.input
-            ? JSON.stringify(run.agent.input, null, 2)
-            : run.agent?.name === 'DeepSeek Harness'
-              ? t('此历史记录未保存原生请求，无法还原实际发送内容。')
-              : run.session
-                ? JSON.stringify(run.session, null, 2)
-                : run.context.messages
-                    .map((message) => `[${message.role}]\n${message.content}`)
-                    .join('\n\n')}
-        </pre>
-      </details>
-      <details className="raw-details">
-        <summary>{t('查看模型原始输出')}</summary>
-        <pre>{run.output || t('尚无输出')}</pre>
-      </details>
-    </>
-  )
-}
 export function ResearchDetails() {
   const { t } = useTranslation()
-  const sendShortcut = useShortcuts((state) => state.sendMessage)
-  const [selectionBusy, setSelectionBusy] = useState(false)
   const theme = useTheme((state) => state.theme)
   const snapshot = useApp((s) => s.snapshot)!,
     view = useApp((s) => s.view)!,
     setView = useApp((s) => s.setView),
-    open = useApp((s) => s.open),
-    command = useApp((s) => s.command)
+    open = useApp((s) => s.open)
   const node = snapshot.nodes.find((n) => n.id === view.selectedId)!,
     reports = snapshot.reports
       .filter((r) => r.nodeId === node.id)
@@ -216,9 +63,7 @@ export function ResearchDetails() {
     tabsId = useId()
   const input = useRef<HTMLTextAreaElement>(null),
     reader = useRef<HTMLDivElement>(null),
-    readingToggle = useRef<HTMLButtonElement>(null),
-    composing = useRef(false),
-    compositionConfirmUntil = useRef(0)
+    readingToggle = useRef<HTMLButtonElement>(null)
   const report = reports.find((r) => r.id === reportId) ?? reports[0],
     draft = view.chatDrafts?.[node.id] ?? view.drafts[node.id] ?? '',
     children = snapshot.nodes.filter((n) => n.parentId === node.id && !n.removedAt)
@@ -317,29 +162,6 @@ export function ResearchDetails() {
     document.addEventListener('keydown', escape)
     return () => document.removeEventListener('keydown', escape)
   }, [full])
-  const start = async () => {
-    if (selectionBusy || running) return
-    if (snapshot.settings.backend === 'acp' ? !snapshot.settings.agent : !snapshot.settings.model) {
-      open('models')
-      return
-    }
-    try {
-      if (!draft.trim()) {
-        input.current?.focus()
-        return
-      }
-      await command({ type: 'send-message', nodeId: node.id, message: draft })
-      const current = useApp.getState()
-      if (current.workspaceId === node.workspaceId && current.view)
-        setView({
-          chatDrafts: { ...current.view.chatDrafts, [node.id]: '' },
-          drafts: { ...current.view.drafts, [node.id]: '' },
-        })
-      if (current.view?.selectedId === node.id) {
-        changeTab('chat')
-      }
-    } catch {}
-  }
   const questionContext = (
     <details
       className="question-context"
@@ -610,43 +432,14 @@ export function ResearchDetails() {
                   </div>
                   <div className="report-controls">
                     {questionContext}
-                    <details
-                      className="report-overview"
+                    <ReportOverview
+                      report={report}
                       open={overviewOpen}
-                      onToggle={(event) => {
-                        const enabled = event.currentTarget.open
-                        if (enabled !== overviewOpen) {
-                          setOverviewOpen(enabled)
-                          remember({ overviewOpen: enabled })
-                        }
+                      onOpenChange={(enabled) => {
+                        setOverviewOpen(enabled)
+                        remember({ overviewOpen: enabled })
                       }}
-                    >
-                      <summary>
-                        <Sparkles size={13} />
-                        {t('概览')}
-                        <ChevronDown size={11} className="disclosure-marker" />
-                      </summary>
-                      <section className="insight-box">
-                        <div className="section-label">
-                          <Sparkles size={14} />
-                          {t('阶段认识')}
-                        </div>
-                        <p>{report.summary}</p>
-                      </section>
-                      {report.openQuestions.length > 0 && (
-                        <section className="open-questions">
-                          <div className="section-label">
-                            <CircleHelp size={14} />
-                            {t('尚待弄清')}
-                          </div>
-                          <ul>
-                            {report.openQuestions.map((q, i) => (
-                              <li key={i}>{q}</li>
-                            ))}
-                          </ul>
-                        </section>
-                      )}
-                    </details>
+                    />
                     <details className="report-toc">
                       <summary>
                         <ListChecks size={13} />
@@ -714,30 +507,7 @@ export function ResearchDetails() {
           hidden={tab !== 'sources'}
           tabIndex={0}
         >
-          {tab === 'sources' && (
-            <>
-              {report && (
-                <div className="source-report">
-                  <FileText size={13} />
-                  {report.title}
-                </div>
-              )}
-              {report?.sources.length ? (
-                report.sources.map((source, i) => (
-                  <div className="source-card" key={source.id} data-source-id={source.id}>
-                    <span className="source-number">{String(i + 1).padStart(2, '0')}</span>
-                    <div>
-                      <ExternalLink href={source.url}>{source.title}</ExternalLink>
-                      <small>{safeDomain(source.url)}</small>
-                      <p>{source.excerpt}</p>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <EmptyState title={t('暂无外部来源')}>{t('此报告未引用外部资料。')}</EmptyState>
-              )}
-            </>
-          )}
+          {tab === 'sources' && <ReportSources report={report} />}
         </div>
         <div
           role="tabpanel"
@@ -769,70 +539,7 @@ export function ResearchDetails() {
           )}
         </div>
       </div>
-      <div className="research-composer" role="region" aria-label={t('研究输入')}>
-        <textarea
-          ref={input}
-          value={draft}
-          onChange={(event) =>
-            setView({ chatDrafts: { ...view.chatDrafts, [node.id]: event.target.value } })
-          }
-          placeholder={t('在这条分支上，你想聊些什么？')}
-          aria-label={t('节点对话输入')}
-          maxLength={12000}
-          onCompositionStart={() => {
-            composing.current = true
-          }}
-          onCompositionEnd={() => {
-            composing.current = false
-            compositionConfirmUntil.current = performance.now() + 50
-          }}
-          onKeyDown={(event) => {
-            if (
-              shouldSendMessage(
-                event.nativeEvent,
-                sendShortcut,
-                composing.current || performance.now() < compositionConfirmUntil.current,
-              )
-            ) {
-              event.preventDefault()
-              if (!running) void start()
-            }
-          }}
-        />
-        <div className="composer-bottom">
-          <ComposerModelPicker onBusyChange={setSelectionBusy} />
-          {running && (
-            <span className="composer-progress" role="status">
-              <LoaderCircle className="spin" size={13} />
-              <span>{runtimeLabel(running.phase)}</span>
-            </span>
-          )}
-          {running ? (
-            <Button
-              className="composer-send"
-              aria-label={t('停止回复')}
-              title={t('停止回复')}
-              onClick={() =>
-                void command({ type: 'cancel-research', runId: running.id }).catch(() => {})
-              }
-            >
-              <Square size={14} fill="currentColor" aria-hidden="true" />
-            </Button>
-          ) : (
-            <Button
-              variant="primary"
-              className="composer-send"
-              aria-label={t('发送消息')}
-              aria-keyshortcuts={sendShortcut === 'enter' ? 'Enter' : 'Control+Enter Meta+Enter'}
-              title={t('发送消息（{{val}}）', { val: sendShortcutLabel(sendShortcut) })}
-              onClick={() => void start()}
-              disabled={!draft.trim() || selectionBusy}
-            >
-              <ArrowUp size={18} aria-hidden="true" />
-            </Button>
-          )}
-        </div>
-      </div>
+      <ResearchComposer node={node} inputRef={input} onSent={() => changeTab('chat')} />
     </aside>
   )
 }
@@ -844,11 +551,4 @@ function getDepth(nodes: { id: string; parentId: string | null }[], id: string) 
     current = nodes.find((n) => n.id === current!.parentId)
   }
   return depth
-}
-function safeDomain(url: string) {
-  try {
-    return new URL(url).hostname
-  } catch {
-    return url
-  }
 }

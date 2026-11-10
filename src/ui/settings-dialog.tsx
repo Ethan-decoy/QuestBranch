@@ -1,5 +1,5 @@
 import { useId, useRef, useState } from 'react'
-import { FolderOpen, Keyboard, Languages, Sun } from 'lucide-react'
+import { FolderOpen, Info, Keyboard, Languages, Sun } from 'lucide-react'
 import { Modal, Button, Feedback } from './components'
 import { useApp } from './state'
 import { AppearancePanel } from './settings/appearance-panel'
@@ -7,6 +7,8 @@ import { ShortcutsPanel } from './settings/shortcuts-panel'
 import { StorageSettingsPanel, useStorageSettings } from './settings/storage-panel'
 import { useTranslation } from 'react-i18next'
 import { GeneralPanel } from './settings/general-panel'
+import { UpdatesPanel } from './settings/updates-panel'
+import { client } from './client'
 
 export function SettingsDialog() {
   const { t } = useTranslation()
@@ -34,6 +36,7 @@ export function SettingsDialog() {
               ['appearance', Sun, t('外观')],
               ['shortcuts', Keyboard, t('快捷键')],
               ['storage', FolderOpen, t('本地存储')],
+              ...(!client.host ? [['updates', Info, t('关于')] as const] : []),
             ] as const
           ).map(([key, Icon, label], index, tabs) => (
             <button
@@ -73,6 +76,15 @@ export function SettingsDialog() {
         </div>
         <fieldset className="settings-fields" disabled={relocating}>
           <div className="settings-content">
+            <section
+              role="tabpanel"
+              id={`${tabsId}-settings-panel-updates`}
+              aria-labelledby={`${tabsId}-settings-tab-updates`}
+              hidden={section !== 'updates' || !!client.host}
+              tabIndex={0}
+            >
+              {section === 'updates' && !client.host && <UpdatesPanel />}
+            </section>
             <section
               role="tabpanel"
               id={`${tabsId}-settings-panel-general`}
@@ -118,14 +130,18 @@ export function SettingsDialog() {
           )}
           <div className="modal-footer split settings-footer">
             <span className="settings-save-status" role="status">
-              <span className="save-dot" />
-              {section === 'general'
-                ? t('设置即时保存')
-                : section === 'appearance'
-                  ? t('外观即时保存')
-                  : section === 'shortcuts'
-                    ? t('快捷键即时保存')
-                    : t('已保存')}
+              {section !== 'updates' && (
+                <>
+                  <span className="save-dot" />
+                  {section === 'general'
+                    ? t('设置即时保存')
+                    : section === 'appearance'
+                      ? t('外观即时保存')
+                      : section === 'shortcuts'
+                        ? t('快捷键即时保存')
+                        : t('已保存')}
+                </>
+              )}
             </span>
             <Button
               type="button"

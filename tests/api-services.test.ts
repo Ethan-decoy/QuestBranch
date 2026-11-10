@@ -430,7 +430,10 @@ describe('统一研究流程与凭据归属', () => {
           nodeId: 'visual',
           instruction: '整理报告',
         })
-        await vi.waitFor(() => expect(db.run(research.id!).status).toBe('failed'))
+        // First use includes the real online upgrade backup, not only a fixed model response.
+        await vi.waitFor(() => expect(db.run(research.id!).status).toBe('failed'), {
+          timeout: 15000,
+        })
         expect(db.run(research.id!).output).toBe(raw)
         expect(db.snapshot().reports).toHaveLength(3)
         expect(db.snapshot().nodes).toHaveLength(8)
@@ -459,7 +462,9 @@ describe('统一研究流程与凭据归属', () => {
       nodeId: 'visual',
       message: '先讨论',
     })
-    await vi.waitFor(() => expect(db.run(conversation.id!).status).toBe('completed'))
+    await vi.waitFor(() => expect(db.run(conversation.id!).status).toBe('completed'), {
+      timeout: 15000,
+    })
     expect(db.snapshot().reports).toHaveLength(3)
     expect(
       db
@@ -478,7 +483,9 @@ describe('统一研究流程与凭据归属', () => {
       collapsed: [],
       drafts: { context: '其他节点的草稿' },
     })
-    await vi.waitFor(() => expect(db.run(research.id!).status).toBe('completed'))
+    await vi.waitFor(() => expect(db.run(research.id!).status).toBe('completed'), {
+      timeout: 15000,
+    })
     const completed = db.run(research.id!)
     expect(completed.pi).toMatchObject({
       provider: 'questbranch',
@@ -520,7 +527,7 @@ describe('统一研究流程与凭据归属', () => {
       nodeId: 'visual',
       instruction: '继续',
     })
-    await vi.waitFor(() => expect(db.run(research.id!).status).toBe('failed'))
+    await vi.waitFor(() => expect(db.run(research.id!).status).toBe('failed'), { timeout: 15000 })
     expect(db.run(research.id!).output).toBe(JSON.stringify(report))
     expect(db.run(research.id!).error).toContain('长度上限')
     expect(db.snapshot().reports).toHaveLength(3)
@@ -539,7 +546,7 @@ describe('统一研究流程与凭据归属', () => {
       nodeId: 'visual',
       instruction: '继续',
     })
-    await vi.waitFor(() => expect(db.run(run.id!).status).toBe('failed'))
+    await vi.waitFor(() => expect(db.run(run.id!).status).toBe('failed'), { timeout: 15000 })
     expect(db.run(run.id!).error).toContain('未完成的工具')
     expect(db.run(run.id!).output).toBe(JSON.stringify(report))
     expect(db.snapshot().reports).toHaveLength(3)

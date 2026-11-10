@@ -1,4 +1,4 @@
-# QuestBranch v0.3.0-dev.6
+# QuestBranch v0.3.0-dev.7
 
 简体中文 · English below
 
@@ -6,61 +6,51 @@ Windows、macOS、Linux 开发者预发布，非 Latest。项目采用 MIT；第
 
 ## 这次更新
 
-- 统一中英文 README、安装与升级、第一次研究、FAQ 和独立应用／DSH 入口。
-- 初始研究空间有“示例”标记，首次可直接创建自己的研究。
-- 空节点提供模型或智能体入口，以及可编辑的示例提问；只填入空草稿，不覆盖输入或自动发送。
-- 明确连接能力和父节点报告要求。报告由 AI 工具保存在节点内，新方向等待你选择研究。
-- 接收已评审的共享主干与回归，保留现有跨平台交付。运行依赖、固定 SessionWeave 快照及研究格式 3 不变。
-- 增加延迟响应下的真实工具回归，对齐集成等待预算和原生成品的父报告提示检查。
+- 新增“设置 → 关于”：检测版本、下载进度、校验和按安装方式更新；侧栏版本号也可进入。
+- Windows 安装版与可写的 Linux AppImage 提供“重启并更新”，安装后重新打开。研究、账号连接或资料迁移进行中会阻止重启；正常退出不自动安装。
+- 升级至官方 SessionWeave `0.1.0-beta.3`。研究背景以稳定身份保存修订，不变的材料不重复追加，修订保留来源和历史。
+- 首次写入新格式研究材料前备份研究库及已有本地凭据密钥；备份失败保留原始资料并停止升级。
+- 清理过期的开发提示，统一中英文安装、更新、恢复与 FAQ 入口。研究导出仍为格式 3。
 
-## 下载与开始
+## 下载与升级
 
-- Windows x64：`QuestBranch-Setup-0.3.0-dev.6-x64.exe` 安装，或完整解压 `QuestBranch-0.3.0-dev.6-windows-x64.zip`，用顶层 `Start-QuestBranch.cmd` 隔离试用。
-- macOS：Apple Silicon 选 `QuestBranch-0.3.0-dev.6-macos-arm64.dmg`，Intel 选 `QuestBranch-0.3.0-dev.6-macos-x64.dmg`，拖入“应用程序”。
-- Linux x64：Ubuntu 优先用 `QuestBranch-0.3.0-dev.6-linux-amd64.deb`；便携版为 `QuestBranch-0.3.0-dev.6-linux-x86_64.AppImage`，赋予执行权限后运行。
-- 先核对 `SHA256SUMS.txt`；`VERIFICATION.json` 记录接受的源码、成品和实际验收。安装、备份和恢复见 `README-TRIAL.md`。
+| 平台 | 附件 |
+| --- | --- |
+| Windows x64 | `QuestBranch-Setup-0.3.0-dev.7-x64.exe` 或 `QuestBranch-0.3.0-dev.7-windows-x64.zip` |
+| macOS | `QuestBranch-0.3.0-dev.7-macos-arm64.dmg` / `QuestBranch-0.3.0-dev.7-macos-x64.dmg` |
+| Linux x64 | `QuestBranch-0.3.0-dev.7-linux-amd64.deb` / `QuestBranch-0.3.0-dev.7-linux-x86_64.AppImage` |
 
-打开示例或创建自己的根问题，连接模型／智能体，在节点中讨论。方向明确后，请 AI 保存阶段报告并建立待研究分支，再选一个方向继续。普通模型对话不会自动搜索网页，搜索和技能取决于连接的实际配置。
+核对 `SHA256SUMS.txt`。升级前正常退出并备份完整配置、研究目录及需要保留的外部智能体文件。**dev.6 及更早版本需手动安装本版一次。** Windows ZIP 使用顶层 `Start-QuestBranch.cmd` 隔离试用；其 `data/` 不自动合并到安装版。
 
-[第一次研究](https://github.com/Ethan-decoy/QuestBranch/blob/v0.3.0-dev.6/docs/getting-started.md) · [FAQ](https://github.com/Ethan-decoy/QuestBranch/blob/v0.3.0-dev.6/docs/faq.md) · [DSH 集成](https://github.com/Ethan-decoy/QuestBranch-DSH)
+ZIP／目录版、macOS DMG 和 DEB 使用手动升级。更新检查走系统代理，不消耗模型额度。自动研究备份位于研究目录 `backups/`；回退应使用升级前完整备份，重装旧程序不等于资料降级。
 
-## 安装、升级与验证范围
+## 验证与限制
 
-升级前停止运行并正常退出 QB，备份研究和配置。安装版继续使用普通桌面配置和自选研究位置；ZIP 的独立 `data/` 不自动合并。跨配置或系统可导出研究 JSON 后导入，凭据和完整原生状态另行备份。卸载保留资料，重装旧程序不等于数据库降级。
+四个原生目标为 Windows x64、macOS 15 Apple Silicon／Intel、Ubuntu 24.04 x64。实际安装、资料重开、对话、双主题图谱、打包 OM SDK、许可与附件校验结果见 `VERIFICATION.json`。
 
-四个原生目标为 Windows x64、macOS 15 Apple Silicon／Intel、Ubuntu 24.04 x64。安装后的研究、对话、双主题画布、实际打包 OM SDK 固定响应与成品输入一致性均由流程检查。macOS/Linux 另检查本地模型、代理、OAuth 和跨系统研究导入。Windows 使用公开 `.5` 安装器验证升级；Mac/Linux 覆盖新装、同版本重装、资料保留与移除，尚未验证历史原生包跨版本升级。最终结果以本版 `VERIFICATION.json` 为准。
+Windows 更新交接使用公开 dev.6 的真实安装器和旧研究，由当前 SDK 驱动安装本版并重新打开；AppImage 检查真实旧映像的替换与重新启动。验收驱动不代表 dev.6 自带更新入口。Mac／DEB 覆盖新装、同版本重装、资料保留和移除，不声称已测历史原生包的全部升级路径。
 
-Windows 未签名；Mac 使用 ad-hoc 签名，尚无 Developer ID 和 Apple 公证。Ubuntu 优先使用 DEB；AppImage 不依赖 FUSE2，用户命名空间受限时上游启动器可能回退为 `--no-sandbox`。未提供自动更新或热更新。固定响应验收不代表全部真实账号、keyring 后端、系统或长期研究均已验证。
+Windows 未签名；Mac 为 ad-hoc 签名，尚无 Developer ID 或公证。Ubuntu 优先使用 DEB；AppImage 不依赖 FUSE2，系统限制用户命名空间时，上游启动器可能回退为 `--no-sandbox`。固定响应不代表全部真实账号、keyring 后端或长期研究质量均已验证。
 
-反馈：[Issues](https://github.com/Ethan-decoy/QuestBranch/issues)。请提供版本、系统、连接方式和复现步骤，去掉凭据及私人研究。
+[安装与恢复](https://github.com/Ethan-decoy/QuestBranch/blob/v0.3.0-dev.7/docs/desktop-installation.md) · [第一次研究](https://github.com/Ethan-decoy/QuestBranch/blob/v0.3.0-dev.7/docs/getting-started.md) · [FAQ](https://github.com/Ethan-decoy/QuestBranch/blob/v0.3.0-dev.7/docs/faq.md) · [DSH 集成](https://github.com/Ethan-decoy/QuestBranch-DSH)
 
 ## English
 
-This developer prerelease updates the first-research experience and bilingual documentation. It is a prerelease, not Latest. QB is MIT-licensed; third-party components keep their own licenses.
+This developer prerelease adds **Settings → About** for version checks and updates, and adopts the official SessionWeave `0.1.0-beta.3` package. It is not Latest. QB is MIT licensed; third-party licenses remain in force.
 
-### Changes
+- Installed Windows editions and writable Linux AppImages can download, verify, install and reopen. Active research, account connection or data migration blocks restart. Normal exit does not install an update.
+- Stable research-material identities avoid appending unchanged background repeatedly. Revisions preserve earlier material and provenance.
+- Before writing new-format material, QB backs up the research database and any local credential key. A failed backup stops the upgrade. Research export remains format 3.
+- Installation, recovery and FAQ pages now use the same bilingual entry names and remove outdated development notices.
 
-- Complete Chinese/English README, installation and upgrade instructions, first-research guides and FAQ, with reciprocal standalone/DSH entries.
-- An Example marker identifies the starter workspace; first-time users can create their own research directly.
-- Empty nodes offer the existing model/agent connection entry and an editable sample question. Suggestions fill only empty drafts, without overwriting or sending them.
-- Connection capabilities and parent-report prerequisites are clearer. AI tools save reports under their nodes; child directions do not run automatically.
-- Reviewed shared-main changes and regressions are integrated while retaining native packages. Runtime dependencies, the fixed SessionWeave archive and research format 3 are unchanged.
-- Delayed-response tool regressions align integration-test wait budgets, and packaged prerequisite checks match the new parent-report hint.
+Choose the Windows x64 installer/ZIP, the arm64 or x64 Mac DMG, or the Linux x64 DEB/AppImage. Verify `SHA256SUMS.txt`. **From dev.6 or earlier, install this version manually once.** Back up complete configuration, research and required external agent files first. Windows ZIP trials use `Start-QuestBranch.cmd` and separate `data/`.
 
-### Download and start
+Directory/ZIP editions, Mac DMGs and DEBs update manually. Checks use the system proxy and make no model requests. Automatic research backups are under the research directory's `backups/`; rolling back requires a compatible app and a complete pre-upgrade backup.
 
-Use the Windows x64 installer, or extract the complete Windows ZIP and launch its top-level `Start-QuestBranch.cmd` for isolated data. On Mac, select the arm64 DMG for Apple Silicon or x64 for Intel, then drag QB to Applications. On Linux x64, prefer the DEB on Ubuntu, or make the AppImage executable and run it. Application packages do not require Node.js or pnpm.
+`VERIFICATION.json` records actual native installation, research/reopen, conversation, both graph themes, packaged OM SDK and byte checks. Windows uses a real released dev.6 predecessor and the current SDK to install/relaunch this version. AppImage checks replace a real predecessor image and relaunch the candidate. These are external acceptance drivers; dev.6 has no updater UI. Mac/DEB checks do not establish every historical upgrade path.
 
-Verify `SHA256SUMS.txt`. `VERIFICATION.json` identifies the accepted source, native assets and actual checks. Open the example or create a root question, connect a model/agent and discuss it. Ask AI to save a stage report and agreed pending directions, then choose one to continue. Ordinary model chat does not automatically search the web; tools and skills depend on the connection's configuration.
+Windows is unsigned. Mac uses ad-hoc signing without Developer ID or notarization. Prefer DEB on Ubuntu; the FUSE2-free AppImage launcher may fall back to `--no-sandbox` when user namespaces are restricted. Local fixtures do not establish coverage of every real account, keyring backend or long-running research workload.
 
-[Installation](https://github.com/Ethan-decoy/QuestBranch/blob/v0.3.0-dev.6/docs/desktop-installation.en.md) · [First research](https://github.com/Ethan-decoy/QuestBranch/blob/v0.3.0-dev.6/docs/getting-started.en.md) · [FAQ](https://github.com/Ethan-decoy/QuestBranch/blob/v0.3.0-dev.6/docs/faq.en.md) · [DSH integration](https://github.com/Ethan-decoy/QuestBranch-DSH/blob/main/README.en.md)
+[Installation](https://github.com/Ethan-decoy/QuestBranch/blob/v0.3.0-dev.7/docs/desktop-installation.en.md) · [First research](https://github.com/Ethan-decoy/QuestBranch/blob/v0.3.0-dev.7/docs/getting-started.en.md) · [FAQ](https://github.com/Ethan-decoy/QuestBranch/blob/v0.3.0-dev.7/docs/faq.en.md) · [DSH integration](https://github.com/Ethan-decoy/QuestBranch-DSH/blob/main/README.en.md)
 
-### Updates, checks and limitations
-
-Stop work, quit and back up before updating. Installed apps retain their ordinary profile and chosen research location; portable ZIP data is separate. JSON moves research between configurations or systems, without credentials or complete native-session state. Removing an app preserves research but does not replace a backup; reinstalling an older app does not downgrade its database.
-
-Native targets are Windows x64, both macOS 15 architectures and Ubuntu 24.04 x64. The workflow checks installed research, conversation, both canvas themes, packaged OM SDK fixtures and content integrity. Mac/Linux also exercise local model, proxy, OAuth and cross-system import fixtures. Windows upgrades from the actual published `.5` installer. Mac/Linux cover fresh installation, same-version reinstall, retention and removal; upgrades from earlier native packages are unverified. Use this release's `VERIFICATION.json` for the final evidence.
-
-Windows is unsigned. Mac uses ad-hoc signing without Developer ID or notarization. Prefer the DEB on Ubuntu; the FUSE2-free AppImage launcher may fall back to `--no-sandbox` when user namespaces are restricted. Automatic/hot updates, all real accounts, keyring backends, other systems and long-running research are not validated.
-
-Report versions, OS, connection type and steps through [Issues](https://github.com/Ethan-decoy/QuestBranch/issues), without credentials or private research.
+反馈 / Feedback: [Issues](https://github.com/Ethan-decoy/QuestBranch/issues). Include version, OS, connection type and reproducible steps; remove credentials and private research.

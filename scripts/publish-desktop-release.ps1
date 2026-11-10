@@ -13,6 +13,8 @@ foreach ($qbPlatform in @('windows-x64','macos-arm64','macos-x64','linux-x64')) 
 }
 $qbExpectedFiles = @("QuestBranch-Setup-$qbVersion-x64.exe","QuestBranch-$qbVersion-windows-x64.zip","QuestBranch-$qbVersion-macos-arm64.dmg","QuestBranch-$qbVersion-macos-x64.dmg","QuestBranch-$qbVersion-linux-amd64.deb","QuestBranch-$qbVersion-linux-x86_64.AppImage",'README-TRIAL.md','RELEASE-NOTES.md','VERIFICATION.json')
 $qbChecksums = @{}
+$qbChannel = if ($qbVersion -match '^\d+\.\d+\.\d+-([0-9A-Za-z-]+)') { $Matches[1] } else { 'latest' }
+$qbExpectedFiles += @("$qbChannel.yml","$qbChannel-linux.yml","QuestBranch-Setup-$qbVersion-x64.exe.blockmap")
 foreach ($qbLine in Get-Content -LiteralPath release/SHA256SUMS.txt) {
   if ($qbLine -notmatch '^([a-f0-9]{64})  ([A-Za-z0-9_.-]+)$') { throw 'Invalid checksum manifest' }
   if ($qbExpectedFiles -notcontains $Matches[2] -or $qbChecksums.ContainsKey($Matches[2])) { throw 'Unexpected or duplicate release asset' }

@@ -67,6 +67,16 @@ export type AgentConnection = {
   error?: string
 }
 export const AgentRunSchema = z.object({
+  sessionOrigin: z.enum(['new', 'resumed', 'loaded', 'stateless']).optional(),
+  usage: z
+    .object({
+      contextTokens: z.number().finite().nonnegative(),
+      contextWindow: z.number().finite().positive(),
+      cost: z
+        .object({ amount: z.number().finite().nonnegative(), currency: z.string().max(20) })
+        .optional(),
+    })
+    .optional(),
   name: z.string().max(200),
   sessionId: z.string().max(200).optional(),
   waitingForResponse: z.boolean().optional(),

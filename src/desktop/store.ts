@@ -1,11 +1,14 @@
 import { DatabaseSync } from 'node:sqlite'
-import { mkdirSync, existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { createCipheriv, createDecipheriv, createHash, randomBytes, randomUUID } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { z } from 'zod'
 import { SqliteSessionArchive } from './session-archive'
+import { recordIdSchema, viewSchema, exportSchema } from './storage-schemas'
+import { SettingsStore, createLocalCredentialCodec, type CredentialCodec } from './settings-store'
+export { viewSchema } from './storage-schemas'
+export type { CredentialCodec } from './settings-store'
 import {
-  defaultSettings,
   palette,
   type Workspace,
   type ResearchNode,
@@ -19,288 +22,30 @@ import {
   type ResearchOutput,
   type Source,
   SourceSchema,
-  ReasoningEffortSchema,
   ResearchOutputSchema,
 } from '../research/types'
 import { starterResearch } from '../research/seed'
-import { AgentConfigSchema, AgentRunSchema, AgentActivitySchema } from '../research/agent'
 import {
   BranchRequestSchema,
   branchPrerequisite,
   type BranchRequest,
   type BranchReceipt,
 } from '../research/branching'
-import {
-  apiProtocol,
-  httpConnectionKey,
-  modelConnectionKey,
-  modelProviderId,
-  sessionStrategy,
-} from '../research/api-services'
-
-export interface CredentialCodec {
-  encrypt(value: string): string
-  decrypt(value: string): string
-}
-const text = z.string().max(100_000),
-  id = z
-    .string()
-    .min(1)
-    .max(200)
-    .regex(/^[A-Za-z0-9][A-Za-z0-9_-]*$/)
-    .refine(
-      (value) => !['constructor', 'prototype', 'toString', 'hasOwnProperty'].includes(value),
-      '记录编号无效',
-    ),
-  time = z.iso.datetime()
-const workspaceSchema = z.object({
-  id,
-  name: text,
-  question: text,
-  objective: text,
-  constraints: text,
-  rootId: id,
-  createdAt: time,
-  updatedAt: time,
-})
-const nodeSchema = z.object({
-  id,
-  workspaceId: id,
-  parentId: id.nullable(),
-  removedAt: time.optional(),
-  removalId: id.optional(),
-  title: text,
-  question: text,
-  summary: text,
-  openQuestions: z.array(text).max(100),
-  color: z.string().regex(/^#[0-9a-f]{6}$/i),
-  relatedIds: z.array(id).max(100),
-  createdAt: time,
-  updatedAt: time,
-  originReportId: id.optional(),
-  referenceReportIds: z.array(id).max(20).optional(),
-})
-const reportSchema = z.object({
-  id,
-  workspaceId: id,
-  nodeId: id,
-  title: text,
-  markdown: text,
-  summary: text,
-  findings: z.array(text).max(100),
-  openQuestions: z.array(text).max(100),
-  sources: z.array(SourceSchema).max(100),
-  createdAt: time,
-  origin: z.enum(['ai', 'import']),
-  model: text,
-  runId: id.optional(),
-  saveRequest: z
-    .object({ id: z.string().min(1).max(200), fingerprint: z.string().regex(/^[a-f0-9]{64}$/) })
-    .optional(),
-})
-const contextSchema = z.object({
-  policy: z.literal('branch-v1'),
-  createdAt: time,
-  workspaceId: id,
-  nodeId: id,
-  path: z.array(id),
-  items: z.array(
-    z.object({
-      reportId: id,
-      nodeId: id,
-      title: text,
-      reason: text,
-      included: z.boolean(),
-      excerpted: z.boolean(),
-    }),
-  ),
-  sources: z.array(SourceSchema),
-  messages: z.array(
-    z.object({ role: z.enum(['system', 'user', 'assistant']), content: z.string().max(400000) }),
-  ),
-  conversation: z
-    .object({ includedMessageIds: z.array(id), omittedMessageIds: z.array(id) })
-    .optional(),
-  estimatedTokens: z.number().nonnegative(),
-  budget: z.number().positive(),
-  limitations: z.array(text),
-})
-const runSchema = z.object({
-  session: z
-    .object({
-      sessionId: id,
-      bootstrapMessageIds: z.array(z.string()),
-      requests: z.array(
-        z.object({
-          revision: z.number().int().nonnegative(),
-          strategy: z.enum(['portable', 'native']),
-          checkpointId: z.string().nullable(),
-          origin: z.string(),
-          modelId: z.string(),
-          contextWindow: z.number().positive(),
-          inputTokens: z.number().nonnegative(),
-          request: z.unknown(),
-        }),
-      ),
-    })
-    .optional(),
-  activities: z.array(AgentActivitySchema).max(500).optional(),
-  toolCalls: z
-    .array(
-      z.object({
-        id: z.string().min(1).max(200),
-        name: text,
-        arguments: z.unknown(),
-        result: z.unknown().optional(),
-        error: text.optional(),
-      }),
-    )
-    .max(100)
-    .optional(),
-  agent: AgentRunSchema.optional(),
-  id,
-  workspaceId: id,
-  nodeId: id,
-  instruction: text,
-  status: z.enum(['running', 'completed', 'failed', 'cancelled', 'interrupted']),
-  phase: text,
-  output: z.string().max(180000),
-  error: text,
-  model: text,
-  reasoningEffort: ReasoningEffortSchema.optional(),
-  context: contextSchema,
-  createdAt: time,
-  finishedAt: time.optional(),
-  reportId: id.optional(),
-  mode: z.literal('chat').optional(),
-  selectedReportId: id.optional(),
-  provider: z.enum(['compatible', 'ollama', 'codex', 'account']).optional(),
-  api: z.object({ protocol: z.string().max(100), baseUrl: z.url().max(1000) }).optional(),
-  codex: z.object({ threadId: id, turnId: id.optional() }).optional(),
-  pi: z
-    .object({
-      provider: z.string().max(200),
-      api: z.string().max(100),
-      responseId: text.optional(),
-    })
-    .optional(),
-})
-const messageSchema = z.object({
-  id,
-  workspaceId: id,
-  nodeId: id,
-  runId: id,
-  role: z.enum(['user', 'assistant']),
-  content: z.string().max(180000),
-  createdAt: time,
-})
-const viewportSchema = z.object({
-  x: z.number().finite(),
-  y: z.number().finite(),
-  zoom: z.number().min(0.001).max(5),
-})
-const positionsSchema = z.record(id, z.object({ x: z.number().finite(), y: z.number().finite() }))
-const graphFrameSchema = z.object({
-  mode: z.enum(['horizontal', 'mindmap', 'outline']),
-  detail: z.enum(['summary', 'compact']),
-  focusId: id.optional(),
-})
-export const viewSchema = z.object({
-  revision: z.number().nonnegative().optional(),
-  selectedId: id,
-  collapsed: z.array(id).max(5000),
-  drafts: z.record(id, z.string().max(12000)),
-  chatDrafts: z.record(id, z.string().max(12000)).optional(),
-  readers: z
-    .record(
-      id,
-      z.object({
-        tab: z.enum(['chat', 'report', 'sources', 'records']),
-        reportId: id.optional(),
-        scroll: z.record(z.string().max(220), z.number().finite().nonnegative()).optional(),
-        composerOpen: z.boolean().optional(),
-        overviewOpen: z.boolean().optional(),
-        questionOpen: z.boolean().optional(),
-      }),
-    )
-    .optional(),
-  viewport: viewportSchema.optional(),
-  positions: positionsSchema.optional(),
-  graph: z
-    .object({
-      mode: z.enum(['horizontal', 'mindmap', 'outline']).optional(),
-      detail: z.enum(['summary', 'compact']).optional(),
-      focusId: id.optional(),
-      branchSides: z.record(id, z.enum(['left', 'right'])).optional(),
-      noticedNodeIds: z.array(id).max(10000).optional(),
-      history: z
-        .array(
-          graphFrameSchema.extend({
-            selectedId: id,
-            collapsed: z.array(id).max(5000).optional(),
-            viewport: viewportSchema.optional(),
-          }),
-        )
-        .max(20)
-        .optional(),
-      scenes: z
-        .array(
-          graphFrameSchema.extend({
-            viewport: viewportSchema.optional(),
-            positions: positionsSchema.optional(),
-          }),
-        )
-        .max(64)
-        .optional(),
-    })
-    // Accept retired outline views at the storage/import boundary only. Do not
-    // map their scenes onto horizontal ones and overwrite existing camera memory.
-    .transform((graph) => ({
-      ...graph,
-      mode: graph.mode === 'outline' ? ('horizontal' as const) : graph.mode,
-      history: graph.history?.map((frame) => ({
-        ...frame,
-        mode: frame.mode === 'outline' ? ('horizontal' as const) : frame.mode,
-      })),
-      scenes: graph.scenes?.flatMap((scene) =>
-        scene.mode === 'outline' ? [] : [{ ...scene, mode: scene.mode }],
-      ),
-    }))
-    .optional(),
-})
-const editSchema = z.object({ nodeId: id, previous: nodeSchema, createdAt: time })
-const branchReceiptSchema = z.object({
-  requestId: z.string().min(1).max(200),
-  workspaceId: id,
-  parentId: id,
-  sourceReportId: id,
-  fingerprint: z.string().regex(/^[a-f0-9]{64}$/),
-  nodeIds: z.array(id).min(1).max(20),
-})
-const exportSchema = z.object({
-  schemaVersion: z.union([z.literal(1), z.literal(2), z.literal(3)]),
-  modelSessions: z.unknown().optional(),
-  workspace: workspaceSchema,
-  nodes: z.array(nodeSchema).min(1).max(10000),
-  reports: z.array(reportSchema).max(20000),
-  runs: z.array(runSchema).max(20000),
-  messages: z.array(messageSchema).max(40000).default([]),
-  edits: z.array(editSchema).max(50000).default([]),
-  branchRequests: z.array(branchReceiptSchema).max(20000).default([]),
-  view: viewSchema.optional(),
-})
 
 export class ResearchStore {
   private db: DatabaseSync
-  private codec: CredentialCodec
+  private readonly settingsStore: SettingsStore
   readonly sessions: SqliteSessionArchive
   private transactionDepth = 0
+  get isOpen() {
+    return this.db.isOpen
+  }
   constructor(
     readonly directory: string,
     options: { seed?: boolean; codec?: CredentialCodec; recoverRuns?: boolean } = {},
   ) {
     mkdirSync(directory, { recursive: true })
-    this.codec = options.codec ?? localCodec(directory)
+    const codec = options.codec ?? createLocalCredentialCodec(directory)
     this.db = new DatabaseSync(join(directory, 'research.sqlite'))
     if (Number(this.db.prepare('PRAGMA user_version').get()!.user_version) > 3) {
       this.db.close()
@@ -322,7 +67,14 @@ export class ResearchStore {
       CREATE TABLE IF NOT EXISTS messages (id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL REFERENCES workspaces(id), node_id TEXT NOT NULL REFERENCES nodes(id), run_id TEXT NOT NULL REFERENCES runs(id), role TEXT NOT NULL, payload TEXT NOT NULL, UNIQUE(run_id,role));
       CREATE INDEX IF NOT EXISTS messages_node ON messages(node_id);
       PRAGMA user_version=3;`)
+    this.settingsStore = new SettingsStore(this.db, codec, (operation) =>
+      this.transaction(operation),
+    )
     this.sessions = new SqliteSessionArchive(this.db)
+    this.db.exec(`CREATE TABLE IF NOT EXISTS acp_sessions (
+      id TEXT PRIMARY KEY, node_id TEXT NOT NULL REFERENCES nodes(id), connection TEXT NOT NULL,
+      active INTEGER NOT NULL DEFAULT 1, payload TEXT NOT NULL);
+      CREATE UNIQUE INDEX IF NOT EXISTS acp_active ON acp_sessions(node_id,connection) WHERE active=1;`)
     if (options.seed !== false && !this.all<Workspace>('workspaces').length) {
       const initial = starterResearch()
       this.transaction(() => {
@@ -337,6 +89,11 @@ export class ResearchStore {
     ))
       this.saveRun({
         ...run,
+        modelCalls: run.modelCalls?.map((call) =>
+          call.status === 'running'
+            ? { ...call, status: 'interrupted', finishedAt: new Date().toISOString() }
+            : call,
+        ),
         status: 'interrupted',
         phase: '研究已中断',
         error: '应用上次关闭时研究尚未完成。原始输出已保留，可重新发起研究。',
@@ -398,175 +155,23 @@ export class ResearchStore {
       storage: { directory: this.directory, database: join(this.directory, 'research.sqlite') },
     }
   }
-  private putSetting(key: string, payload: string) {
-    this.db.prepare('INSERT OR REPLACE INTO settings VALUES (?,?)').run(key, payload)
-  }
-  private readSetting(key: string) {
-    return (
-      this.db.prepare('SELECT payload FROM settings WHERE key=?').get(key) as
-        { payload: string } | undefined
-    )?.payload
-  }
-  private apiKeyConnection(settings: Settings) {
-    return (
-      this.readSetting('apiKeyConnection') ??
-      httpConnectionKey({
-        ...settings,
-        baseUrl: this.readSetting('apiKeyOrigin') ?? '',
-        apiProtocol: 'openai-chat',
-        anthropicWorkspaceId: '',
-      })
-    )
-  }
   settings(): Settings {
-    const saved = this.readSetting('preferences')
-    const previous = saved
-      ? (JSON.parse(saved) as Omit<Settings, 'provider'> & {
-          provider: Settings['provider'] | 'codex'
-        })
-      : undefined
-    const provider =
-      previous?.provider === 'codex' ? 'account' : (previous?.provider ?? defaultSettings.provider)
-    const settings: Settings = {
-      ...defaultSettings,
-      backend: previous?.backend ?? 'model',
-      agent: previous?.agent ? AgentConfigSchema.parse(previous.agent) : undefined,
-      provider,
-      modelProvider:
-        previous?.modelProvider ||
-        (previous?.provider === 'codex' || previous?.provider === 'account' || !previous
-          ? 'openai'
-          : 'custom'),
-      baseUrl: previous?.provider === 'codex' ? '' : (previous?.baseUrl ?? defaultSettings.baseUrl),
-      model: previous?.model ?? defaultSettings.model,
-      reasoningEffort: previous?.reasoningEffort ?? '',
-      apiProtocol: previous?.apiProtocol,
-      anthropicWorkspaceId: previous?.anthropicWorkspaceId,
-      maxOutputTokens: previous?.maxOutputTokens,
-      sessionStrategy: sessionStrategy({ provider, sessionStrategy: previous?.sessionStrategy }),
-      sessionInputBudget: previous?.sessionInputBudget,
-      modelContextWindow: previous?.modelContextWindow,
-      jsonMode: previous?.jsonMode ?? defaultSettings.jsonMode,
-      contextBudget: previous?.contextBudget ?? defaultSettings.contextBudget,
-    }
-    // OAuth and API connections use separate encrypted scopes. Legacy API keys
-    // are read only for their original exact endpoint until explicitly saved.
-    const credential = this.readModelCredential(modelConnectionKey(settings)) as
-      { type?: string } | undefined
-    return {
-      ...settings,
-      hasApiKey: !!(
-        credential?.type === 'api_key' ||
-        (settings.provider !== 'account' &&
-          modelProviderId(settings) === 'custom' &&
-          this.readSetting('apiKey') &&
-          this.apiKeyConnection(settings) === httpConnectionKey(settings))
-      ),
-      hasSearchKey: !!(this.readSetting('searchKey') || process.env.TAVILY_API_KEY),
-    }
+    return this.settingsStore.settings()
   }
   credentials(): { apiKey: string; searchKey: string } {
-    const read = (name: string, fallback?: string) => {
-      const encrypted = this.readSetting(name)
-      return encrypted ? this.codec.decrypt(encrypted) : (fallback ?? '')
-    }
-    const settings = this.settings()
-    const credential = this.readModelCredential(modelConnectionKey(settings)) as
-      { type?: string; key?: string } | undefined
-    return {
-      apiKey: settings.hasApiKey
-        ? credential?.type === 'api_key'
-          ? (credential.key ?? '')
-          : read('apiKey')
-        : '',
-      searchKey: read('searchKey', process.env.TAVILY_API_KEY),
-    }
+    return this.settingsStore.credentials()
   }
   saveSettings(input: SettingsInput) {
-    const previous = this.settings()
-    if (input.baseUrl) {
-      const url = new URL(input.baseUrl)
-      if (
-        !['http:', 'https:'].includes(url.protocol) ||
-        url.username ||
-        url.password ||
-        url.search ||
-        url.hash
-      )
-        throw new Error('服务地址应为不含密钥、查询参数或片段的 HTTP / HTTPS 地址')
-    }
-    if (
-      input.backend !== 'acp' &&
-      input.provider !== 'account' &&
-      modelProviderId(input) === 'custom' &&
-      !input.baseUrl
-    )
-      throw new Error('请填写自定义服务地址')
-    const preferences = {
-      backend: input.backend ?? 'model',
-      agent: input.agent ? AgentConfigSchema.parse(input.agent) : previous.agent,
-      provider: input.provider,
-      modelProvider: modelProviderId(input),
-      baseUrl: input.baseUrl.replace(/\/+$/, ''),
-      apiProtocol: apiProtocol(input),
-      ...(input.maxOutputTokens === undefined ? {} : { maxOutputTokens: input.maxOutputTokens }),
-      anthropicWorkspaceId: input.anthropicWorkspaceId?.trim() ?? '',
-      model: input.model.trim(),
-      jsonMode: input.jsonMode,
-      contextBudget: input.contextBudget,
-      sessionStrategy: sessionStrategy(input),
-      sessionInputBudget: input.sessionInputBudget,
-      modelContextWindow: input.modelContextWindow,
-      reasoningEffort: input.reasoningEffort ?? '',
-    }
-    this.transaction(() => {
-      // Freeze a legacy key's original identity before changing preferences.
-      if (this.readSetting('apiKey') && !this.readSetting('apiKeyConnection'))
-        this.putSetting('apiKeyConnection', this.apiKeyConnection(previous))
-      this.putSetting('preferences', JSON.stringify(preferences))
-      if (input.backend !== 'acp' && input.provider !== 'account') {
-        const scope = modelConnectionKey(preferences)
-        if (input.clearApiKey) this.putModelCredential(scope, undefined)
-        else {
-          const current = this.readModelCredential(scope) as
-            { type?: string; env?: Record<string, string> } | undefined
-          const key = input.apiKey?.trim() || this.credentials().apiKey
-          if (key && (input.apiKey?.trim() || !current))
-            this.putModelCredential(scope, {
-              type: 'api_key',
-              key,
-              ...(current?.type === 'api_key' && current.env ? { env: current.env } : {}),
-            })
-        }
-        if (input.clearApiKey && this.apiKeyConnection(previous) === httpConnectionKey(preferences))
-          this.db.prepare('DELETE FROM settings WHERE key=?').run('apiKey')
-      }
-      if (input.clearSearchKey) this.db.prepare('DELETE FROM settings WHERE key=?').run('searchKey')
-      else if (input.searchKey?.trim())
-        this.putSetting('searchKey', this.codec.encrypt(input.searchKey.trim()))
-    })
-  }
-  private modelCredentialKey(scope: string) {
-    return `piCredential:${createHash('sha256').update(scope).digest('hex')}`
+    this.settingsStore.saveSettings(input)
   }
   readModelCredential(scope: string): unknown | undefined {
-    const value = this.readSetting(this.modelCredentialKey(scope))
-    return value ? JSON.parse(this.codec.decrypt(value)) : undefined
-  }
-  private putModelCredential(scope: string, value: unknown | undefined) {
-    const key = this.modelCredentialKey(scope)
-    if (value === undefined) this.db.prepare('DELETE FROM settings WHERE key=?').run(key)
-    else this.putSetting(key, this.codec.encrypt(JSON.stringify(value)))
+    return this.settingsStore.readModelCredential(scope)
   }
   saveModelCredential(scope: string, value: unknown | undefined) {
-    this.transaction(() => this.putModelCredential(scope, value))
+    this.settingsStore.saveModelCredential(scope, value)
   }
   installationId() {
-    const existing = this.readSetting('piInstallationId')
-    if (existing) return existing
-    const value = randomUUID()
-    this.transaction(() => this.putSetting('piInstallationId', value))
-    return value
+    return this.settingsStore.installationId()
   }
   insertWorkspace(w: Workspace) {
     this.db.prepare('INSERT INTO workspaces VALUES (?,?)').run(w.id, JSON.stringify(w))
@@ -757,7 +362,7 @@ export class ResearchStore {
   }
   removeBranch(nodeId: string, removalId: string) {
     return this.transaction(() => {
-      id.parse(removalId)
+      recordIdSchema.parse(removalId)
       const target = this.node(nodeId)
       if (!target.parentId) throw new Error('根问题不能作为分支移除')
       const nodes = this.all<ResearchNode>('nodes').filter(
@@ -918,6 +523,44 @@ export class ResearchStore {
       .prepare('INSERT OR REPLACE INTO views VALUES (?,?)')
       .run(workspaceId, JSON.stringify(clean))
     this.bump()
+  }
+  /** Local binding persistence only; native-agent restore policy belongs to the desktop service. */
+  readonly agentSessionBindings = {
+    load: (nodeId: string, connection: string) => {
+      const row = this.db
+        .prepare('SELECT payload FROM acp_sessions WHERE node_id=? AND connection=? AND active=1')
+        .get(nodeId, connection)
+      return row ? (JSON.parse(String(row.payload)) as unknown) : undefined
+    },
+    save: (nodeId: string, connection: string, payload: unknown) => {
+      this.db
+        .prepare(
+          `INSERT INTO acp_sessions(id,node_id,connection,payload) VALUES (?,?,?,?)
+          ON CONFLICT(node_id,connection) WHERE active=1 DO UPDATE SET payload=excluded.payload`,
+        )
+        .run(randomUUID(), nodeId, connection, JSON.stringify(payload))
+    },
+    retire: (nodeId: string, connection: string) => {
+      this.db
+        .prepare('UPDATE acp_sessions SET active=0 WHERE node_id=? AND connection=? AND active=1')
+        .run(nodeId, connection)
+    },
+    coversChats: (nodeId: string, lastRunId: string | undefined, currentRunId: string) => {
+      const covered = lastRunId
+        ? this.db
+            .prepare('SELECT rowid AS position FROM runs WHERE id=? AND node_id=?')
+            .get(lastRunId, nodeId)
+        : undefined
+      return (
+        !!covered &&
+        !this.db
+          .prepare(
+            `SELECT 1 FROM runs WHERE node_id=? AND rowid>? AND id<>?
+          AND json_extract(payload,'$.mode')='chat' AND json_extract(payload,'$.status')='completed' LIMIT 1`,
+          )
+          .get(nodeId, covered.position, currentRunId)
+      )
+    },
   }
   saveRun(run: ResearchRun) {
     // A savepoint keeps a chat turn and its visible messages atomic, including during import.
@@ -1309,27 +952,5 @@ export class ResearchStore {
   }
   close() {
     this.db.close()
-  }
-}
-
-function localCodec(directory: string): CredentialCodec {
-  const path = join(directory, '.credential-key')
-  if (!existsSync(path)) writeFileSync(path, randomBytes(32), { mode: 0o600 })
-  const key = readFileSync(path)
-  return {
-    encrypt(value) {
-      const iv = randomBytes(12),
-        cipher = createCipheriv('aes-256-gcm', key, iv),
-        body = Buffer.concat([cipher.update(value, 'utf8'), cipher.final()])
-      return Buffer.concat([iv, cipher.getAuthTag(), body]).toString('base64')
-    },
-    decrypt(value) {
-      const buffer = Buffer.from(value, 'base64'),
-        decipher = createDecipheriv('aes-256-gcm', key, buffer.subarray(0, 12))
-      decipher.setAuthTag(buffer.subarray(12, 28))
-      return Buffer.concat([decipher.update(buffer.subarray(28)), decipher.final()]).toString(
-        'utf8',
-      )
-    },
   }
 }

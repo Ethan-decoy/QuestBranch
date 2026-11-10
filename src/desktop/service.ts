@@ -16,15 +16,18 @@ import { webSearch } from '../research/providers'
 import { modelConnectionKey } from '../research/api-services'
 import { PiModels } from './pi-models'
 import { AcpAgents } from './acp-agent'
+import { AcpSessions, AgentSessionRestoreError } from './acp-sessions'
 import { openResearchMcp } from './research-mcp'
 import type { AgentRun } from '../research/agent'
 import { branchReport } from '../research/branching'
 import { defaultNetwork, type Network } from './network'
 import { researchTools } from './research-tools'
 import { type ModelProgress } from './model-tool-turn'
+import { ResearchRunLifecycle } from './run-lifecycle'
 
 export class ResearchService implements ResearchClient {
   private active = new Map<string, AbortController>()
+  private readonly agentSessions: AcpSessions
   get hasActiveRuns() {
     return this.active.size > 0 || this.modelRuntime.auth.pending || this.agentRuntime.pending
   }
@@ -36,7 +39,9 @@ export class ResearchService implements ResearchClient {
     > = new PiModels(store),
     private readonly agentRuntime = new AcpAgents(store.directory),
     private readonly network: Network = defaultNetwork,
-  ) {}
+  ) {
+    this.agentSessions = new AcpSessions(store)
+  }
   get agent(): NonNullable<ResearchClient['agent']> {
     return this.agentRuntime
   }
@@ -129,19 +134,25 @@ export class ResearchService implements ResearchClient {
       case 'save-settings':
         this.store.saveSettings(command.settings)
         break
+      case 'reset-agent-session': {
+        const settings = this.store.settings()
+        this.store.node(command.nodeId)
+        if (settings.backend !== 'acp' || !settings.agent) throw new Error('当前没有智能体连接')
+        if (
+          this.store
+            .snapshot()
+            .runs.some((run) => run.nodeId === command.nodeId && run.status === 'running')
+        )
+          throw new Error('请先停止此节点的当前回复')
+        this.agentSessions.scope(command.nodeId, settings.agent).retire()
+        break
+      }
       case 'import-workspace':
         return { id: this.store.importWorkspace(command.data) }
       case 'cancel-research': {
-        const run = this.store.run(command.runId)
-        if (run.status === 'running') {
-          this.active.get(run.id)?.abort()
-          this.store.saveRun({
-            ...run,
-            status: 'cancelled',
-            phase: '已停止',
-            finishedAt: new Date().toISOString(),
-          })
-        }
+        new ResearchRunLifecycle(this.store, command.runId).cancel(() =>
+          this.active.get(command.runId)?.abort(),
+        )
         break
       }
       case 'send-message':
@@ -219,10 +230,15 @@ export class ResearchService implements ResearchClient {
     let agentState: AgentRun | undefined
     let requestVersion = ''
     let modelProgress: ModelProgress | undefined
-    const patch = (updates: Partial<ResearchRun>) => {
-      const current = this.store.run(runId)
-      if (current.status === 'running') this.store.saveRun({ ...current, ...updates })
-    }
+    const lifecycle = new ResearchRunLifecycle(this.store, runId)
+    const patch = (updates: Partial<ResearchRun>) => lifecycle.update(updates)
+    const progress = () => ({
+      output: raw,
+      agent: agentState,
+      ...(modelProgress
+        ? { activities: modelProgress.activities, toolCalls: modelProgress.toolCalls }
+        : {}),
+    })
     try {
       const run = this.store.run(runId),
         node = this.store.node(run.nodeId),
@@ -264,13 +280,14 @@ export class ResearchService implements ResearchClient {
               }
             },
             tools.servers,
+            this.agentSessions.scope(run.nodeId, settings.agent, runId),
           )
           .finally(() => tools.close())
         raw = result.raw
         if (signal.aborted) return
         patch({ output: raw, agent: result.agent, model: result.model })
         if (run.mode === 'chat') {
-          patch({ status: 'completed', phase: '对话已保存', finishedAt: new Date().toISOString() })
+          lifecycle.completeChat()
           return
         }
         let parsed: unknown
@@ -387,25 +404,11 @@ export class ResearchService implements ResearchClient {
       )
       raw = output.raw
       if (signal.aborted) {
-        const current = this.store.run(runId)
-        if (raw || agentState || modelProgress)
-          this.store.saveRun({
-            ...current,
-            output: raw || current.output,
-            ...(agentState ? { agent: agentState } : {}),
-            ...(modelProgress
-              ? { activities: modelProgress.activities, toolCalls: modelProgress.toolCalls }
-              : {}),
-          })
+        lifecycle.preserve(progress())
         return
       }
       if (run.mode === 'chat') {
-        patch({
-          output: raw,
-          phase: '对话已保存',
-          status: 'completed',
-          finishedAt: new Date().toISOString(),
-        })
+        lifecycle.completeChat(raw)
         return
       }
       patch({ output: raw, phase: '整理报告与后续研究方向' })
@@ -444,31 +447,12 @@ export class ResearchService implements ResearchClient {
           '\n\n---\n\n**资料范围**：本次未进行外部检索。内容基于已有报告与模型知识，其中新增主张尚未独立核验。'
       this.store.complete(runId, result.data)
     } catch (error) {
-      const current = this.store.run(runId)
-      if (current.status === 'cancelled' || current.status === 'interrupted') {
-        if (raw || agentState || modelProgress)
-          this.store.saveRun({
-            ...current,
-            output: raw || current.output,
-            ...(agentState ? { agent: agentState } : {}),
-            ...(modelProgress
-              ? { activities: modelProgress.activities, toolCalls: modelProgress.toolCalls }
-              : {}),
-          })
-      } else if (current.status === 'running') {
-        let message = error instanceof Error ? error.message : '研究未能完成'
-        for (const secret of Object.values(credentials))
-          if (secret) message = message.replaceAll(secret, '[密钥已隐藏]')
-        this.store.saveRun({
-          ...current,
-          status: signal.aborted ? 'cancelled' : 'failed',
-          output: raw || current.output,
-          ...(agentState ? { agent: agentState } : {}),
-          error: message,
-          phase: signal.aborted ? '已停止' : current.mode === 'chat' ? '回复未完成' : '报告未完成',
-          finishedAt: new Date().toISOString(),
-        })
-      }
+      lifecycle.fail(error, {
+        cancelled: signal.aborted,
+        progress: progress(),
+        secrets: Object.values(credentials),
+        recovery: error instanceof AgentSessionRestoreError ? 'agent-session' : undefined,
+      })
     }
   }
   shutdown() {
@@ -476,14 +460,7 @@ export class ResearchService implements ResearchClient {
     this.modelRuntime.shutdown()
     for (const [id, controller] of this.active) {
       controller.abort()
-      const run = this.store.run(id)
-      if (run.status === 'running')
-        this.store.saveRun({
-          ...run,
-          status: 'interrupted',
-          phase: run.mode === 'chat' ? '应用关闭，回复中断' : '应用关闭，报告中断',
-          finishedAt: new Date().toISOString(),
-        })
+      new ResearchRunLifecycle(this.store, id).interrupt()
     }
     this.active.clear()
   }

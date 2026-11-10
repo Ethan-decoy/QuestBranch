@@ -2,6 +2,9 @@ import { app, BrowserWindow, dialog, ipcMain, safeStorage, shell } from 'electro
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { randomUUID } from 'node:crypto'
+import log from 'electron-log/main.js'
+import { DesktopUpdates } from './app-updates'
+import { createUpdateTransport } from './update-transport'
 import { ResearchStore } from './store'
 import { ResearchService } from './service'
 import { PiModels } from './pi-models'
@@ -20,6 +23,7 @@ let service: ResearchService
 let store: ResearchStore
 let disposeAppearance: (() => void) | undefined
 let disposeNetwork: (() => void) | undefined
+let disposeUpdates: (() => void) | undefined
 // A second desktop instance must not treat the first instance's live turns as interrupted.
 const primary = app.requestSingleInstanceLock()
 if (!primary) app.quit()
@@ -76,9 +80,11 @@ void app
     }
     const location = loadStorageLocation(userData, process.env.QUESTBRANCH_DATA_DIR)
     let relocating = false
+    let updates: DesktopUpdates | undefined
     let selection: { directory: string; token: string; sender: number } | undefined
     const writable = () => {
       if (relocating) throw new Error('正在迁移研究资料，应用即将重启')
+      if (updates?.installing) throw new Error('正在安装更新，应用即将重启')
     }
     store = new ResearchStore(location.directory, {
       codec: safeStorage.isEncryptionAvailable()
@@ -94,6 +100,35 @@ void app
       undefined,
       network,
     )
+    const logUpdate = (phase: string, error?: unknown) => {
+      // Record phase and a bounded code, never SDK URLs, headers or account data.
+      const code = error && typeof error === 'object' && 'code' in error ? String(error.code) : ''
+      log.info('app-update', phase, /^[A-Z0-9_]{1,64}$/.test(code) ? code : '')
+    }
+    const updateTransport = await createUpdateTransport(network, (error) => {
+      if (updates?.installing) updates.failed('install', error)
+      else logUpdate('sdk-error', error)
+    })
+    updates = new DesktopUpdates(
+      app.getVersion(),
+      updateTransport.transport,
+      () => relocating || service.hasActiveRuns,
+      logUpdate,
+      updateTransport.native,
+    )
+    ipcMain.handle('app-updates:state', () => updates!.state())
+    ipcMain.handle('app-updates:check', () => updates!.check())
+    ipcMain.handle('app-updates:download', () => updates!.download())
+    ipcMain.handle('app-updates:install', () => updates!.install())
+    ipcMain.handle('app-updates:open-release', () => updates!.openRelease())
+    if (app.isPackaged) {
+      const firstUpdateCheck = setTimeout(() => void updates!.check(), 15_000)
+      const updateChecks = setInterval(() => void updates!.check(), 6 * 60 * 60_000)
+      disposeUpdates = () => {
+        clearTimeout(firstUpdateCheck)
+        clearInterval(updateChecks)
+      }
+    }
     ipcMain.handle('research:snapshot', async (_, sinceVersion?: number) => {
       const snapshot =
         sinceVersion === undefined ? await service.snapshot() : await service.snapshot(sinceVersion)
@@ -196,6 +231,7 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
 })
 app.on('before-quit', () => {
+  disposeUpdates?.()
   disposeAppearance?.()
   service?.shutdown()
   disposeNetwork?.()

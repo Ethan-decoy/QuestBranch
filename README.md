@@ -28,7 +28,7 @@
 
 公开开发者预发布提供 Windows x64 安装程序/ZIP、macOS Apple Silicon/Intel DMG、Linux x64 DEB/AppImage。按系统和处理器选择实际发布附件，再核对 SHA256SUMS.txt。运行安装包无需 Node.js 或 pnpm。
 
-安装与手动升级见[安装说明](docs/desktop-installation.md)，隔离 ZIP 见 [Windows 指南](docs/windows-trial.md)，常见条件见 [FAQ](docs/faq.md)。Windows 未签名，Mac 使用 ad-hoc 签名、尚无 Developer ID 和公证；系统实测范围与限制随各版本记录。
+安装与更新见[安装说明](docs/desktop-installation.md)，隔离 ZIP 见 [Windows 指南](docs/windows-trial.md)，常见条件见 [FAQ](docs/faq.md)。Windows 未签名，Mac 使用 ad-hoc 签名、尚无 Developer ID 和公证；系统实测范围与限制随各版本记录。
 
 1. 阅读示例，或创建自己的研究空间与根问题。
 2. 连接模型或智能体。工具与检索取决于实际连接，账号登录不等于已经开启联网研究。
@@ -45,6 +45,7 @@
 - 用本地 SQLite 保存研究，支持研究空间导出与恢复；独立桌面可选择研究资料保存位置并迁移数据。
 - 桌面优先，同时提供使用相同研究服务的本地浏览器预览。
 - 默认简体中文，可在“设置 → 通用”切换 English 并保存本机偏好；研究内容保持原文。
+- 在“设置 → 关于”检查版本，按安装方式下载、重启更新或进入官方附件页面。
 
 ## 从源码运行
 
@@ -96,4 +97,4 @@ tests/         关键行为测试
 
 使用问题与缺陷请通过 [Issues](https://github.com/Ethan-decoy/QuestBranch/issues) 反馈。版本变化见 [CHANGELOG](CHANGELOG.md)。反馈时请移除密钥和私人研究内容。
 
-本项目采用 [MIT](LICENSE)。固定 SessionWeave 快照及历史版本的许可范围见 [LICENSING.md](LICENSING.md)，第三方声明见 [THIRD_PARTY_NOTICES.txt](THIRD_PARTY_NOTICES.txt)。
+本项目采用 [MIT](LICENSE)。SessionWeave 与历史版本的许可范围见 [LICENSING.md](LICENSING.md)，第三方声明见 [THIRD_PARTY_NOTICES.txt](THIRD_PARTY_NOTICES.txt)。

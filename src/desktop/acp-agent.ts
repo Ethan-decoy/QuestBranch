@@ -16,6 +16,7 @@ import {
   type SessionNotification,
   type McpCapabilities,
   type McpServer,
+  type PromptResponse,
 } from '@agentclientprotocol/sdk'
 import {
   AgentConfigSchema,
@@ -28,6 +29,7 @@ import {
   type AgentRun,
 } from '../research/agent'
 import type { ContextPack } from '../research/types'
+import { agentPrompt, AgentSessionRestoreError, type AgentSessionScope } from './acp-sessions'
 
 type LiveConnection = {
   child: ChildProcessWithoutNullStreams
@@ -36,6 +38,7 @@ type LiveConnection = {
   config: AgentConfig
   mcpServers?: McpServer[]
   sessionId?: string
+  replaying?: boolean
   pending: Map<string, (response: AgentResponse) => void>
   run: AgentRun
   output: string
@@ -148,6 +151,7 @@ export class AcpAgents implements AgentClient {
     input: AgentConfig,
     signal?: AbortSignal,
     researchTools?: (capabilities?: McpCapabilities) => McpServer[],
+    scope?: AgentSessionScope,
   ): Promise<AgentConnection> {
     if (signal?.aborted) throw new Error('已取消研究')
     if (this.connections.size >= 6) throw new Error('请先结束已有智能体连接')
@@ -189,6 +193,7 @@ export class AcpAgents implements AgentClient {
     const app = client({ name: 'questbranch' })
       .onNotification(methods.client.session.update, ({ params }) => this.update(entry, params))
       .onRequest(methods.client.session.requestPermission, async ({ params, signal }) => {
+        if (entry.replaying) return { outcome: { outcome: 'cancelled' as const } }
         const response = await this.ask(
           entry,
           {
@@ -296,11 +301,53 @@ export class AcpAgents implements AgentClient {
         // API credentials remain available through Pi or the native CLI config.
         .filter((method) => config.kind !== 'codex' || method.id !== 'api-key')
         .map(({ id, name }) => ({ id, name }))
-      await this.newSession(entry)
+      const previous = scope?.load()
+      const capabilities = initialized.agentCapabilities
+      const restore = capabilities?.sessionCapabilities?.resume
+        ? 'resume'
+        : capabilities?.loadSession
+          ? 'load'
+          : undefined
+      if (previous) {
+        if (!restore)
+          throw new AgentSessionRestoreError(
+            '此智能体未声明恢复已保存会话的能力；未自动重建，请在研究记录中明确重建会话',
+          )
+        entry.sessionId = previous.sessionId
+        entry.replaying = true
+        try {
+          const session = await this.bounded(
+            entry,
+            peer.agent.request(
+              restore === 'resume' ? methods.agent.session.resume : methods.agent.session.load,
+              {
+                sessionId: previous.sessionId,
+                cwd,
+                mcpServers: entry.mcpServers ?? [],
+              },
+            ),
+          )
+          entry.state.options = configOptions(session.configOptions ?? [])
+          entry.state.status = 'connected'
+          entry.run.sessionOrigin = restore === 'resume' ? 'resumed' : 'loaded'
+        } catch (error) {
+          if (typeof error === 'object' && error && 'code' in error && error.code === -32000)
+            entry.state.status = 'login-required'
+          else throw new AgentSessionRestoreError(`原生会话恢复失败；未自动重建。${message(error)}`)
+        } finally {
+          entry.replaying = false
+        }
+      } else {
+        await this.newSession(entry)
+        entry.run.sessionOrigin = restore ? 'new' : 'stateless'
+        if (scope && restore && entry.sessionId)
+          scope.save({ sessionId: entry.sessionId, materialDigest: '', bootstrapped: false })
+      }
       this.touch(entry)
       return structuredClone(state)
     } catch (error) {
       await this.disconnect(state.id)
+      if (error instanceof AgentSessionRestoreError) throw error
       throw new Error(state.error || message(error))
     } finally {
       signal?.removeEventListener('abort', cancelled)
@@ -412,7 +459,27 @@ export class AcpAgents implements AgentClient {
   }
   private update(entry: LiveConnection, { sessionId, update }: SessionNotification) {
     if (entry.closing || (entry.sessionId && entry.sessionId !== sessionId)) return
+    if (entry.replaying) {
+      // Loading may replay old text/tools. Only live configuration can update the connection.
+      if (update.sessionUpdate === 'config_option_update')
+        entry.state.options = configOptions(update.configOptions)
+      if (update.sessionUpdate === 'available_commands_update')
+        entry.state.commands = update.availableCommands.map(({ name, description }) => ({
+          name,
+          description,
+        }))
+      return
+    }
     switch (update.sessionUpdate) {
+      case 'usage_update':
+        entry.run.usage = {
+          contextTokens: update.used,
+          contextWindow: update.size,
+          ...(update.cost
+            ? { cost: { amount: update.cost.amount, currency: update.cost.currency } }
+            : {}),
+        }
+        break
       case 'agent_message_chunk':
         if (update.content.type === 'text') {
           if (
@@ -477,10 +544,11 @@ export class AcpAgents implements AgentClient {
     signal: AbortSignal,
     changed: (output: string, agent: AgentRun) => void,
     researchTools?: (capabilities?: McpCapabilities) => McpServer[],
+    scope?: AgentSessionScope,
   ) {
     if (signal.aborted) throw new Error('已取消研究')
-    // Every turn reconstructs context from QB; hidden native history cannot duplicate it.
-    const connection = await this.connect(config, signal, researchTools)
+    const previous = scope?.load()
+    const connection = await this.connect(config, signal, researchTools, scope)
     const entry = this.entry(connection.id)
     clearTimeout(entry.idle)
     entry.changed = changed
@@ -500,22 +568,38 @@ export class AcpAgents implements AgentClient {
         await this.configure(connection.id, configId, value)
       }
       this.emit(entry)
-      const current = context.messages.at(-1)!.content
-      const nativeCommand = /^\/[a-z][\w-]*(?:\s|$)/i.test(current)
-      const text = nativeCommand
-        ? current
-        : context.messages.map((part) => `[${part.role}]\n${part.content}`).join('\n\n')
-      const result = await this.bounded(
+      const prompt = agentPrompt(context, previous)
+      const content = [{ type: 'text' as const, text: prompt.text }]
+      entry.run.input = {
+        request: { sessionId: entry.sessionId, requestId: randomUUID(), content },
+        submittedAt: new Date().toISOString(),
+        materials: {
+          digest: prompt.materialDigest,
+          previousDigest: previous?.materialDigest ?? '',
+          included: prompt.included,
+          historyIncluded: prompt.historyIncluded,
+        },
+      }
+      this.emit(entry)
+      const result = await this.bounded<PromptResponse>(
         entry,
         entry.peer.agent.request(methods.agent.session.prompt, {
           sessionId: entry.sessionId,
-          prompt: [{ type: 'text', text }],
+          prompt: content,
         }),
         30 * 60_000,
       )
       if (result.stopReason === 'cancelled' || signal.aborted) throw new Error('已取消研究')
       if (result.stopReason !== 'end_turn')
         throw new Error(`智能体未完成回复（${result.stopReason}）`)
+      entry.run.input.acceptedAt = new Date().toISOString()
+      if (scope && entry.run.sessionOrigin !== 'stateless')
+        scope.save({
+          sessionId: entry.sessionId,
+          materialDigest: prompt.command ? (previous?.materialDigest ?? '') : prompt.materialDigest,
+          bootstrapped: previous?.bootstrapped || !prompt.command,
+          lastRunId: scope.runId,
+        })
       return {
         raw: entry.output,
         answer: entry.answer,

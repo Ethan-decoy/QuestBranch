@@ -2,6 +2,13 @@ import { contextBridge, ipcRenderer } from 'electron'
 import type { ResearchClient } from '../research/types'
 
 const client: ResearchClient = {
+  updates: {
+    state: () => ipcRenderer.invoke('app-updates:state'),
+    check: () => ipcRenderer.invoke('app-updates:check'),
+    download: () => ipcRenderer.invoke('app-updates:download'),
+    install: () => ipcRenderer.invoke('app-updates:install'),
+    openRelease: () => ipcRenderer.invoke('app-updates:open-release'),
+  },
   snapshot: (sinceVersion?: number) => ipcRenderer.invoke('research:snapshot', sinceVersion),
   command: (command) => ipcRenderer.invoke('research:command', command),
   testConnection: (settings) => ipcRenderer.invoke('research:test', settings),

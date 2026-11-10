@@ -1,0 +1,133 @@
+.run-record {
+  margin: 0 0 14px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 6px;
+  padding: 13px;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+}
+
+.run-record > summary {
+  cursor: pointer;
+}
+
+.run-record strong {
+  font-size: 11px;
+  color: var(--color-text-primary);
+  font-weight: 500;
+  line-height: 1.8;
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.run-record small {
+  display: block;
+  font-size: 10px;
+  color: var(--color-text-muted);
+  line-height: 1.7;
+  margin-top: 4px;
+}
+
+.record-icon {
+  padding: 5px;
+  border-radius: 4px;
+  background: var(--color-surface-subtle);
+  color: var(--color-text-secondary);
+}
+
+.record-icon.failed {
+  background: var(--color-error-surface);
+  color: var(--color-error-text);
+}
+
+.record-state {
+  font-size: 8px;
+  white-space: nowrap;
+  color: var(--color-text-muted);
+}
+
+.record-state.failed {
+  color: var(--color-error-text);
+}
+
+.record-state.interrupted,
+.record-icon.interrupted {
+  color: var(--color-text-secondary);
+}
+
+.record-icon.interrupted {
+  background: var(--color-surface-subtle);
+}
+
+.record-state.running {
+  color: var(--color-text-secondary);
+}
+
+.record-icon.running {
+  color: var(--color-running-text);
+  background: var(--color-running-surface);
+}
+
+.run-record h4 {
+  font-size: 10px;
+  color: var(--color-text-primary);
+  margin: 16px 0 6px;
+  font-weight: 500;
+}
+
+.context-items {
+  list-style: none;
+  padding: 0;
+  margin: 14px 0;
+}
+
+.context-items > li {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 10px 0;
+  font-size: 10px;
+  line-height: 1.7;
+  color: var(--color-text-muted);
+}
+
+.context-items svg {
+  margin-top: 2px;
+  color: var(--color-text-muted);
+}
+
+.context-items code {
+  color: var(--color-text-muted);
+  font-size: 8px;
+}
+
+.raw-details {
+  margin-top: 15px;
+  color: var(--color-text-muted);
+}
+
+.raw-details summary {
+  cursor: pointer;
+  font-size: 9px;
+}
+
+.raw-details pre {
+  white-space: pre-wrap;
+  max-height: 240px;
+  overflow: auto;
+  font:
+    9px/1.7 Consolas,
+    monospace;
+  background: var(--color-surface-subtle);
+  padding: 10px;
+  margin: 10px 0 0;
+  border-radius: 4px;
+}
+
+.record-state {
+  font-size: 9px;
+}
+
+.context-items > li {
+  font-size: 11px;
+}

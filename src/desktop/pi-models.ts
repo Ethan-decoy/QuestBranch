@@ -37,6 +37,7 @@ import { PiAuth } from './pi-auth'
 import { defaultNetwork, type Network } from './network'
 import { type ModelToolRuntime } from './model-tool-turn'
 import { sessionTurn, type SessionTurn } from './session-turn'
+import { modelCacheKey, ModelUsageRecorder } from './model-usage'
 
 export type ModelSelection = {
   model: string
@@ -498,6 +499,7 @@ export class PiModels {
               },
       }
       if (turn) {
+        const usage = new ModelUsageRecorder(this.store, turn.runId)
         const resolved = await models.getAuth(provider.id, { signal: requestSignal })
         const key = apiKey || resolved?.auth.apiKey || ''
         const nativeHeaders: Record<string, string> = {
@@ -535,8 +537,29 @@ export class PiModels {
             }),
           network: this.network,
           nativeHeaders,
-          stream: (context, maxTokens) =>
-            models.streamSimple(model, context, { ...options, maxTokens }),
+          stream: (context, maxTokens, identity) =>
+            usage.stream(
+              {
+                phase: identity.phase,
+                provider: provider.id,
+                model: model.id,
+                api: model.api,
+                source: 'pi',
+                billing:
+                  settings.provider === 'account'
+                    ? 'subscription'
+                    : settings.provider === 'ollama'
+                      ? 'local'
+                      : 'api',
+              },
+              requestSignal,
+              () =>
+                models.streamSimple(model, context, {
+                  ...options,
+                  maxTokens,
+                  sessionId: modelCacheKey(identity.sessionId, model, identity.phase),
+                }),
+            ),
         })
       }
       if (toolRuntime) throw new Error('研究工具需要明确的持久会话归属')

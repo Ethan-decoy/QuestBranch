@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
 import { copyFileSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { verifyUpdateAssets } from './update-release-assets.mjs'
 
 const version = JSON.parse(readFileSync('package.json')).version
 const commit = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim()
@@ -18,6 +19,9 @@ const platforms = Object.fromEntries(
       assert.equal(record.installer.freshInstall, true)
       assert.equal(record.installer.installerUpgrade, true)
       assert.equal(record.installer.uninstallPreservesResearch, true)
+      assert.equal(record.installer.nativeUpdater.downloadVerifiedBySdk, true)
+      assert.equal(record.installer.nativeUpdater.shutdownBySdk, true)
+      assert.equal(record.installer.nativeUpdater.relaunched, true)
       assert.equal(record.om.realSdk, true)
       assert.equal(record.om.calls, 1)
       assert.equal(record.package.contentMatchesBuildInputs, true)
@@ -43,8 +47,12 @@ const platforms = Object.fromEntries(
       assert(record.runtime.networkCases > 0)
       assert(record.runtime.oauthCases > 0)
       assert.equal(record.runtime.modelFixtureRuns, 14)
-      if (key === 'linux-x64') assert.equal(record.appImage.researchAndReopen, true)
-      else assert.equal(record.signing.adHocVerified, true)
+      if (key === 'linux-x64') {
+        assert.equal(record.appImage.researchAndReopen, true)
+        assert.equal(record.appImage.nativeUpdater.downloadVerifiedBySdk, true)
+        assert.equal(record.appImage.nativeUpdater.shutdownBySdk, true)
+        assert.equal(record.appImage.nativeUpdater.relaunched, true)
+      } else assert.equal(record.signing.adHocVerified, true)
     }
     assert.match(record.package.nativeCodexVersion, /0\.160\.1/)
     assert(record.assets.length > 0)
@@ -73,7 +81,11 @@ const record = {
   prerelease: true,
   platforms,
   realProviderCalls: 0,
-  automaticUpdatesProvided: false,
+  updates: {
+    check: true,
+    installAndRestart: ['windows-nsis', 'linux-appimage'],
+    manual: ['windows-zip', 'macos-dmg', 'linux-deb'],
+  },
 }
 writeFileSync('release/VERIFICATION.json', JSON.stringify(record, null, 2) + '\n')
 const names = [
@@ -86,6 +98,7 @@ const names = [
   'README-TRIAL.md',
   'RELEASE-NOTES.md',
   'VERIFICATION.json',
+  ...verifyUpdateAssets('release', version),
 ]
 const lines = names.map((name) => {
   const bytes = readFileSync(join('release', name))

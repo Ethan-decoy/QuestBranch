@@ -10,7 +10,7 @@ import {
   renameSync,
   writeFileSync,
 } from 'node:fs'
-import { rm } from 'node:fs/promises'
+import { rm, rmdir } from 'node:fs/promises'
 import { basename, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { backup, DatabaseSync } from 'node:sqlite'
@@ -96,6 +96,7 @@ export async function relocateResearchStorage(
   const target = validateStorageDestination(store.directory, destination)
   const staging = mkdtempSync(join(target, '.questbranch-migration-'))
   const created: string[] = []
+  const createdDirectories: string[] = []
   let committed = false
   try {
     const source = new DatabaseSync(join(store.directory, 'research.sqlite'), { readOnly: true })
@@ -124,6 +125,22 @@ export async function relocateResearchStorage(
       copyFileSync(join(store.directory, '.credential-key'), join(staging, '.credential-key'))
       files.push('.credential-key')
     }
+    const upgradeBackup = join('backups', 'before-sessionweave-materials-v4')
+    if (existsSync(join(store.directory, upgradeBackup))) {
+      mkdirSync(join(staging, upgradeBackup), { recursive: true })
+      const backupFiles = ['research.sqlite', 'backup.json']
+      if (existsSync(join(store.directory, upgradeBackup, '.credential-key')))
+        backupFiles.push('.credential-key')
+      for (const file of backupFiles) {
+        const relativePath = join(upgradeBackup, file)
+        copyFileSync(join(store.directory, relativePath), join(staging, relativePath))
+        files.push(relativePath)
+      }
+      for (const directory of [join(target, 'backups'), join(target, upgradeBackup)]) {
+        mkdirSync(directory)
+        createdDirectories.push(directory)
+      }
+    }
     for (const file of files) {
       const path = join(target, file)
       copyFileSync(join(staging, file), path, constants.COPYFILE_EXCL)
@@ -134,7 +151,15 @@ export async function relocateResearchStorage(
     committed = true
     return target
   } finally {
-    if (!committed) for (const path of created) await rm(path, { force: true })
+    if (!committed) {
+      for (const path of created) await rm(path, { force: true })
+      for (const directory of createdDirectories.reverse()) {
+        // Only remove our empty directories; never recursively erase another writer's files.
+        try {
+          await rmdir(directory)
+        } catch {}
+      }
+    }
     const cleanup = resolve(staging)
     if (
       relative(target, cleanup) === basename(cleanup) &&

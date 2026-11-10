@@ -11,6 +11,7 @@ export class SqliteSessionStore implements SessionStore {
   readonly supportsNativeState = true
   readonly supportsWorkingMemoryState = true
   readonly supportsWorkingMemoryProvenance = true
+  readonly supportsMaterialRevisions = true
   constructor(private readonly archive: SqliteSessionArchive) {}
 
   async load(sessionId: string): Promise<SessionState | null> {
@@ -44,11 +45,13 @@ export class SqliteSessionStore implements SessionStore {
             ...old,
             revision: old.revision + 1,
             version:
-              old.version === 3 || mutation.workingMemoryCheckpoint?.version === 2
-                ? 3
-                : mutation.workingMemoryCheckpoint
-                  ? 2
-                  : old.version,
+              old.version === 4 || mutation.materialRevisions
+                ? 4
+                : old.version === 3 || mutation.workingMemoryCheckpoint?.version === 2
+                  ? 3
+                  : mutation.workingMemoryCheckpoint
+                    ? 2
+                    : old.version,
             messages: [...old.messages, ...(mutation.messages ?? [])],
             checkpoints: [
               ...old.checkpoints,
@@ -63,6 +66,14 @@ export class SqliteSessionStore implements SessionStore {
               ...(old.workingMemoryCheckpoints ?? []),
               ...(mutation.workingMemoryCheckpoint ? [mutation.workingMemoryCheckpoint] : []),
             ],
+            ...(old.materialRevisions || mutation.materialRevisions
+              ? {
+                  materialRevisions: [
+                    ...(old.materialRevisions ?? []),
+                    ...(mutation.materialRevisions ?? []),
+                  ],
+                }
+              : {}),
             appendLog: [
               ...(old.appendLog ?? []),
               ...(mutation.messages?.length &&

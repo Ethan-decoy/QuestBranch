@@ -197,6 +197,13 @@ describe('自选保存位置与完整迁移', () => {
     const { root, target, store } = fixture()
     const blockedProfile = join(root, 'unwritable-profile')
     writeFileSync(blockedProfile, 'existing file')
+    const upgradeBackup = join(store.directory, 'backups', 'before-sessionweave-materials-v4')
+    mkdirSync(upgradeBackup, { recursive: true })
+    await store.sessions.backup(join(upgradeBackup, 'research.sqlite'))
+    writeFileSync(
+      join(upgradeBackup, 'backup.json'),
+      JSON.stringify({ feature: 'sessionweave-materials-v4' }),
+    )
     const before = store.exportWorkspace('welcome-research')
     await expect(relocateResearchStorage(store, blockedProfile, target)).rejects.toThrow()
     expect(readdirSync(target)).toEqual([])

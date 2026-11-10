@@ -68,6 +68,11 @@ function candidate() {
                 freshInstall: true,
                 installerUpgrade: true,
                 uninstallPreservesResearch: true,
+                nativeUpdater: {
+                  downloadVerifiedBySdk: true,
+                  shutdownBySdk: true,
+                  relaunched: true,
+                },
               }
             : undefined,
         installation: {
@@ -91,13 +96,36 @@ function candidate() {
           modelFixtureRuns: 14,
         },
         signing: { adHocVerified: true },
-        appImage: { researchAndReopen: true },
+        appImage: {
+          researchAndReopen: true,
+          nativeUpdater: { downloadVerifiedBySdk: true, shutdownBySdk: true, relaunched: true },
+        },
         assets: assets.map((name) => {
           writeFileSync(join(folder, 'release', name), name)
           return { name, sha256: createHash('sha256').update(name).digest('hex') }
         }),
       },
     ]),
+  )
+  for (const [name, payload] of [
+    ['dev.yml', 'QuestBranch-Setup-1.0.0-dev.1-x64.exe'],
+    ['dev-linux.yml', 'QuestBranch-1.0.0-dev.1-linux-x86_64.AppImage'],
+  ]) {
+    const bytes = readFileSync(join(folder, 'release', payload))
+    const sha512 = createHash('sha512').update(bytes).digest('base64')
+    writeFileSync(
+      join(folder, 'release', name),
+      JSON.stringify({
+        version: '1.0.0-dev.1',
+        files: [{ url: payload, sha512, size: bytes.length }],
+        path: payload,
+        sha512,
+      }),
+    )
+  }
+  writeFileSync(
+    join(folder, 'release/QuestBranch-Setup-1.0.0-dev.1-x64.exe.blockmap'),
+    'fixture blockmap',
   )
   return {
     folder,
@@ -118,7 +146,7 @@ it('assembles exactly the accepted four-target bytes and source-bound metadata',
   const c = candidate()
   expect(c.run().status).toBe(0)
   const manifest = readFileSync(join(c.folder, 'release/SHA256SUMS.txt'), 'utf8').trim().split('\n')
-  expect(manifest).toHaveLength(9)
+  expect(manifest).toHaveLength(12)
   for (const line of manifest) {
     const [hash, name] = line.split('  ')
     expect(
@@ -138,6 +166,11 @@ it('rejects incomplete native installation evidence', () => {
   Object.assign(c.records['linux-x64'].installation, { fresh: undefined })
   expect(c.run().status).not.toBe(0)
 })
+it('rejects a download-only check without verified native relaunch', () => {
+  const c = candidate()
+  c.records['linux-x64'].appImage.nativeUpdater.relaunched = false
+  expect(c.run().status).not.toBe(0)
+})
 it('rejects a missing platform and failed runtime checks', () => {
   const c = candidate()
   c.records['macos-x64'].runtime.networkCases = 0
@@ -149,5 +182,23 @@ it('rejects a missing platform and failed runtime checks', () => {
 it('rejects candidate bytes changed after native acceptance', () => {
   const c = candidate()
   writeFileSync(join(c.folder, 'release', c.records['linux-x64'].assets[0].name), 'changed')
+  expect(c.run().status).not.toBe(0)
+})
+it('rejects metadata that redirects to another payload or contains an incorrect update hash', () => {
+  const c = candidate()
+  const path = join(c.folder, 'release/dev.yml')
+  const original = JSON.parse(readFileSync(path, 'utf8'))
+  writeFileSync(
+    path,
+    JSON.stringify({
+      ...original,
+      files: [{ ...original.files[0], url: 'https://untrusted.invalid/installer.exe' }],
+    }),
+  )
+  expect(c.run().status).not.toBe(0)
+  writeFileSync(
+    path,
+    JSON.stringify({ ...original, files: [{ ...original.files[0], sha512: 'wrong' }] }),
+  )
   expect(c.run().status).not.toBe(0)
 })

@@ -62,22 +62,6 @@ function collect(directory) {
       `Source: ${override.source}\n${override.reason}\n\n${contents.toString('utf8').trimEnd()}`,
     )
   }
-  if (!texts.length && id === 'sessionweave@0.0.0' && license === 'UNLICENSED') {
-    const source = JSON.parse(readFileSync(join(root, 'vendor/sessionweave-source.json'), 'utf8'))
-    if (hash(readFileSync(resolve(root, source.file))) !== source.sha256)
-      throw new Error('SessionWeave 固定快照校验不符')
-    const grant = readFileSync(resolve(root, source.licenseGrant.file))
-    if (
-      source.license !== 'MIT' ||
-      source.archiveMetadataLicense !== license ||
-      hash(grant) !== source.licenseGrant.sha256
-    )
-      throw new Error('SessionWeave 补充许可校验不符')
-    texts.push(
-      `Fixed source snapshot. Original archive metadata license: ${license}.\nSource commit: ${source.sourceCommit}\nArchive SHA-256: ${source.sha256}\nSupplemental MIT grant dated ${source.licenseGrant.date}: ${source.licenseGrant.scope}\n\n${grant.toString('utf8').trimEnd()}`,
-    )
-    license = source.license
-  }
   if (!texts.length) throw new Error(`缺少原始许可文本：${id}；请核对来源后补充该版本的声明`)
   const notice = { license, text: texts.join('\n\n') }
   const existing = packages.get(id)
@@ -110,8 +94,8 @@ Electron's accompanying LICENSE.electron.txt and LICENSES.chromium.html must
 also remain with the distributed application. The bundled Codex upstream
 NOTICE follows this inventory.
 
-QuestBranch is MIT licensed; see LICENSE and LICENSING.md. The unchanged
-SessionWeave snapshot has an explicit supplemental MIT grant below.
+QuestBranch is MIT licensed; see LICENSE and LICENSING.md. SessionWeave's
+official release includes its own MIT license, preserved in this inventory.
 ${declarationOnly.size} packages supply MIT declarations only in their original manifests.
 Those manifests and standard terms are preserved below; no separate upstream
 copyright notice was supplied or invented. Other entries preserve original notices.

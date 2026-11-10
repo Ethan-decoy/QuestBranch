@@ -8,7 +8,7 @@ import {
 } from '@agentclientprotocol/sdk'
 import { Readable, Writable } from 'node:stream'
 import { randomUUID } from 'node:crypto'
-import { existsSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
@@ -17,6 +17,35 @@ import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 const scenario = process.argv[2] ?? 'normal'
 let mcp, mcpDescriptor
 const isMcp = scenario.startsWith('mcp-')
+const resumable = ['session-resume', 'session-failure', 'mcp-resume'].includes(scenario)
+const loadable = scenario === 'session-load'
+const sessionFile = () => join(process.cwd(), 'fixture-sessions.json')
+const readSessions = () =>
+  existsSync(sessionFile()) ? JSON.parse(readFileSync(sessionFile(), 'utf8')) : {}
+async function connectMcp(params) {
+  if (!isMcp) return
+  mcpDescriptor = params.mcpServers[0]
+  if (!mcpDescriptor) throw new Error('No QB MCP server was injected')
+  mcp = new Client({ name: 'qb-fixture-agent', version: '1' })
+  const descriptor = mcpDescriptor
+  await mcp.connect(
+    descriptor.type === 'http'
+      ? new StreamableHTTPClientTransport(new URL(descriptor.url), {
+          requestInit: {
+            headers: Object.fromEntries(descriptor.headers.map(({ name, value }) => [name, value])),
+          },
+        })
+      : new StdioClientTransport({
+          command: descriptor.command,
+          args: descriptor.args,
+          env: {
+            ...process.env,
+            ...Object.fromEntries(descriptor.env.map(({ name, value }) => [name, value])),
+          },
+          stderr: 'pipe',
+        }),
+  )
+}
 const toolValue = (response) => {
   if (response.isError) throw new Error(JSON.stringify(response.content))
   return (
@@ -66,10 +95,15 @@ const option = () => [
 const app = agent({ name: 'fixture' })
   .onRequest(methods.agent.initialize, async () => {
     if (scenario === 'startup') await new Promise(() => {})
+    if (scenario === 'delayed-start') await new Promise((resolve) => setTimeout(resolve, 5500))
     return {
       protocolVersion: PROTOCOL_VERSION,
       agentInfo: { name: 'Fixture ACP', version: '1' },
-      agentCapabilities: { mcpCapabilities: { http: isMcp && scenario !== 'mcp-stdio' } },
+      agentCapabilities: {
+        mcpCapabilities: { http: isMcp && scenario !== 'mcp-stdio' },
+        ...(resumable ? { sessionCapabilities: { resume: {} } } : {}),
+        ...(loadable ? { loadSession: true } : {}),
+      },
       authMethods: [{ id: 'device-code', name: '登录 Fixture' }],
     }
   })
@@ -88,31 +122,12 @@ const app = agent({ name: 'fixture' })
   .onRequest(methods.agent.session.new, async ({ client, params }) => {
     if (scenario === 'auth' && !existsSync(loginFile())) throw RequestError.authRequired()
     sessionId = randomUUID()
-    if (isMcp) {
-      mcpDescriptor = params.mcpServers[0]
-      if (!mcpDescriptor) throw new Error('No QB MCP server was injected')
-      mcp = new Client({ name: 'qb-fixture-agent', version: '1' })
-      const descriptor = mcpDescriptor
-      await mcp.connect(
-        descriptor.type === 'http'
-          ? new StreamableHTTPClientTransport(new URL(descriptor.url), {
-              requestInit: {
-                headers: Object.fromEntries(
-                  descriptor.headers.map(({ name, value }) => [name, value]),
-                ),
-              },
-            })
-          : new StdioClientTransport({
-              command: descriptor.command,
-              args: descriptor.args,
-              env: {
-                ...process.env,
-                ...Object.fromEntries(descriptor.env.map(({ name, value }) => [name, value])),
-              },
-              stderr: 'pipe',
-            }),
-      )
+    if (resumable || loadable) {
+      const sessions = readSessions()
+      sessions[sessionId] = { prompts: [], restores: 0 }
+      writeFileSync(sessionFile(), JSON.stringify(sessions))
     }
+    await connectMcp(params)
     void client.notify(methods.client.session.update, {
       sessionId,
       update: {
@@ -121,6 +136,41 @@ const app = agent({ name: 'fixture' })
       },
     })
     return { sessionId, configOptions: option() }
+  })
+  .onRequest(methods.agent.session.resume, async ({ params }) => {
+    const sessions = readSessions()
+    if (scenario === 'session-failure' || !sessions[params.sessionId])
+      throw new Error('Fixture session cannot be restored')
+    sessionId = params.sessionId
+    sessions[sessionId].restores++
+    writeFileSync(sessionFile(), JSON.stringify(sessions))
+    await connectMcp(params)
+    return { configOptions: option() }
+  })
+  .onRequest(methods.agent.session.load, async ({ client, params }) => {
+    const sessions = readSessions()
+    if (!sessions[params.sessionId]) throw new Error('Fixture session missing')
+    sessionId = params.sessionId
+    sessions[sessionId].restores++
+    writeFileSync(sessionFile(), JSON.stringify(sessions))
+    await client.notify(methods.client.session.update, {
+      sessionId,
+      update: {
+        sessionUpdate: 'agent_message_chunk',
+        content: { type: 'text', text: 'HISTORY_REPLAY_ONLY' },
+      },
+    })
+    await client.notify(methods.client.session.update, {
+      sessionId,
+      update: {
+        sessionUpdate: 'tool_call',
+        toolCallId: 'history-tool',
+        kind: 'edit',
+        status: 'completed',
+        title: 'Historical operation',
+      },
+    })
+    return { configOptions: option() }
   })
   .onRequest(methods.agent.session.setConfigOption, ({ params }) => {
     if (scenario === 'picker' && params.configId === 'reasoning_effort') effort = params.value
@@ -137,6 +187,29 @@ const app = agent({ name: 'fixture' })
     if (scenario === 'exit') process.exit(7)
     const notify = (update) =>
       client.notify(methods.client.session.update, { sessionId: params.sessionId, update })
+    if (resumable || loadable) {
+      const text = params.prompt.map((part) => part.text ?? '').join('\n'),
+        sessions = readSessions()
+      const receipt = { text }
+      if (isMcp) {
+        receipt.nodeId = toolValue(
+          await mcp.callTool({ name: 'qb_get_research', arguments: {} }),
+        ).current_node.id
+      }
+      sessions[sessionId].prompts.push(receipt)
+      writeFileSync(sessionFile(), JSON.stringify(sessions))
+      await notify({
+        sessionUpdate: 'usage_update',
+        used: 1200,
+        size: 128000,
+        cost: { amount: sessions[sessionId].prompts.length / 100, currency: 'USD' },
+      })
+      await notify({
+        sessionUpdate: 'agent_message_chunk',
+        content: { type: 'text', text: 'CURRENT_TURN_ONLY' },
+      })
+      return { stopReason: 'end_turn' }
+    }
     if (scenario === 'mcp-save') {
       await notify({
         sessionUpdate: 'tool_call',

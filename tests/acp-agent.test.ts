@@ -58,6 +58,85 @@ afterEach(async () => {
   }
 })
 describe('ACP 原生智能体接入', () => {
+  it.each(['mcp-resume', 'session-load'])(
+    '%s 同节点持续恢复、跨节点隔离、重连研究工具；历史回放不成为本轮回复',
+    async (scenario) => {
+      const { service, store, directory } = setup(scenario)
+      const send = async (nodeId: string, message: string) => {
+        const { id } = await service.command({ type: 'send-message', nodeId, message })
+        const run = await until(
+          () => store.run(id!),
+          (run) => run.status !== 'running',
+        )
+        expect(run.status, run.error).toBe('completed')
+        return run
+      }
+      const first = await send('visual', 'FIRST_NODE_ONLY')
+      const other = await send('context', 'OTHER_NODE_ONLY')
+      const next = await send('visual', 'CURRENT_FOLLOWUP_ONLY')
+      expect(next.agent!.sessionId).toBe(first.agent!.sessionId)
+      expect(other.agent!.sessionId).not.toBe(first.agent!.sessionId)
+      expect(next.agent!.sessionOrigin).toBe(scenario === 'session-load' ? 'loaded' : 'resumed')
+      expect(next.output).toBe('CURRENT_TURN_ONLY')
+      expect(next.agent!.activities).toHaveLength(0)
+      expect(next.agent!.usage).toMatchObject({
+        contextTokens: 1200,
+        contextWindow: 128000,
+        cost: { amount: 0.02, currency: 'USD' },
+      })
+      const sessions = JSON.parse(
+        readFileSync(join(directory, 'agent-workspace', 'fixture-sessions.json'), 'utf8'),
+      )
+      const prompts = sessions[first.agent!.sessionId!].prompts
+      expect(prompts).toHaveLength(2)
+      expect(prompts[1].text).toBe('[user]\nCURRENT_FOLLOWUP_ONLY')
+      expect(prompts[1].text).not.toContain('FIRST_NODE_ONLY')
+      if (scenario === 'mcp-resume')
+        expect(prompts.map((p: { nodeId: string }) => p.nodeId)).toEqual(['visual', 'visual'])
+      const source = store.snapshot().reports.find((report) => report.nodeId === 'visual')!
+      store.createNode('visual', 'MATERIAL_UPDATE_ONLY', source.id)
+      const updated = await send('visual', 'AFTER_UPDATE_ONLY')
+      expect(updated.agent!.input!.materials).toMatchObject({
+        included: true,
+        historyIncluded: false,
+      })
+      expect(updated.agent!.input!.request.content[0].text).toContain('MATERIAL_UPDATE_ONLY')
+      expect(updated.agent!.input!.request.content[0].text).not.toContain('FIRST_NODE_ONLY')
+    },
+    30000,
+  )
+
+  it('恢复失败不静默另建会话，明确重建后才新建；旧研究仍保留', async () => {
+    const { service, store, directory } = setup('session-failure')
+    const send = async () => {
+      const { id } = await service.command({
+        type: 'send-message',
+        nodeId: 'visual',
+        message: '继续',
+      })
+      return until(
+        () => store.run(id!),
+        (run) => run.status !== 'running',
+      )
+    }
+    const first = await send(),
+      failed = await send()
+    expect(first.status).toBe('completed')
+    expect(failed.status).toBe('failed')
+    expect(failed.recovery).toBe('agent-session')
+    expect(
+      Object.keys(
+        JSON.parse(
+          readFileSync(join(directory, 'agent-workspace', 'fixture-sessions.json'), 'utf8'),
+        ),
+      ),
+    ).toHaveLength(1)
+    await service.command({ type: 'reset-agent-session', nodeId: 'visual' })
+    const rebuilt = await send()
+    expect(rebuilt.status).toBe('completed')
+    expect(rebuilt.agent!.sessionId).not.toBe(first.agent!.sessionId)
+    expect(store.run(first.id).output).toBe('CURRENT_TURN_ONLY')
+  }, 30000)
   it.each(['mcp-http', 'mcp-stdio'])(
     '通过 %s 注入真实 MCP 工具，直接保存并返回分支，重复调用一致',
     async (scenario) => {
@@ -230,35 +309,41 @@ describe('ACP 原生智能体接入', () => {
     expect(run.mode).toBe('chat')
     expect(run.reportId).toBeUndefined()
   })
-  it('报告保留智能体新来源、活动与会话引用，导出恢复不丢失', async () => {
-    const { service, store } = setup()
-    const { id } = await service.command({
-      type: 'start-research',
-      nodeId: 'visual',
-      instruction: '研究并保存报告',
-    })
-    const run = await until(
-      () => store.run(id!),
-      (run) => run.status !== 'running',
-    )
-    expect(run.error).toBe('')
-    expect(run.status).toBe('completed')
-    expect(
-      run.context.sources.some((source) => source.url === 'https://example.com/research'),
-    ).toBe(false)
-    const report = store.snapshot().reports.find((report) => report.runId === id)!
-    expect(
-      report.sources.some(
-        (source) =>
-          source.url === 'https://example.com/research' && source.excerpt.includes('未独立核验'),
-      ),
-    ).toBe(true)
-    const exported = store.exportWorkspace(run.workspaceId)
-    const restored = setup('normal', false).store
-    restored.importWorkspace(exported)
-    expect(restored.run(id!).agent).toEqual(run.agent)
-    expect(restored.snapshot().reports.find((item) => item.id === report.id)).toEqual(report)
-  })
+  it.each(['normal', 'delayed-start'])(
+    '报告保留智能体新来源、活动与会话引用，导出恢复不丢失（%s）',
+    async (scenario) => {
+      const { service, store } = setup(scenario)
+      const { id } = await service.command({
+        type: 'start-research',
+        nodeId: 'visual',
+        instruction: '研究并保存报告',
+      })
+      const run = await until(
+        () => store.run(id!),
+        (run) => run.status !== 'running',
+      )
+      expect(run.error).toBe('')
+      expect(run.status).toBe('completed')
+      expect(
+        run.context.sources.some((source) => source.url === 'https://example.com/research'),
+      ).toBe(false)
+      const report = store.snapshot().reports.find((report) => report.runId === id)!
+      expect(
+        report.sources.some(
+          (source) =>
+            source.url === 'https://example.com/research' && source.excerpt.includes('未独立核验'),
+        ),
+      ).toBe(true)
+      const exported = store.exportWorkspace(run.workspaceId)
+      const restored = setup('normal', false).store
+      restored.importWorkspace(exported)
+      expect(restored.run(id!).agent).toEqual(run.agent)
+      expect(restored.snapshot().reports.find((item) => item.id === report.id)).toEqual(report)
+      // Real process startup plus export/import can outlast Vitest's 5s unit-test default.
+      // Keep until()'s 8s protocol bound and every persistence assertion unchanged.
+    },
+    15_000,
+  )
   it('取消待回应工具请求后结束进程，晚到事件不能写成完成', async () => {
     const { service, store, runtime } = setup('cancel')
     const { id } = await service.command({

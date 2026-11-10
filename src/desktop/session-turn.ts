@@ -20,6 +20,8 @@ import type { ModelToolRuntime } from './model-tool-turn'
 import type { Network } from './network'
 import { piOmModel } from './session-om-model'
 import { resolveSessionNative } from './session-native'
+import { ModelUsageRecorder } from './model-usage'
+import { updateSessionMaterials } from './session-materials'
 
 export type SessionTurn = {
   runId: string
@@ -36,7 +38,11 @@ export async function sessionTurn(options: {
   turn: SessionTurn
   settings: Settings
   model: Model<Api>
-  stream(context: Context, maxTokens: number): AssistantMessageEventStream
+  stream(
+    context: Context,
+    maxTokens: number,
+    identity: { sessionId: string; phase: 'reply' | 'memory' },
+  ): AssistantMessageEventStream
   nativeHeaders: Record<string, string>
   network: Network
   signal: AbortSignal
@@ -78,12 +84,18 @@ export async function sessionTurn(options: {
       toolCalls: structuredClone(toolCalls),
     })
   const outputReserve =
-    settings.maxOutputTokens ?? Math.min(8192, model.maxTokens, Math.floor(model.contextWindow / 4))
+    settings.maxOutputTokens ??
+    Math.min(8192, model.maxTokens, Math.floor(model.contextWindow / (run.mode === 'chat' ? 8 : 4)))
   if (outputReserve < 256 || outputReserve > model.maxTokens)
     throw new Error('输出上限超过模型容量或不足 256 Token')
   const { createOmWorkingMemory, RESEARCH_RETENTION_POLICY_V2 } = await import('sessionweave/om')
   const memory = createOmWorkingMemory({
-    model: piOmModel({ modelId: profile.id, signal, stream: options.stream }),
+    model: piOmModel({
+      modelId: profile.id,
+      signal,
+      stream: (context, maxTokens) =>
+        options.stream(context, maxTokens, { sessionId: owner.sessionId, phase: 'memory' }),
+    }),
     modelId: hash([profile.id, settings.reasoningEffort, connection]),
     retentionPolicy: RESEARCH_RETENTION_POLICY_V2,
     maxOutputTokens: Math.min(8192, model.maxTokens, Math.floor(model.contextWindow / 4)),
@@ -169,6 +181,7 @@ export async function sessionTurn(options: {
       ])
     }
   }
+  turn.onTrace(structuredClone(trace))
   await session.append([
     {
       id: `${run.id}-input`,
@@ -177,6 +190,8 @@ export async function sessionTurn(options: {
     },
   ])
   const native = await resolveSessionNative({
+    usage: new ModelUsageRecorder(store, run.id),
+    sessionId: owner.sessionId,
     settings,
     model,
     profile,
@@ -270,9 +285,7 @@ export async function sessionTurn(options: {
       ? toolGuidance
       : '\n需要核对历史时使用 qb_read_session_raw，只读本轮会话原文；按指定报告格式提交结果。')
   const materialText = turn.context.messages[1]?.content ?? ''
-  const materials = [
-    { id: 'qb-material-' + hash([turn.context.items, materialText]), text: materialText },
-  ]
+  await updateSessionMaterials(session, store, materialText, signal)
   let raw = ''
   const show = (text: string) => {
     raw = text.slice(0, 180000)
@@ -300,7 +313,6 @@ export async function sessionTurn(options: {
       model: profile,
       strategy: sessionStrategy(settings),
       systemPrompt,
-      materials,
       tools: native ? nativeTools(native) : (definitions as unknown as Json[]),
       outputReserveTokens: outputReserve,
       signal,
@@ -337,7 +349,10 @@ export async function sessionTurn(options: {
       completed = parts[0]
       show(raw + (raw ? '\n\n' : '') + completed.text)
     } else {
-      const responseStream = options.stream(request as Context, outputReserve)
+      const responseStream = options.stream(request as Context, outputReserve, {
+        sessionId: owner.sessionId,
+        phase: 'reply',
+      })
       const prefix = raw ? raw.trimEnd() + '\n\n' : ''
       let text = ''
       const reportDraft = new Map<number, string>()

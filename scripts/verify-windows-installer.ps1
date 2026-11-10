@@ -9,10 +9,10 @@ $qbEvidence = Join-Path $qbRoot 'artifacts/release-evidence'
 New-Item -ItemType Directory -Path $qbEvidence -Force | Out-Null
 $qbTemporary = Join-Path $env:RUNNER_TEMP ('questbranch-installer-' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $qbTemporary | Out-Null
-$qbPreviousVersion = '0.3.0-dev.5'
-$qbPreviousDigest = '6615a9b76060ca6416a8e12467e730a2a62e2e4d982429b7fb15120d2ad756eb'
-$qbPreviousInstallerDigest = '20bcba72ca8b4cc083348385a80894b3008e40d207b72b0ce57f6057726697bd'
-$qbPreviousSourceCommit = '838ce8f3ad83d2a12b4415403217be32eda0ad09'
+$qbPreviousVersion = '0.3.0-dev.6'
+$qbPreviousDigest = '6d2189d121318bedb36bd44794327e2106f7d19ca9f37534401f00a763f3895d'
+$qbPreviousInstallerDigest = '3495905de934e217b77f506f29d90fc4a058e29eb69e8eaca0ba47cbea17bfbd'
+$qbPreviousSourceCommit = '48669f450e6684bd6d7027d1dde8452b5b366000'
 $qbPreviousVerifier = Join-Path $qbTemporary 'previous-verifier'
 $qbPreviousVerifierArchive = Join-Path $qbTemporary 'previous-verifier.zip'
 $qbPreviousArchive = Join-Path $qbTemporary 'previous.zip'
@@ -103,7 +103,21 @@ $qbPointer = Join-Path $qbUpgradeStudy 'profile/storage-location.json'
 $qbResearchPath = Join-Path $qbUpgradeStudy 'research'
 @{version=1;directory=$qbResearchPath} | ConvertTo-Json | Set-Content -LiteralPath $qbPointer -Encoding utf8
 $qbPointerHash = Hash-QbFile $qbPointer
-Install-Qb (Resolve-Path -LiteralPath $Installer).Path $qbUpgradeDirectory $qbVersion
+$qbNativePointer = Join-Path $qbDefaultProfile 'storage-location.json'
+Copy-Item -LiteralPath $qbPointer -Destination $qbNativePointer
+$qbNativeArguments = @('scripts/verify-native-update.mjs',"--previous-root=$qbUpgradeDirectory","--installer=$((Resolve-Path -LiteralPath $Installer).Path)","--previous-version=$qbPreviousVersion")
+$qbNativeArgumentLine = ($qbNativeArguments | ForEach-Object { '"' + $_ + '"' }) -join ' '
+$qbNativeProcess = Start-Process -FilePath (Join-Path $qbRoot 'node_modules/electron/dist/electron.exe') -ArgumentList $qbNativeArgumentLine -WorkingDirectory $qbRoot -WindowStyle Hidden -Wait -PassThru -RedirectStandardOutput (Join-Path $qbEvidence 'native-update.stdout.log') -RedirectStandardError (Join-Path $qbEvidence 'native-update.stderr.log')
+if ($qbNativeProcess.ExitCode -ne 0) { Get-Content (Join-Path $qbEvidence 'native-update.stderr.log') -Tail 30; throw 'Native update driver failed' }
+Wait-Qb { @(Get-Process QuestBranch -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq (Join-Path $qbUpgradeDirectory 'QuestBranch.exe') -and $_.MainWindowTitle -like 'QuestBranch*' }).Count -gt 0 }
+$qbRelaunched = @(Get-Process QuestBranch | Where-Object { $_.Path -eq (Join-Path $qbUpgradeDirectory 'QuestBranch.exe') -and $_.MainWindowHandle -ne 0 })
+foreach ($qbWindow in $qbRelaunched) { if (-not $qbWindow.CloseMainWindow()) { throw 'Cannot close relaunched QB normally' } }
+Wait-Qb { @(Get-Process QuestBranch -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq (Join-Path $qbUpgradeDirectory 'QuestBranch.exe') }).Count -eq 0 }
+$qbNativeUpdate = Get-Content (Join-Path $qbEvidence 'native-update-win32.json') -Raw | ConvertFrom-Json
+if (-not $qbNativeUpdate.installRequested -or -not $qbNativeUpdate.shutdownBySdk -or -not $qbNativeUpdate.downloadVerifiedBySdk) { throw 'Missing native update handoff' }
+$qbNativeUpdate | Add-Member -NotePropertyName relaunched -NotePropertyValue $true
+$qbNativeUpdate | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $qbEvidence 'native-update-win32.json') -Encoding utf8
+Remove-Item -LiteralPath $qbNativePointer
 if ((Hash-QbFile (Join-Path $qbUpgradeDirectory 'resources/app.asar')) -ne (Hash-QbFile 'release/win-unpacked/resources/app.asar')) { throw 'Upgrade installed bytes differ from final build' }
 $null = Invoke-QbResearch $qbUpgradeDirectory 'upgrade-reopen' $qbUpgradeStudy -SavedLocation
 if ((Hash-QbFile $qbPointer) -ne $qbPointerHash) { throw 'Upgrade changed saved storage location' }
@@ -135,6 +149,7 @@ $qbEvidenceRecord = [ordered]@{
   freshInstall=$true; customInstallPaths=$true; installBytesMatch=$true;
   previousVersion=$qbPreviousVersion; previousZipSha256=$qbPreviousDigest; predecessorInstallerSha256=$qbPreviousInstallerDigest; predecessorInstaller='Published NSIS installer'; predecessorVerifierSource=$qbPreviousSourceCommit;
   installerUpgrade=$true; reportsConversationsAndOriginsPreserved=$true; savedStorageLocationPreserved=$true;
+  nativeUpdater=$qbNativeUpdate;
   oldPortableJsonImportAndReopen=$true; normalExitAndReopen=$true; uninstallPreservesResearch=$true;
   conversationCases=14; branchingCases=15; lightGraphCases=12; darkGraphCases=12;
   installerSignature=(Get-AuthenticodeSignature -LiteralPath $Installer).Status.ToString()

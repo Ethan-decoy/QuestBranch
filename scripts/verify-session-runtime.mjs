@@ -1,13 +1,19 @@
 // Run with the final QuestBranch.exe and ELECTRON_RUN_AS_NODE=1. Only deterministic
 // local SDK output is used; no application profile, credentials or network are opened.
 import assert from 'node:assert/strict'
-import { mkdirSync, mkdtempSync, readdirSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readdirSync, writeFileSync, readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { desktopPackage } from './desktop-package.mjs'
 
 assert(process.versions.electron, 'Use the packaged Electron executable')
-const root = desktopPackage().archive
+const packagePaths = desktopPackage()
+const root = packagePaths.archive
+const provenance = JSON.parse(
+  readFileSync(join(packagePaths.resources, 'vendor/sessionweave-source.json'), 'utf8'),
+)
+assert.equal(provenance.version, '0.1.0-beta.3')
+assert.equal(provenance.archiveMetadataLicense, 'MIT')
 const chunks = join(root, 'out/main/chunks')
 const matches = readdirSync(chunks).filter((name) => /^om-.*\.js$/.test(name))
 assert.equal(matches.length, 1, 'The OM SDK graph must be bundled before dependency flattening')
@@ -81,7 +87,9 @@ const record = {
   appRoot: root,
   electron: process.versions.electron,
   node: process.versions.node,
-  source: 'compiled fixed SessionWeave snapshot',
+  source: `compiled official SessionWeave ${provenance.version} release`,
+  sourceCommit: provenance.sourceCommit,
+  archiveSha256: provenance.sha256,
   realOmSdk: true,
   sdkFixtureOnly: true,
   calls,

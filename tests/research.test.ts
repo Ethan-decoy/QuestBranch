@@ -478,7 +478,8 @@ describe('真实协议接口与运行生命周期', () => {
       collapsed: [],
       drafts: { context: 'B 的草稿' },
     })
-    await vi.waitFor(() => expect(finish).toBeTypeOf('function'))
+    // First use now completes an actual online database backup before sending the request.
+    await vi.waitFor(() => expect(finish).toBeTypeOf('function'), { timeout: 15000 })
     finish(apiStream('openai-chat', JSON.stringify(output)))
     await vi.waitFor(() => expect(db.run(result.id!).status).toBe('completed'))
     const snapshot = db.snapshot()
@@ -509,7 +510,7 @@ describe('真实协议接口与运行生命周期', () => {
       nodeId: 'visual',
       instruction: '',
     })
-    await vi.waitFor(() => expect(db.run(result.id!).status).toBe('failed'))
+    await vi.waitFor(() => expect(db.run(result.id!).status).toBe('failed'), { timeout: 15000 })
     expect(db.run(result.id!).output).toBe('这不是约定的 JSON 报告')
     expect(db.snapshot().reports).toHaveLength(3)
     expect(db.snapshot().nodes).toHaveLength(8)
@@ -542,7 +543,7 @@ describe('真实协议接口与运行生命周期', () => {
       nodeId: 'layout',
       instruction: '',
     })
-    await vi.waitFor(() => expect(finish).toBeTypeOf('function'))
+    await vi.waitFor(() => expect(finish).toBeTypeOf('function'), { timeout: 15000 })
     await service.command({ type: 'cancel-research', runId: result.id! })
     finish(apiStream('openai-chat', JSON.stringify(output)))
     await new Promise((resolve) => setTimeout(resolve, 20))

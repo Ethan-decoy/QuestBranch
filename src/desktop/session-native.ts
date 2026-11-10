@@ -15,6 +15,7 @@ import {
 import type { Settings } from '../research/types'
 import { modelConnectionKey, sessionStrategy } from '../research/api-services'
 import type { Network } from './network'
+import { modelCacheKey, nativeUsage, type ModelUsageRecorder } from './model-usage'
 
 const verified = new WeakMap<Network, Map<string, { until: number; evidence: string }>>()
 
@@ -26,6 +27,8 @@ export async function resolveSessionNative(options: {
   network: Network
   headers: Record<string, string>
   signal: AbortSignal
+  usage?: ModelUsageRecorder
+  sessionId?: string
 }): Promise<NativeAdapter | undefined> {
   const { settings, model, profile, network, signal } = options
   if (sessionStrategy(settings) === 'portable') return
@@ -53,21 +56,44 @@ export async function resolveSessionNative(options: {
   const post =
     (path: string): NativeTransport =>
     async (request, providedSignal) => {
-      const response = await network.fetch(endpoint + path, {
-        method: 'POST',
-        headers: { ...options.headers, ...request.headers, 'content-type': 'application/json' },
-        body: JSON.stringify(request.body),
-        redirect: 'error',
-        signal: providedSignal ?? signal,
-      })
-      const data = await response.json()
-      if (!response.ok) {
-        cache.delete(cacheKey)
-        throw new Error(
-          `会话原生接口 HTTP ${response.status}：${JSON.stringify(data).slice(0, 1000)}`,
+      const requestSignal = providedSignal ?? signal
+      requestSignal.throwIfAborted()
+      const finish =
+        path.endsWith('input_tokens') || path.endsWith('count_tokens')
+          ? undefined
+          : options.usage?.start({
+              phase: path.endsWith('/compact') ? 'compaction' : 'reply',
+              provider: model.provider,
+              model: model.id,
+              api: model.api,
+              billing: 'api',
+              source: 'native',
+            })
+      try {
+        const response = await network.fetch(endpoint + path, {
+          method: 'POST',
+          headers: { ...options.headers, ...request.headers, 'content-type': 'application/json' },
+          body: JSON.stringify(request.body),
+          redirect: 'error',
+          signal: requestSignal,
+        })
+        const data = await response.json()
+        finish?.(
+          requestSignal.aborted ? 'cancelled' : response.ok ? 'completed' : 'failed',
+          nativeUsage(data, model.api),
+          data && typeof data === 'object' && typeof data.id === 'string' ? data.id : undefined,
         )
+        if (!response.ok) {
+          cache.delete(cacheKey)
+          throw new Error(
+            `会话原生接口 HTTP ${response.status}：${JSON.stringify(data).slice(0, 1000)}`,
+          )
+        }
+        return data
+      } catch (error) {
+        finish?.(requestSignal.aborted ? 'cancelled' : 'failed')
+        throw error
       }
-      return data
     }
   if (model.api === 'openai-completions') {
     const binding = {
@@ -92,6 +118,7 @@ export async function resolveSessionNative(options: {
     delete body.store
     delete body.context_management
     delete body.include
+    delete body.prompt_cache_key
     const path =
       model.api === 'openai-responses' ? '/responses/input_tokens' : '/v1/messages/count_tokens'
     const result = (await post(path)({ body, headers: request.headers }, signal)) as {
@@ -121,6 +148,8 @@ export async function resolveSessionNative(options: {
   adapter.build = (input) => {
     const request = build(input)
     if (model.api === 'openai-responses') request.body.include = ['reasoning.encrypted_content']
+    if (model.api === 'openai-responses' && options.sessionId)
+      request.body.prompt_cache_key = modelCacheKey(options.sessionId, model, 'reply')
     if (
       model.api === 'openai-responses' &&
       model.reasoning &&

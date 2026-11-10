@@ -410,17 +410,24 @@ describe('API 协议契约', () => {
 })
 
 describe('统一研究流程与凭据归属', () => {
-  it.each(connections)(
-    '%s 的结构化报告校验失败仍保留原文，不创建报告或后续节点',
-    async (protocol) => {
+  it.each(
+    connections.flatMap((protocol) =>
+      [
+        { invalid: '非 JSON', raw: '这不是 JSON' },
+        {
+          invalid: '错误字段类型',
+          raw: JSON.stringify({ ...report, followups: '错误的字段类型' }),
+        },
+        { invalid: '标题超长', raw: JSON.stringify({ ...report, title: '长'.repeat(201) }) },
+      ].map((input) => ({ protocol, ...input })),
+    ),
+  )(
+    '$protocol 的结构化报告校验失败（$invalid）仍保留原文，不创建报告或后续节点',
+    async ({ protocol, raw }) => {
       const db = store(),
         service = new ResearchService(db)
       db.saveSettings(settings(protocol))
-      for (const raw of [
-        '这不是 JSON',
-        JSON.stringify({ ...report, followups: '错误的字段类型' }),
-        JSON.stringify({ ...report, title: '长'.repeat(201) }),
-      ]) {
+      try {
         vi.stubGlobal(
           'fetch',
           vi.fn(async () => stream(protocol, raw)),
@@ -437,9 +444,11 @@ describe('统一研究流程与凭据归属', () => {
         expect(db.run(research.id!).output).toBe(raw)
         expect(db.snapshot().reports).toHaveLength(3)
         expect(db.snapshot().nodes).toHaveLength(8)
+      } finally {
+        service.shutdown()
       }
-      service.shutdown()
     },
+    20000,
   )
   it.each(connections)('%s 完成对话、报告、分支和导出恢复，保留协议归属', async (protocol) => {
     const db = store(),

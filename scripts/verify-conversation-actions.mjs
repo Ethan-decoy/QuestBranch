@@ -27,7 +27,8 @@ const appRoot = packageRoot ? desktopPackage(packageRoot).archive : resolve('.')
 const cases = [],
   sockets = new Set()
 let serial = 0,
-  finished = false
+  finished = false,
+  expectedInput = ''
 const report = {
   title: '隔离验收报告',
   summary: '用户明确生成的报告。',
@@ -47,7 +48,12 @@ const server = createServer(async (request, response) => {
   const reportMode = body.tools?.some(
     (tool) => (tool.name ?? tool.function?.name) === 'submit_research_report',
   )
-  const user = body.messages.filter((message) => message.role === 'user').at(-1)?.content ?? ''
+  // Reference materials may follow the actual user input in the wire request.
+  // Verify the exact submitted input instead of relying on SDK message ordering.
+  const user = body.messages.findLast(
+    (message) => message.role === 'user' && message.content === expectedInput,
+  )?.content
+  assert.equal(user, expectedInput, 'The provider must receive the submitted conversation input')
   const results = body.messages.filter((message) => message.role === 'tool')
   const emit = (delta, reason = null) =>
     response.write(
@@ -212,8 +218,9 @@ app.on('browser-window-created', (_, window) => {
         },
         { text, selector },
       )
-    const fill = (text) =>
-      evaluate((text) => {
+    const fill = (text) => {
+      expectedInput = text
+      return evaluate((text) => {
         const field = document.querySelector('.research-composer textarea')
         field.focus()
         Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set.call(
@@ -222,6 +229,7 @@ app.on('browser-window-created', (_, window) => {
         )
         field.dispatchEvent(new Event('input', { bubbles: true }))
       }, text)
+    }
     const capture = async (name) => {
       window.show()
       window.focus()

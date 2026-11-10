@@ -21,10 +21,6 @@ import { buildContext } from '../src/research/context'
 import type { ResearchRun } from '../src/research/types'
 import { apiStream } from './fixtures/api-stream'
 
-// Multiple real SDK turns, online backups and reopen/import run in each case.
-// This is an integration budget; unit-test defaults remain unchanged.
-vi.setConfig({ testTimeout: 20000 })
-
 const cleanup: (() => void)[] = []
 afterEach(() => {
   for (const close of cleanup.splice(0).reverse()) close()

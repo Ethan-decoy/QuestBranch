@@ -92,7 +92,13 @@ async function verify() {
       updater.disableDifferentialDownload = true
       updater.disableWebInstaller = true
       updater.allowDowngrade = false
-      await updater.netSession.setProxy({ proxyRules: `http=127.0.0.1:${address.port}` })
+      const sdkSession = updater.netSession
+      await sdkSession.setProxy({
+        mode: 'fixed_servers',
+        proxyRules: `http=127.0.0.1:${address.port}`,
+      })
+      await sdkSession.closeAllConnections()
+      assert.equal(await sdkSession.resolveProxy(options.url), `PROXY 127.0.0.1:${address.port}`)
       const result = await updater.checkForUpdates()
       assert.equal(result.isUpdateAvailable, true)
       assert.equal(result.downloadPromise, null)
@@ -104,6 +110,7 @@ async function verify() {
         assert.deepEqual(readFileSync(paths[0]), payload)
       }
       cases.push(name)
+      await sdkSession.closeAllConnections()
     }
     assert(requests.some((url) => url.startsWith('http://update.qb.invalid/')))
     const record = {

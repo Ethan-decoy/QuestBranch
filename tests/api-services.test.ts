@@ -11,10 +11,6 @@ import { connectionKey } from '../src/ui/provider-connection'
 import { modelConnectionKey } from '../src/research/api-services'
 import { apiEvents, apiStream } from './fixtures/api-stream'
 
-// Real provider SDKs and SQLite upgrade backups need a bounded integration budget.
-// Keep the default timeout for unit tests in other files.
-vi.setConfig({ testTimeout: 20000 })
-
 const connections = ['openai-chat', 'openai-responses', 'anthropic-messages', 'ollama'] as const
 type Connection = (typeof connections)[number]
 function stream(connection: Connection, text: string, ending?: string) {

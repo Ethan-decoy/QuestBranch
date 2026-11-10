@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { mkdirSync, mkdtempSync, rmSync, readFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync } from 'node:fs'
+import { rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { basename, join, resolve, relative, sep } from 'node:path'
 import { AcpAgents } from '../src/desktop/acp-agent'
@@ -44,7 +45,6 @@ afterEach(async () => {
   for (const { runtime, store, directory, service } of resources.splice(0)) {
     service.shutdown()
     runtime.shutdown()
-    await new Promise((resolve) => setTimeout(resolve, 150))
     store.close()
     if (
       !(
@@ -54,7 +54,8 @@ afterEach(async () => {
       !basename(directory).startsWith('qb-acp-test-')
     )
       throw new Error('Unexpected cleanup path')
-    rmSync(directory, { recursive: true, force: true })
+    // Windows may retain the child working directory while shutdown completes.
+    await rm(directory, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
   }
 })
 describe('ACP 原生智能体接入', () => {

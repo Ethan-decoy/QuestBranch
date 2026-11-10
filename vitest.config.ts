@@ -5,5 +5,7 @@ export default defineConfig({
     include: ['tests/**/*.test.ts'],
     environment: 'node',
     maxWorkers: Math.min(4, availableParallelism()),
+    // SQLite backups, SDKs and real child-process lifecycles share one finite budget.
+    testTimeout: 20000,
   },
 })

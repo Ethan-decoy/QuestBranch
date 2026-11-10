@@ -6,6 +6,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  openSync,
   readFileSync,
   statSync,
   writeFileSync,
@@ -104,6 +105,14 @@ void app
     }
     const Updater = process.platform === 'win32' ? NsisUpdater : AppImageUpdater
     const updater = new Updater(undefined, adapter)
+    if (process.platform === 'linux') {
+      // Keep the SDK's actual detached launch; retain its child output for CI diagnosis.
+      const spawnLog = updater.spawnLog.bind(updater)
+      const stdout = openSync(join(evidence, 'native-relaunch.stdout.log'), 'a')
+      const stderr = openSync(join(evidence, 'native-relaunch.stderr.log'), 'a')
+      updater.spawnLog = (command, args, env) =>
+        spawnLog(command, args, env, ['ignore', stdout, stderr])
+    }
     updater.httpExecutor = new ElectronHttpExecutor()
     updater.logger = null
     updater.autoDownload = false

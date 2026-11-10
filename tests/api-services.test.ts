@@ -11,6 +11,10 @@ import { connectionKey } from '../src/ui/provider-connection'
 import { modelConnectionKey } from '../src/research/api-services'
 import { apiEvents, apiStream } from './fixtures/api-stream'
 
+// Real provider SDKs and SQLite upgrade backups need a bounded integration budget.
+// Keep the default timeout for unit tests in other files.
+vi.setConfig({ testTimeout: 20000 })
+
 const connections = ['openai-chat', 'openai-responses', 'anthropic-messages', 'ollama'] as const
 type Connection = (typeof connections)[number]
 function stream(connection: Connection, text: string, ending?: string) {
@@ -448,7 +452,6 @@ describe('统一研究流程与凭据归属', () => {
         service.shutdown()
       }
     },
-    20000,
   )
   it.each(connections)('%s 完成对话、报告、分支和导出恢复，保留协议归属', async (protocol) => {
     const db = store(),

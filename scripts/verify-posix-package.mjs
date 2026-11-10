@@ -256,8 +256,10 @@ if (process.platform === 'linux') {
     'AppImage replacement differs from accepted bytes',
   )
   let relaunchedPid
+  let windowChecks = []
   const deadline = Date.now() + 60_000
   while (!relaunchedPid && Date.now() < deadline) {
+    windowChecks = []
     try {
       const windows = execFileSync(
         'xdotool',
@@ -271,6 +273,12 @@ if (process.platform === 'linux') {
           execFileSync('xdotool', ['getwindowpid', window], { encoding: 'utf8' }).trim(),
         )
         const variables = readFileSync(`/proc/${pid}/environ`, 'utf8').split('\0')
+        windowChecks.push({
+          window,
+          pid,
+          appImage: variables.find((value) => value.startsWith('APPIMAGE=')),
+          data: variables.find((value) => value.startsWith('QUESTBRANCH_DATA_DIR=')),
+        })
         if (
           variables.includes(`APPIMAGE=${predecessor}`) &&
           variables.includes(`QUESTBRANCH_DATA_DIR=${data}`)
@@ -279,11 +287,19 @@ if (process.platform === 'linux') {
           break
         }
       }
-    } catch {
-      /* A visible window is not yet available. */
+    } catch (error) {
+      windowChecks.push({ error: String(error.message) })
     }
     if (!relaunchedPid) await new Promise((done) => setTimeout(done, 200))
   }
+  writeFileSync(
+    join(evidence, 'native-update-window-diagnostics.json'),
+    JSON.stringify(
+      { expectedImage: predecessor, expectedData: data, windows: windowChecks },
+      null,
+      2,
+    ) + '\n',
+  )
   assert(relaunchedPid, 'Updated AppImage did not relaunch its research window')
   const nativeUpdate = json(join(evidence, 'native-update-linux.json'))
   assert.equal(nativeUpdate.installRequested, true)

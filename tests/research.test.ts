@@ -445,7 +445,8 @@ describe('SQLite 研究历史与恢复', () => {
     expect(db.settings().hasApiKey).toBe(false)
   })
 })
-describe('真实协议接口与运行生命周期', () => {
+// Real SDK calls and upgrade backups use the integration budget, not the unit default.
+describe('真实协议接口与运行生命周期', { timeout: 20000 }, () => {
   it('开始 A 研究后切换 B 焦点，完成报告仍归 A', async () => {
     const db = store(),
       service = new ResearchService(db)

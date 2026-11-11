@@ -335,6 +335,7 @@ if (process.platform === 'linux') {
   const nativeUpdate = json(join(evidence, 'native-update-linux.json'))
   assert.equal(nativeUpdate.installRequested, true)
   assert.equal(nativeUpdate.shutdownBySdk, true)
+  assert.equal(nativeUpdate.normalQuit, true)
   assert.equal(nativeUpdate.downloadVerifiedBySdk, true)
   assert.equal(nativeUpdate.packagedImplementation, true)
   assert.equal(nativeUpdate.failurePreservedExecutable, true)

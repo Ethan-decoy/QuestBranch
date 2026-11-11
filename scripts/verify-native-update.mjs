@@ -71,6 +71,10 @@ let record = {
   shutdownBySdk: false,
 }
 const result = join(evidence, `native-update-${process.platform}.json`)
+app.on('before-quit', () => {
+  record = { ...record, normalQuit: true }
+  writeFileSync(result, JSON.stringify(record, null, 2) + '\n')
+})
 if (process.platform === 'linux') {
   const relaunch = app.relaunch.bind(app)
   app.relaunch = (options) => {
@@ -117,7 +121,7 @@ void app
         writeFileSync(result, JSON.stringify(record, null, 2) + '\n')
         console.log(JSON.stringify(record))
         server.closeAllConnections()
-        server.close(() => app.exit(0))
+        server.close(() => app.quit())
       },
     }
     const Updater =

@@ -238,5 +238,6 @@ app.on('before-quit', () => {
   disposeUpdates?.()
   disposeAppearance?.()
   service?.shutdown()
+  if (store?.isOpen) store.close()
   disposeNetwork?.()
 })

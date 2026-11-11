@@ -114,6 +114,8 @@ function candidate() {
             failurePreservedExecutable: true,
             failedUpdateResearchReopen: true,
             retrySameUpdater: true,
+            normalQuit: true,
+            launchRequested: true,
           },
         },
         assets: assets.map((name) => {

@@ -88,8 +88,15 @@ export class AtomicAppImageUpdater extends updaterPackage.AppImageUpdater {
     const staged = this.staged
     if (!staged) throw new Error('No verified AppImage staged for installation')
     renameSync(staged.path, staged.destination)
-    // Start the AppImage wrapper after the current instance releases its single-instance lock.
-    app.relaunch({ execPath: staged.destination, args: process.argv.slice(1) })
+    // Research is closed in before-quit. Release the lock in will-quit before
+    // using the SDK's launcher, so the replacement can open its own window.
+    app.once('will-quit', () => {
+      app.releaseSingleInstanceLock()
+      void this.spawnLog(staged.destination, process.argv.slice(1), {
+        ...process.env,
+        APPIMAGE_SILENT_INSTALL: 'true',
+      }).catch((error: Error) => this.dispatchError(error))
+    })
     return true
   }
 }

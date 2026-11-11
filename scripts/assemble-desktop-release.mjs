@@ -65,6 +65,8 @@ const platforms = Object.fromEntries(
         assert.equal(record.appImage.nativeUpdater.failurePreservedExecutable, true)
         assert.equal(record.appImage.nativeUpdater.failedUpdateResearchReopen, true)
         assert.equal(record.appImage.nativeUpdater.retrySameUpdater, true)
+        assert.equal(record.appImage.nativeUpdater.normalQuit, true)
+        assert.equal(record.appImage.nativeUpdater.launchRequested, true)
       } else assert.equal(record.signing.adHocVerified, true)
     }
     assert.match(record.package.nativeCodexVersion, /0\.160\.1/)

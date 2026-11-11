@@ -315,27 +315,13 @@ if (process.platform === 'linux') {
       2,
     ) + '\n',
   )
-  if (!relaunchedPid) {
-    const native = json(join(evidence, 'native-update-linux.json'))
-    const output = await run(
-      'native-update-direct-diagnostic',
-      predecessor,
-      native.relaunchOptions.args,
-      {
-        timeout: 10000,
-        env: { ...environment, QUESTBRANCH_DATA_DIR: data },
-      },
-    ).catch((error) => ({ error: error.message }))
-    writeFileSync(
-      join(evidence, 'native-update-direct-diagnostic.json'),
-      JSON.stringify(output, null, 2),
-    )
-  }
   assert(relaunchedPid, 'Updated AppImage did not relaunch its research window')
   const nativeUpdate = json(join(evidence, 'native-update-linux.json'))
   assert.equal(nativeUpdate.installRequested, true)
   assert.equal(nativeUpdate.shutdownBySdk, true)
   assert.equal(nativeUpdate.normalQuit, true)
+  assert.equal(nativeUpdate.launchRequested, true)
+  assert.equal(nativeUpdate.launchFile, predecessor)
   assert.equal(nativeUpdate.downloadVerifiedBySdk, true)
   assert.equal(nativeUpdate.packagedImplementation, true)
   assert.equal(nativeUpdate.failurePreservedExecutable, true)

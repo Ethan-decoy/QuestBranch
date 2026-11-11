@@ -21,7 +21,9 @@ const host = vi.hoisted(() => ({
   installed: true,
   version: '0.3.0-dev.6',
   open: vi.fn(),
-  relaunch: vi.fn(),
+  launch: vi.fn(async () => true),
+  releaseLock: vi.fn(),
+  willQuit: undefined as (() => void) | undefined,
   quit: vi.fn(),
   beforeReplace: vi.fn<(source: string, destination: string) => void>(),
   appImageDownload: undefined as { path: string; sha512: string } | undefined,
@@ -32,7 +34,10 @@ vi.mock('electron', () => ({
     get isPackaged() {
       return host.packaged
     },
-    relaunch: host.relaunch,
+    once: (_event: string, listener: () => void) => {
+      host.willQuit = listener
+    },
+    releaseSingleInstanceLock: host.releaseLock,
   },
   shell: { openExternal: host.open },
 }))
@@ -67,6 +72,7 @@ vi.doMock('electron-updater', () => {
     setFeedURL = sdk.setFeedURL
     checkForUpdates = sdk.checkForUpdates
     downloadUpdate = sdk.downloadUpdate
+    spawnLog = host.launch
     get installerPath() {
       return host.appImageDownload?.path
     }
@@ -109,6 +115,8 @@ beforeEach(() => {
   host.installed = true
   host.version = '0.3.0-dev.6'
   host.appImageDownload = undefined
+  host.willQuit = undefined
+  host.quit.mockImplementation(() => host.willQuit?.())
 })
 function network(fetch = vi.fn<typeof globalThis.fetch>()) {
   return { fetch, run: (_context, work) => work() } satisfies Network
@@ -188,7 +196,8 @@ it.each(['rename failure', 'digest mismatch'])(
       expect(readFileSync(original, 'utf8')).toBe(oldImage)
       if (platform.value === 'linux')
         expect(execFileSync(original, { encoding: 'utf8' })).toBe('old executable')
-      expect(host.relaunch).not.toHaveBeenCalled()
+      expect(host.launch).not.toHaveBeenCalled()
+      expect(host.releaseLock).not.toHaveBeenCalled()
       expect(host.quit).not.toHaveBeenCalled()
 
       writeFileSync(downloaded, newImage)
@@ -199,8 +208,14 @@ it.each(['rename failure', 'digest mismatch'])(
       expect(readdirSync(directory).sort()).toEqual(
         ['QuestBranch Custom.AppImage', 'download.AppImage'].sort(),
       )
-      expect(host.relaunch).toHaveBeenCalledExactlyOnceWith(
-        expect.objectContaining({ execPath: original }),
+      expect(host.releaseLock).toHaveBeenCalledOnce()
+      expect(host.launch).toHaveBeenCalledExactlyOnceWith(
+        original,
+        process.argv.slice(1),
+        expect.objectContaining({ APPIMAGE_SILENT_INSTALL: 'true' }),
+      )
+      expect(host.releaseLock.mock.invocationCallOrder[0]).toBeLessThan(
+        host.launch.mock.invocationCallOrder[0],
       )
       expect(host.quit).toHaveBeenCalledTimes(1)
     } finally {

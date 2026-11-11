@@ -75,14 +75,6 @@ app.on('before-quit', () => {
   record = { ...record, normalQuit: true }
   writeFileSync(result, JSON.stringify(record, null, 2) + '\n')
 })
-if (process.platform === 'linux') {
-  const relaunch = app.relaunch.bind(app)
-  app.relaunch = (options) => {
-    const accepted = relaunch(options)
-    record = { ...record, relaunchOptions: options, relaunchAccepted: accepted }
-    return accepted
-  }
-}
 const server = createServer((request, response) => {
   const name = decodeURIComponent(new URL(request.url, 'http://localhost').pathname.slice(1))
   if (name.endsWith('.yml')) response.end(feed)
@@ -131,6 +123,14 @@ void app
             .AtomicAppImageUpdater
     assert.equal(typeof Updater, 'function')
     const updater = new Updater(undefined, adapter)
+    if (process.platform === 'linux') {
+      const launch = updater.spawnLog.bind(updater)
+      updater.spawnLog = (...args) => {
+        record = { ...record, launchRequested: true, launchFile: args[0], launchArgs: args[1] }
+        writeFileSync(result, JSON.stringify(record, null, 2) + '\n')
+        return launch(...args)
+      }
+    }
     updater.httpExecutor = new ElectronHttpExecutor()
     updater.logger = null
     updater.autoDownload = false

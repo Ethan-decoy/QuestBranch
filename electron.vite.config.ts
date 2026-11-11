@@ -37,6 +37,7 @@ export default defineConfig({
         input: {
           index: resolve('src/desktop/main.ts'),
           'research-mcp-stdio': resolve('src/desktop/research-mcp-stdio.ts'),
+          'update-transport': resolve('src/desktop/update-transport.ts'),
         },
       },
     },

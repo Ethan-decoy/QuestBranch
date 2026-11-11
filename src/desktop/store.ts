@@ -84,21 +84,19 @@ export class ResearchStore {
         this.saveView(initial.workspace.id, { selectedId: 'visual', collapsed: [], drafts: {} })
       })
     }
-    for (const run of this.all<ResearchRun>('runs').filter(
-      (r) => options.recoverRuns !== false && r.status === 'running',
-    ))
-      this.saveRun({
-        ...run,
-        modelCalls: run.modelCalls?.map((call) =>
-          call.status === 'running'
-            ? { ...call, status: 'interrupted', finishedAt: new Date().toISOString() }
-            : call,
-        ),
-        status: 'interrupted',
-        phase: '研究已中断',
-        error: '应用上次关闭时研究尚未完成。原始输出已保留，可重新发起研究。',
-        finishedAt: new Date().toISOString(),
-      })
+    if (options.recoverRuns !== false) {
+      for (const run of this.all<ResearchRun>('runs')) {
+        if (run.status === 'running')
+          this.saveRun({
+            ...run,
+            status: 'interrupted',
+            phase: '研究已中断',
+            error: '应用上次关闭时研究尚未完成。原始输出已保留，可重新发起研究。',
+            finishedAt: new Date().toISOString(),
+          })
+        else if (run.modelCalls?.some((call) => call.status === 'running')) this.saveRun(run)
+      }
+    }
   }
   private all<T>(table: 'workspaces' | 'nodes' | 'reports' | 'runs') {
     return (
@@ -528,9 +526,13 @@ export class ResearchStore {
   readonly agentSessionBindings = {
     load: (nodeId: string, connection: string) => {
       const row = this.db
-        .prepare('SELECT payload FROM acp_sessions WHERE node_id=? AND connection=? AND active=1')
+        .prepare(
+          'SELECT id,payload FROM acp_sessions WHERE node_id=? AND connection=? AND active=1',
+        )
         .get(nodeId, connection)
-      return row ? (JSON.parse(String(row.payload)) as unknown) : undefined
+      return row
+        ? { id: String(row.id), payload: JSON.parse(String(row.payload)) as unknown }
+        : undefined
     },
     save: (nodeId: string, connection: string, payload: unknown) => {
       this.db
@@ -540,11 +542,21 @@ export class ResearchStore {
         )
         .run(randomUUID(), nodeId, connection, JSON.stringify(payload))
     },
-    retire: (nodeId: string, connection: string) => {
-      this.db
-        .prepare('UPDATE acp_sessions SET active=0 WHERE node_id=? AND connection=? AND active=1')
-        .run(nodeId, connection)
-    },
+    retire: (nodeId: string, bindingId: string) =>
+      this.transaction(() => {
+        const result = this.db
+          .prepare('UPDATE acp_sessions SET active=0 WHERE node_id=? AND id=? AND active=1')
+          .run(nodeId, bindingId)
+        if (!result.changes) return false
+        this.db
+          .prepare(
+            `UPDATE runs SET payload=json_remove(payload,'$.agentSessionBindingId')
+             WHERE node_id=? AND json_extract(payload,'$.agentSessionBindingId')=?`,
+          )
+          .run(nodeId, bindingId)
+        this.bump()
+        return true
+      }),
     coversChats: (nodeId: string, lastRunId: string | undefined, currentRunId: string) => {
       const covered = lastRunId
         ? this.db
@@ -563,6 +575,17 @@ export class ResearchStore {
     },
   }
   saveRun(run: ResearchRun) {
+    if (run.status !== 'running' && run.modelCalls?.some((call) => call.status === 'running')) {
+      const status =
+        run.status === 'failed' || run.status === 'cancelled' ? run.status : 'interrupted'
+      const finishedAt = run.finishedAt ?? new Date().toISOString()
+      run = {
+        ...run,
+        modelCalls: run.modelCalls.map((call) =>
+          call.status === 'running' ? { ...call, status, finishedAt } : call,
+        ),
+      }
+    }
     // A savepoint keeps a chat turn and its visible messages atomic, including during import.
     this.db.exec('SAVEPOINT save_run')
     try {
@@ -748,7 +771,9 @@ export class ResearchStore {
       workspace,
       nodes: s.nodes.filter((n) => n.workspaceId === workspaceId),
       reports: s.reports.filter((r) => r.workspaceId === workspaceId),
-      runs: s.runs.filter((r) => r.workspaceId === workspaceId),
+      runs: s.runs
+        .filter((r) => r.workspaceId === workspaceId)
+        .map(({ agentSessionBindingId: _localBinding, ...run }) => run),
       messages: s.messages.filter((m) => m.workspaceId === workspaceId),
       edits,
       branchRequests: (

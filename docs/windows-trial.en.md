@@ -1,17 +1,17 @@
 # Windows installation and upgrades
 
-[简体中文](https://github.com/Ethan-decoy/QuestBranch/blob/v0.3.0-dev.7/docs/windows-trial.md) · English
+[简体中文](https://github.com/Ethan-decoy/QuestBranch/blob/v0.3.0-dev.8/docs/windows-trial.md) · English
 
-Applies to **0.3.0-dev.7 · Windows x64 prerelease**. No Node.js or pnpm is required. Get the actual packages and checksums from [Releases](https://github.com/Ethan-decoy/QuestBranch/releases).
+Applies to **0.3.0-dev.8 · Windows x64 prerelease**. No Node.js or pnpm is required. Get the actual packages and checksums from [Releases](https://github.com/Ethan-decoy/QuestBranch/releases).
 
 ## Installed application
 
-1. Download `QuestBranch-Setup-0.3.0-dev.7-x64.exe` and `SHA256SUMS.txt` for the same release, then verify the hash.
+1. Download `QuestBranch-Setup-0.3.0-dev.8-x64.exe` and `SHA256SUMS.txt` for the same release, then verify the hash.
 2. Run the current-user installer and choose a program directory. Administrator installation is not required.
 3. Open QB, read the example or create your own research. Connect your model or agent before starting an AI conversation.
 
 ```powershell
-Get-FileHash .\QuestBranch-Setup-0.3.0-dev.7-x64.exe -Algorithm SHA256
+Get-FileHash .\QuestBranch-Setup-0.3.0-dev.8-x64.exe -Algorithm SHA256
 Get-Content .\SHA256SUMS.txt
 ```
 
@@ -19,7 +19,7 @@ The installed app uses normal desktop configuration and your saved research loca
 
 ## Isolated portable trial
 
-Download `QuestBranch-0.3.0-dev.7-windows-x64.zip`, verify its checksum and extract the entire archive into a writable directory. Keep `win-unpacked/` intact; do not distribute or copy only the EXE. Launch with the top-level `Start-QuestBranch.cmd`.
+Download `QuestBranch-0.3.0-dev.8-windows-x64.zip`, verify its checksum and extract the entire archive into a writable directory. Keep `win-unpacked/` intact; do not distribute or copy only the EXE. Launch with the top-level `Start-QuestBranch.cmd`.
 
 The script puts research, Electron configuration and bundled Codex configuration into adjacent `data/research/`, `data/profile/` and `data/codex/` directories. They may contain personal content or credentials and should not be shared with feedback.
 
@@ -31,7 +31,7 @@ Windows packages are unsigned and may trigger source or SmartScreen notices. The
 
 Installed editions offer **Settings → About** for checks, downloads and restart-to-install; ZIP/directory editions update manually. From dev.6 or earlier, install this version manually once. See the [installation guide](desktop-installation.en.md) for backup and recovery.
 
-Stop active work and quit QB. Export important spaces and back up the research directory and configuration. Run the new installer, retaining the intended program and data locations. Reopen and check reports, sources, conversations and connections. This release uses the actual published dev.6 installer as its predecessor.
+Stop active work and quit QB. Export important spaces and back up the research directory and configuration. Run the new installer, retaining the intended program and data locations. Reopen and check reports, sources, conversations and connections. This release uses the actual published dev.7 installer as its predecessor.
 
 The portable ZIP's `data/` is separate and is not automatically merged. Export/import research JSON when moving from a portable trial to the installed app; credentials and native state need separate handling.
 
@@ -46,6 +46,6 @@ Research format 3 can import formats 1 and 2. JSON contains the research trail, 
 
 ## Scope and help
 
-The installer and complete ZIP are checked in an isolated runner, including actual installation, upgrade, SDK handoff/relaunch, research reopen, import and uninstall retention. Fixed responses do not establish coverage of every real provider. See [installation conditions](https://github.com/Ethan-decoy/QuestBranch/blob/v0.3.0-dev.7/docs/desktop-installation.en.md) and `VERIFICATION.json` for the actual scope.
+The installer and complete ZIP are checked in an isolated runner, including actual installation, upgrade, SDK handoff/relaunch, research reopen, import and uninstall retention. Fixed responses do not establish coverage of every real provider. See [installation conditions](https://github.com/Ethan-decoy/QuestBranch/blob/v0.3.0-dev.8/docs/desktop-installation.en.md) and `VERIFICATION.json` for the actual scope.
 
-See [your first research](https://github.com/Ethan-decoy/QuestBranch/blob/v0.3.0-dev.7/docs/getting-started.en.md) and [FAQ](https://github.com/Ethan-decoy/QuestBranch/blob/v0.3.0-dev.7/docs/faq.en.md). Report version, OS, connection type and reproducible steps in [Issues](https://github.com/Ethan-decoy/QuestBranch/issues), removing credentials and private research first.
+See [your first research](https://github.com/Ethan-decoy/QuestBranch/blob/v0.3.0-dev.8/docs/getting-started.en.md) and [FAQ](https://github.com/Ethan-decoy/QuestBranch/blob/v0.3.0-dev.8/docs/faq.en.md). Report version, OS, connection type and reproducible steps in [Issues](https://github.com/Ethan-decoy/QuestBranch/issues), removing credentials and private research first.

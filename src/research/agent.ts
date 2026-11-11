@@ -66,6 +66,10 @@ export type AgentConnection = {
   requests: AgentRequest[]
   error?: string
 }
+const agentPromptBlocks = z
+  .array(z.object({ type: z.literal('text'), text: z.string().max(400000) }))
+  .max(100)
+
 export const AgentRunSchema = z.object({
   sessionOrigin: z.enum(['new', 'resumed', 'loaded', 'stateless']).optional(),
   usage: z
@@ -85,13 +89,16 @@ export const AgentRunSchema = z.object({
   requests: z.array(AgentRequestSchema).max(100),
   input: z
     .object({
-      request: z.object({
-        sessionId: z.string().min(1).max(200),
-        requestId: z.string().min(1).max(200),
-        content: z
-          .array(z.object({ type: z.literal('text'), text: z.string().max(400000) }))
-          .max(100),
-      }),
+      request: z.union([
+        z.object({ sessionId: z.string().min(1).max(200), prompt: agentPromptBlocks }),
+        // DSH uses this wire shape. Older ACP records used the same fields locally.
+        z.object({
+          sessionId: z.string().min(1).max(200),
+          requestId: z.string().min(1).max(200),
+          content: agentPromptBlocks,
+        }),
+      ]),
+      correlationId: z.string().min(1).max(200).optional(),
       submittedAt: z.iso.datetime(),
       acceptedAt: z.iso.datetime().optional(),
       materials: z.object({
@@ -104,6 +111,17 @@ export const AgentRunSchema = z.object({
     .optional(),
 })
 export type AgentRun = z.infer<typeof AgentRunSchema>
+
+export function agentRequestDetails(agent: AgentRun | undefined) {
+  if (!agent?.input) return
+  const { request, correlationId } = agent.input
+  if ('prompt' in request || agent.name === 'DeepSeek Harness') return { request, correlationId }
+  return {
+    request: { sessionId: request.sessionId, prompt: request.content },
+    correlationId: request.requestId,
+  }
+}
+
 export type AgentClient = {
   connect(config: AgentConfig): Promise<AgentConnection>
   state(id: string): Promise<AgentConnection>
@@ -111,4 +129,5 @@ export type AgentClient = {
   configure(id: string, configId: string, value: string): Promise<AgentConnection>
   respond(id: string, requestId: string, response: AgentResponse): Promise<void>
   disconnect(id: string): Promise<void>
+  resetSession?(runId: string): Promise<{ id: string }>
 }

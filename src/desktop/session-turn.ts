@@ -335,18 +335,19 @@ export async function sessionTurn(options: {
     let completed: MessageInput
     if (context.strategy === 'native') {
       if (!native) throw new Error('缺少已确认的原生会话适配器')
-      const response = await native.send(context.request, signal)
-      signal.throwIfAborted()
-      if (response && typeof response === 'object') {
-        const wire = response as { id?: string; model?: string }
-        options.onResponse?.({ responseId: wire.id, model: wire.model })
-      }
-      const receipt = await session.accept(context, response, { signal })
-      const state = await sessionStore.load(owner.sessionId)
-      const parts = state!.messages.filter((message) => receipt.messageIds.includes(message.id))
-      if (parts.length !== 1 || parts[0].role !== 'assistant')
-        throw new Error('原生响应没有可用的公开回复，完整原生状态已保留')
-      completed = parts[0]
+      completed = await native.reply(context.request, async (response) => {
+        const receipt = await session.accept(context, response, { signal })
+        signal.throwIfAborted()
+        const state = await sessionStore.load(owner.sessionId)
+        const parts = state!.messages.filter((message) => receipt.messageIds.includes(message.id))
+        if (parts.length !== 1 || parts[0].role !== 'assistant')
+          throw new Error('原生响应没有可用的公开回复，完整原生状态已保留')
+        if (response && typeof response === 'object') {
+          const wire = response as { id?: string; model?: string }
+          options.onResponse?.({ responseId: wire.id, model: wire.model })
+        }
+        return parts[0]
+      })
       show(raw + (raw ? '\n\n' : '') + completed.text)
     } else {
       const responseStream = options.stream(request as Context, outputReserve, {

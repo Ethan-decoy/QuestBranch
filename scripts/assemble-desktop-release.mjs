@@ -7,9 +7,18 @@ import { verifyUpdateAssets } from './update-release-assets.mjs'
 
 const version = JSON.parse(readFileSync('package.json')).version
 const commit = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim()
-const keys = ['windows-x64', 'macos-arm64', 'macos-x64', 'linux-x64']
+const expectedAssets = {
+  'windows-x64': [`QuestBranch-Setup-${version}-x64.exe`, `QuestBranch-${version}-windows-x64.zip`],
+  'macos-arm64': [`QuestBranch-${version}-macos-arm64.dmg`],
+  'macos-x64': [`QuestBranch-${version}-macos-x64.dmg`],
+  'linux-x64': [
+    `QuestBranch-${version}-linux-amd64.deb`,
+    `QuestBranch-${version}-linux-x86_64.AppImage`,
+  ],
+}
+const acceptedHashes = new Map()
 const platforms = Object.fromEntries(
-  keys.map((key) => {
+  Object.entries(expectedAssets).map(([key, expected]) => {
     const record = JSON.parse(readFileSync(`release/VERIFICATION-${key}.json`, 'utf8'))
     assert.equal(record.version, version)
     assert.equal(record.sourceCommit, commit)
@@ -52,24 +61,34 @@ const platforms = Object.fromEntries(
         assert.equal(record.appImage.nativeUpdater.downloadVerifiedBySdk, true)
         assert.equal(record.appImage.nativeUpdater.shutdownBySdk, true)
         assert.equal(record.appImage.nativeUpdater.relaunched, true)
+        assert.equal(record.appImage.nativeUpdater.packagedImplementation, true)
+        assert.equal(record.appImage.nativeUpdater.failurePreservedExecutable, true)
+        assert.equal(record.appImage.nativeUpdater.failedUpdateResearchReopen, true)
+        assert.equal(record.appImage.nativeUpdater.retrySameUpdater, true)
       } else assert.equal(record.signing.adHocVerified, true)
     }
     assert.match(record.package.nativeCodexVersion, /0\.160\.1/)
-    assert(record.assets.length > 0)
-    for (const asset of record.assets) {
-      assert.match(asset.name, /^[A-Za-z0-9_.-]+$/)
+    assert.deepEqual(
+      record.assets.map((asset) => asset.name).sort(),
+      [...expected].sort(),
+      `Acceptance assets differ from the release packages for ${key}`,
+    )
+    for (const name of expected) {
+      const asset = record.assets.find((entry) => entry.name === name)
       const digest = createHash('sha256')
-        .update(readFileSync(join('release', asset.name)))
+        .update(readFileSync(join('release', name)))
         .digest('hex')
       assert.equal(
         digest,
         asset.sha256,
-        `Downloaded candidate differs from accepted bytes: ${asset.name}`,
+        `Downloaded candidate differs from accepted bytes: ${name}`,
       )
+      acceptedHashes.set(name, digest)
     }
     return [key, record]
   }),
 )
+const updateAssets = verifyUpdateAssets('release', version)
 
 copyFileSync('docs/desktop-installation.md', 'release/README-TRIAL.md')
 copyFileSync('docs/release-notes.md', 'release/RELEASE-NOTES.md')
@@ -89,20 +108,19 @@ const record = {
 }
 writeFileSync('release/VERIFICATION.json', JSON.stringify(record, null, 2) + '\n')
 const names = [
-  `QuestBranch-Setup-${version}-x64.exe`,
-  `QuestBranch-${version}-windows-x64.zip`,
-  `QuestBranch-${version}-macos-arm64.dmg`,
-  `QuestBranch-${version}-macos-x64.dmg`,
-  `QuestBranch-${version}-linux-amd64.deb`,
-  `QuestBranch-${version}-linux-x86_64.AppImage`,
+  ...acceptedHashes.keys(),
   'README-TRIAL.md',
   'RELEASE-NOTES.md',
   'VERIFICATION.json',
-  ...verifyUpdateAssets('release', version),
+  ...updateAssets,
 ]
 const lines = names.map((name) => {
-  const bytes = readFileSync(join('release', name))
-  return `${createHash('sha256').update(bytes).digest('hex')}  ${name}`
+  const hash =
+    acceptedHashes.get(name) ??
+    createHash('sha256')
+      .update(readFileSync(join('release', name)))
+      .digest('hex')
+  return `${hash}  ${name}`
 })
 writeFileSync('release/SHA256SUMS.txt', lines.join('\n') + '\n')
 console.log(`Four native targets accepted; ${names.length + 1} release files verified.`)

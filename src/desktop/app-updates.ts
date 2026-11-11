@@ -16,7 +16,7 @@ export interface AppRelease {
 export interface UpdateTransport {
   latest(): Promise<AppRelease | null>
   download(release: AppRelease, progress: (percent: number) => void): Promise<void>
-  install(): void
+  install(): void | Promise<void>
   openRelease(version?: string): Promise<void>
 }
 
@@ -24,7 +24,7 @@ export interface UpdateTransport {
 export function selectRelease(
   input: unknown,
   current: string,
-  feedSuffix: '' | '-linux' | undefined,
+  feedSuffix: '' | '-linux' | '-safe-linux' | undefined,
 ): AppRelease | null {
   if (!Array.isArray(input)) throw new Error('Invalid release catalog')
   const channel = updateChannel(current)
@@ -138,7 +138,7 @@ export class DesktopUpdates {
     return this.pending
   }
 
-  install(): AppUpdateState {
+  async install(): Promise<AppUpdateState> {
     if (this.pending || this.value.phase !== 'ready') return this.state()
     if (this.busy()) {
       this.change({ problem: 'busy' })
@@ -147,7 +147,7 @@ export class DesktopUpdates {
     // No await between the idle check and the write barrier used by desktop IPC.
     this.change({ phase: 'installing' })
     try {
-      this.transport.install()
+      await this.transport.install()
     } catch (error) {
       this.failed('install', error)
     }

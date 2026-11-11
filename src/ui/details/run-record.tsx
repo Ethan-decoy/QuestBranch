@@ -7,12 +7,27 @@ import { useApp } from '../state'
 import { Button, Feedback, SignalIcon } from '../components'
 import { AgentActivity, ToolActivities } from '../agent-activity'
 import { RunDiagnostics } from './run-diagnostics'
+import { client } from '../client'
 
 export function RunRecord({ run }: { run: ResearchRun }) {
   const { t } = useTranslation()
-  const [reset, setReset] = useState(false)
-  const command = useApp((state) => state.command)
-  const settings = useApp((state) => state.snapshot?.settings)
+  const [reset, setReset] = useState<'idle' | 'pending' | 'done'>('idle')
+  const refresh = useApp((state) => state.refresh)
+  const setError = useApp((state) => state.setError)
+  const resetSession = client.agent?.resetSession
+  const rebuildSession = async () => {
+    if (!resetSession) return
+    setReset('pending')
+    try {
+      const result = await resetSession(run.id)
+      if (result?.id !== run.id) throw new Error(t('操作未完成'))
+      setReset('done')
+      await refresh()
+    } catch (error) {
+      setError(error instanceof Error ? error.message : t('操作未完成'))
+      setReset('idle')
+    }
+  }
   const Container = import.meta.env.DEV ? 'details' : 'article',
     Header = import.meta.env.DEV ? 'summary' : 'div'
   return (
@@ -64,17 +79,14 @@ export function RunRecord({ run }: { run: ResearchRun }) {
         ))}
       <AgentActivity agent={run.agent} live={run.status === 'running'} />
       <ToolActivities activities={run.activities} live={run.status === 'running'} />
-      {run.recovery === 'agent-session' && settings?.backend === 'acp' && (
+      {resetSession && (run.agentSessionBindingId || reset === 'done') && (
         <Button
-          disabled={reset}
-          onClick={() =>
-            void command({ type: 'reset-agent-session', nodeId: run.nodeId })
-              .then(() => setReset(true))
-              .catch(() => {})
-          }
-          title={t('保留已有研究记录，下次发送时建立新的原生会话')}
+          disabled={reset !== 'idle'}
+          aria-busy={reset === 'pending'}
+          onClick={() => void rebuildSession()}
+          title={t('保留已有研究记录，下次使用此连接时建立新会话')}
         >
-          {reset ? <Check size={13} /> : <Sparkles size={13} />}
+          {reset === 'done' ? <Check size={13} /> : <Sparkles size={13} />}
           {t('重建智能体会话')}
         </Button>
       )}

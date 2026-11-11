@@ -1,6 +1,6 @@
 {
   "name": "questbranch",
-  "version": "0.3.0-dev.7",
+  "version": "0.3.0-dev.8",
   "private": true,
   "packageManager": "pnpm@11.1.3",
   "type": "module",
@@ -20,7 +20,7 @@
     "package:dir": "pnpm notices && pnpm build && electron-builder --dir --publish never",
     "package:win": "pnpm notices && pnpm build && electron-builder --win nsis --x64 --publish never",
     "package:mac": "pnpm notices && pnpm build && electron-builder --mac dmg --publish never",
-    "package:linux": "pnpm notices && pnpm build && electron-builder --linux AppImage deb --publish never",
+    "package:linux": "pnpm notices && pnpm build && electron-builder --linux AppImage deb --x64 --publish never && node scripts/update-release-assets.mjs --prepare-linux",
     "start": "electron .",
     "format": "prettier --write src tests config scripts *.ts *.json *.yaml",
     "format:check": "prettier --check src tests config scripts *.ts *.json *.yaml",

@@ -76,7 +76,6 @@ export const commandSchema = z.discriminatedUnion('type', [
     selectedReportId: id.optional(),
   }),
   z.object({ type: z.literal('cancel-research'), runId: id }),
-  z.object({ type: z.literal('reset-agent-session'), nodeId: id }),
   z.object({
     type: z.literal('send-message'),
     nodeId: id,

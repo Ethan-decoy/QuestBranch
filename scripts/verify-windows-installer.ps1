@@ -9,10 +9,10 @@ $qbEvidence = Join-Path $qbRoot 'artifacts/release-evidence'
 New-Item -ItemType Directory -Path $qbEvidence -Force | Out-Null
 $qbTemporary = Join-Path $env:RUNNER_TEMP ('questbranch-installer-' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $qbTemporary | Out-Null
-$qbPreviousVersion = '0.3.0-dev.6'
-$qbPreviousDigest = '6d2189d121318bedb36bd44794327e2106f7d19ca9f37534401f00a763f3895d'
-$qbPreviousInstallerDigest = '3495905de934e217b77f506f29d90fc4a058e29eb69e8eaca0ba47cbea17bfbd'
-$qbPreviousSourceCommit = '48669f450e6684bd6d7027d1dde8452b5b366000'
+$qbPreviousVersion = '0.3.0-dev.7'
+$qbPreviousDigest = '41416c4dd761a165b8dd56140adfe33ca0d2ccc88a08636f8bd949535b0a929e'
+$qbPreviousInstallerDigest = '2b54ea54bbd921181910a74f1a4d91497ca0b857297a101bf33223a081824e8f'
+$qbPreviousSourceCommit = 'dda47930c59ea75cd897162758203bda9ea484eb'
 $qbPreviousVerifier = Join-Path $qbTemporary 'previous-verifier'
 $qbPreviousVerifierArchive = Join-Path $qbTemporary 'previous-verifier.zip'
 $qbPreviousArchive = Join-Path $qbTemporary 'previous.zip'

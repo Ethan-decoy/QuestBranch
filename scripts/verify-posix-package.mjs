@@ -178,8 +178,7 @@ assert.equal(fresh.details.cases.length, 15)
 const pointer = join(fresh.folder, 'profile/storage-location.json')
 writeFileSync(pointer, JSON.stringify({ version: 1, directory: join(fresh.folder, 'research') }))
 const pointerHash = sha256(pointer)
-// These are the first native packages. Reinstall the accepted version, without
-// presenting this as an upgrade from a historical macOS/Linux release.
+// Reinstall the accepted DMG/DEB; the historical AppImage upgrade is verified separately.
 if (process.platform === 'darwin') {
   assert(installed.startsWith(temporary + sep))
   rmSync(installed, { recursive: true })
@@ -231,11 +230,11 @@ if (process.platform === 'linux') {
     '2',
     '--output',
     predecessor,
-    'https://github.com/Ethan-decoy/QuestBranch/releases/download/v0.3.0-dev.6/QuestBranch-0.3.0-dev.6-linux-x86_64.AppImage',
+    'https://github.com/Ethan-decoy/QuestBranch/releases/download/v0.3.0-dev.7/QuestBranch-0.3.0-dev.7-linux-x86_64.AppImage',
   ])
   assert.equal(
     sha256(predecessor),
-    '304882cb6827a2982b597a43fac8b846fd5cdbeebd08cbad901de5025c6feafe',
+    'b8a4c05173f06638920462ba7fdfe28724bd817cd7e02aacf589f37bc76e476b',
   )
   chmodSync(predecessor, 0o755)
   const data = join(imageStudy.folder, 'research')
@@ -246,7 +245,9 @@ if (process.platform === 'linux') {
       'scripts/verify-native-update.mjs',
       `--previous-root=${predecessor}`,
       `--installer=${image}`,
-      '--previous-version=0.3.0-dev.6',
+      '--previous-version=0.3.0-dev.7',
+      `--node-executable=${process.execPath}`,
+      `--reopen=${imageStudy.folder}`,
     ],
     {
       env: { ...environment, QUESTBRANCH_DATA_DIR: data },
@@ -319,6 +320,14 @@ if (process.platform === 'linux') {
   assert.equal(nativeUpdate.installRequested, true)
   assert.equal(nativeUpdate.shutdownBySdk, true)
   assert.equal(nativeUpdate.downloadVerifiedBySdk, true)
+  assert.equal(nativeUpdate.packagedImplementation, true)
+  assert.equal(nativeUpdate.failurePreservedExecutable, true)
+  assert.equal(nativeUpdate.failedUpdateResearchReopen, true)
+  assert.equal(nativeUpdate.retrySameUpdater, true)
+  assert.equal(
+    preserveResult(nativeUpdate.failureReopenFolder, 'appimage-failed-update-reopen').normalExit,
+    true,
+  )
   nativeUpdate.relaunched = true
   nativeUpdate.cleanup =
     'SIGTERM after verifying the new window, accepted ASAR and open isolated database'

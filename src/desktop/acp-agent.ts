@@ -312,6 +312,7 @@ export class AcpAgents implements AgentClient {
         if (!restore)
           throw new AgentSessionRestoreError(
             '此智能体未声明恢复已保存会话的能力；未自动重建，请在研究记录中明确重建会话',
+            previous.bindingId,
           )
         entry.sessionId = previous.sessionId
         entry.replaying = true
@@ -333,7 +334,11 @@ export class AcpAgents implements AgentClient {
         } catch (error) {
           if (typeof error === 'object' && error && 'code' in error && error.code === -32000)
             entry.state.status = 'login-required'
-          else throw new AgentSessionRestoreError(`原生会话恢复失败；未自动重建。${message(error)}`)
+          else
+            throw new AgentSessionRestoreError(
+              `原生会话恢复失败；未自动重建。${message(error)}`,
+              previous.bindingId,
+            )
         } finally {
           entry.replaying = false
         }
@@ -569,9 +574,13 @@ export class AcpAgents implements AgentClient {
       }
       this.emit(entry)
       const prompt = agentPrompt(context, previous)
-      const content = [{ type: 'text' as const, text: prompt.text }]
+      const request = {
+        sessionId: entry.sessionId,
+        prompt: [{ type: 'text' as const, text: prompt.text }],
+      }
       entry.run.input = {
-        request: { sessionId: entry.sessionId, requestId: randomUUID(), content },
+        request,
+        correlationId: randomUUID(),
         submittedAt: new Date().toISOString(),
         materials: {
           digest: prompt.materialDigest,
@@ -583,10 +592,7 @@ export class AcpAgents implements AgentClient {
       this.emit(entry)
       const result = await this.bounded<PromptResponse>(
         entry,
-        entry.peer.agent.request(methods.agent.session.prompt, {
-          sessionId: entry.sessionId,
-          prompt: content,
-        }),
+        entry.peer.agent.request(methods.agent.session.prompt, request),
         30 * 60_000,
       )
       if (result.stopReason === 'cancelled' || signal.aborted) throw new Error('已取消研究')

@@ -30,6 +30,8 @@ Published developer previews provide Windows x64 installer/ZIP, Apple Silicon an
 
 See [installation and upgrades](docs/desktop-installation.en.md), the [Windows isolated trial](docs/windows-trial.en.md), and [FAQ](docs/faq.en.md). Windows is unsigned; Mac uses ad-hoc signing without Developer ID or notarization. Tested OS versions and limitations are recorded with each release.
 
+For AppImages on dev.7 or earlier, download dev.8 manually once, then use the repaired built-in updater.
+
 1. Read the example or create your own research space and root question.
 2. Connect a model or an agent. Tools and web search depend on the chosen connection; an account login alone does not enable them.
 3. Discuss in a node. When directions are clear, ask AI to save a stage report and create those pending branches.

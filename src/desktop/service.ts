@@ -86,6 +86,20 @@ export class ResearchService implements ResearchClient {
   async exportWorkspace(id: string) {
     return this.store.exportWorkspace(id)
   }
+  async resetAgentSession(runId: string) {
+    const run = this.store.run(id.parse(runId))
+    if (run.status !== 'failed' || !run.agentSessionBindingId)
+      throw new Error('此记录没有可重建的本机智能体会话')
+    if (
+      this.store
+        .snapshot()
+        .runs.some((active) => active.nodeId === run.nodeId && active.status === 'running')
+    )
+      throw new Error('请先停止此节点的当前回复')
+    if (!this.agentSessions.retire(run.nodeId, run.agentSessionBindingId))
+      throw new Error('此记录关联的本机会话已不再有效')
+    return { id: run.id }
+  }
   async testConnection(input?: SettingsInput) {
     const saved = this.store.settings()
     const candidate = input === undefined ? undefined : settingsSchema.parse(input)
@@ -134,19 +148,6 @@ export class ResearchService implements ResearchClient {
       case 'save-settings':
         this.store.saveSettings(command.settings)
         break
-      case 'reset-agent-session': {
-        const settings = this.store.settings()
-        this.store.node(command.nodeId)
-        if (settings.backend !== 'acp' || !settings.agent) throw new Error('当前没有智能体连接')
-        if (
-          this.store
-            .snapshot()
-            .runs.some((run) => run.nodeId === command.nodeId && run.status === 'running')
-        )
-          throw new Error('请先停止此节点的当前回复')
-        this.agentSessions.scope(command.nodeId, settings.agent).retire()
-        break
-      }
       case 'import-workspace':
         return { id: this.store.importWorkspace(command.data) }
       case 'cancel-research': {
@@ -254,9 +255,10 @@ export class ResearchService implements ResearchClient {
             (output, agent) => {
               raw = output
               agentState = agent
-              const nextVersion = JSON.stringify(
+              const nextVersion = JSON.stringify([
+                agent.input?.submittedAt,
                 agent.requests.map((request) => [request.id, request.status]),
-              )
+              ])
               const requestsChanged = requestVersion !== nextVersion
               requestVersion = nextVersion
               const waiting = agent.requests.some((request) => request.status === 'pending')
@@ -451,7 +453,8 @@ export class ResearchService implements ResearchClient {
         cancelled: signal.aborted,
         progress: progress(),
         secrets: Object.values(credentials),
-        recovery: error instanceof AgentSessionRestoreError ? 'agent-session' : undefined,
+        agentSessionBindingId:
+          error instanceof AgentSessionRestoreError ? error.bindingId : undefined,
       })
     }
   }
@@ -459,8 +462,8 @@ export class ResearchService implements ResearchClient {
     this.agentRuntime.shutdown()
     this.modelRuntime.shutdown()
     for (const [id, controller] of this.active) {
-      controller.abort()
       new ResearchRunLifecycle(this.store, id).interrupt()
+      controller.abort()
     }
     this.active.clear()
   }

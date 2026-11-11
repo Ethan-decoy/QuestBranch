@@ -81,6 +81,7 @@ const server = createServer(async (request, response) => {
           id: string
           methodId: string
           requestId: string
+          runId: string
           configId: string
           value: string
           response: AgentResponse
@@ -89,6 +90,8 @@ const server = createServer(async (request, response) => {
           json(response, 200, await service.agent.connect(input.config))
         else if (url.pathname === '/api/agents/configure')
           json(response, 200, await service.agent.configure(input.id, input.configId, input.value))
+        else if (url.pathname === '/api/agents/reset-session')
+          json(response, 200, await service.resetAgentSession(input.runId))
         else if (url.pathname === '/api/agents/authenticate') {
           await service.agent.authenticate(input.id, input.methodId)
           json(response, 200, {})

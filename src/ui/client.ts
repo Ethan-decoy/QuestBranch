@@ -41,6 +41,7 @@ export const client: ResearchClient = window.questbranch ?? {
     configure: (id, configId, value) => request('agents/configure', { id, configId, value }),
     respond: (id, requestId, response) => request('agents/respond', { id, requestId, response }),
     disconnect: (id) => request('agents/disconnect', { id }),
+    resetSession: (runId) => request('agents/reset-session', { runId }),
   },
   auth: {
     start: (settings, type) => request('auth/start', { settings, type }),

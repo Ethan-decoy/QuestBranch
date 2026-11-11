@@ -93,7 +93,7 @@ jobs:
             command: pnpm package:mac --x64
           - os: ubuntu-24.04
             target: linux-x64
-            command: pnpm package:linux --x64
+            command: pnpm package:linux
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
     env:

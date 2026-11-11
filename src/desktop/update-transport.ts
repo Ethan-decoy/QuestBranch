@@ -1,5 +1,15 @@
 import { app, shell } from 'electron'
-import { accessSync, constants, existsSync } from 'node:fs'
+import { createHash } from 'node:crypto'
+import {
+  accessSync,
+  constants,
+  createReadStream,
+  existsSync,
+  renameSync,
+  rmSync,
+  rmdirSync,
+} from 'node:fs'
+import { chmod, copyFile, mkdtemp, open } from 'node:fs/promises'
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import updaterPackage, { type AppUpdater } from 'electron-updater'
 import type { Network } from './network'
@@ -26,13 +36,61 @@ export function isAppImageMount(
 }
 
 function writableAppImage() {
-  if (!isAppImageMount(process.env.APPIMAGE, process.env.APPDIR, process.execPath)) return false
+  const image = process.env.APPIMAGE
+  if (!image || !isAbsolute(image) || !isAppImageMount(image, process.env.APPDIR, process.execPath))
+    return
   try {
-    accessSync(process.env.APPIMAGE!, constants.W_OK)
-    accessSync(dirname(process.env.APPIMAGE!), constants.W_OK)
-    return true
+    accessSync(image, constants.W_OK)
+    accessSync(dirname(image), constants.W_OK)
+    return image
   } catch {
-    return false
+    return
+  }
+}
+
+// Keep the SDK's download and quit lifecycle. Its default AppImage install unlinks the
+// running image before moving the download, which can be on a different filesystem.
+export class AtomicAppImageUpdater extends updaterPackage.AppImageUpdater {
+  private staged?: { path: string; destination: string }
+
+  async installInPlace(destination: string) {
+    const installer = this.installerPath
+    const sha512 = this.downloadedUpdateHelper?.downloadedFileInfo?.sha512
+    if (!installer || !sha512) throw new Error('Missing verified AppImage download')
+    const directory = await mkdtemp(join(dirname(destination), '.questbranch-update-'))
+    const path = join(directory, 'replacement.AppImage')
+    try {
+      await copyFile(installer, path, constants.COPYFILE_EXCL)
+      const hash = createHash('sha512')
+      for await (const chunk of createReadStream(path)) hash.update(chunk)
+      if (hash.digest('base64') !== sha512) throw new Error('Staged AppImage digest mismatch')
+      await chmod(path, 0o755)
+      const file = await open(path, 'r+')
+      try {
+        await file.sync()
+      } finally {
+        await file.close()
+      }
+      this.staged = { path, destination }
+      this.quitAndInstall(true, true)
+    } finally {
+      this.staged = undefined
+      try {
+        rmSync(path, { force: true })
+        rmdirSync(directory)
+      } catch {
+        // Staging cleanup must not replace the install result.
+      }
+    }
+  }
+
+  protected doInstall() {
+    const staged = this.staged
+    if (!staged) throw new Error('No verified AppImage staged for installation')
+    renameSync(staged.path, staged.destination)
+    // Start the AppImage wrapper after the current instance releases its single-instance lock.
+    app.relaunch({ execPath: staged.destination, args: process.argv.slice(1) })
+    return true
   }
 }
 
@@ -42,14 +100,16 @@ export async function createUpdateTransport(
 ): Promise<{ transport: UpdateTransport; native: boolean }> {
   const version = app.getVersion()
   const channel = updateChannel(version)
+  const appImage = process.platform === 'linux' ? writableAppImage() : undefined
   let native = supportsNativeUpdate(
     process.platform,
     app.isPackaged,
     process.platform === 'win32'
       ? existsSync(join(dirname(process.execPath), 'Uninstall QuestBranch.exe'))
-      : writableAppImage(),
+      : appImage !== undefined,
   )
   let updater: AppUpdater | undefined
+  let appImageUpdater: AtomicAppImageUpdater | undefined
   try {
     updater = native ? updaterPackage.autoUpdater : undefined
     if (
@@ -61,6 +121,7 @@ export async function createUpdateTransport(
       updater = undefined
       native = false
     }
+    if (updater && appImage) updater = appImageUpdater = new AtomicAppImageUpdater()
     if (updater) {
       updater.autoDownload = false
       updater.autoInstallOnAppQuit = false
@@ -79,7 +140,7 @@ export async function createUpdateTransport(
     native = false
     installError(error instanceof Error ? error : new Error('Update initialization failed'))
   }
-  const feedSuffix = native ? (process.platform === 'linux' ? '-linux' : '') : undefined
+  const feedSuffix = native ? (process.platform === 'linux' ? '-safe-linux' : '') : undefined
   return {
     native,
     transport: {
@@ -117,7 +178,9 @@ export async function createUpdateTransport(
         updater.setFeedURL({
           provider: 'generic',
           url: `${releaseRepository}/releases/download/v${release.version}/`,
-          channel: updateChannel(release.version),
+          channel: appImage
+            ? `${updateChannel(release.version)}-safe`
+            : updateChannel(release.version),
           useMultipleRangeRequest: false,
         })
         updater.allowDowngrade = false
@@ -134,6 +197,7 @@ export async function createUpdateTransport(
       },
       install() {
         if (!updater) throw new Error('Native updating is unavailable')
+        if (appImage && appImageUpdater) return appImageUpdater.installInPlace(appImage)
         updater.quitAndInstall(true, true)
       },
       openRelease: (target) =>

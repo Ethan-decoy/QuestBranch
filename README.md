@@ -30,6 +30,8 @@
 
 安装与更新见[安装说明](docs/desktop-installation.md)，隔离 ZIP 见 [Windows 指南](docs/windows-trial.md)，常见条件见 [FAQ](docs/faq.md)。Windows 未签名，Mac 使用 ad-hoc 签名、尚无 Developer ID 和公证；系统实测范围与限制随各版本记录。
 
+使用 dev.7 及更早 AppImage 时，请手动下载 dev.8 一次，此后使用修复后的内置更新。
+
 1. 阅读示例，或创建自己的研究空间与根问题。
 2. 连接模型或智能体。工具与检索取决于实际连接，账号登录不等于已经开启联网研究。
 3. 在节点中讨论；方向明确后，请 AI 保存阶段报告并建立这些待研究分支。

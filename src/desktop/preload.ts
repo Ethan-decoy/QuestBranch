@@ -21,6 +21,7 @@ const client: ResearchClient = {
     respond: (id, requestId, response) =>
       ipcRenderer.invoke('agents:respond', id, requestId, response),
     disconnect: (id) => ipcRenderer.invoke('agents:disconnect', id),
+    resetSession: (runId) => ipcRenderer.invoke('agents:reset-session', runId),
   },
   auth: {
     start: (settings, type) => ipcRenderer.invoke('models:auth-start', settings, type),

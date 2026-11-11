@@ -4,10 +4,11 @@ import { rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { basename, join, resolve, relative, sep } from 'node:path'
 import { AcpAgents } from '../src/desktop/acp-agent'
+import { AcpSessions } from '../src/desktop/acp-sessions'
 import { ResearchStore } from '../src/desktop/store'
 import { ResearchService } from '../src/desktop/service'
 import { buildContext } from '../src/research/context'
-import type { AgentConfig, AgentRun } from '../src/research/agent'
+import { agentRequestDetails, type AgentConfig, type AgentRun } from '../src/research/agent'
 
 const resources: {
   runtime: AcpAgents
@@ -92,6 +93,8 @@ describe('ACP 原生智能体接入', () => {
       expect(prompts).toHaveLength(2)
       expect(prompts[1].text).toBe('[user]\nCURRENT_FOLLOWUP_ONLY')
       expect(prompts[1].text).not.toContain('FIRST_NODE_ONLY')
+      expect(next.agent!.input!.request).toEqual(prompts[1].params)
+      expect(next.agent!.input!.correlationId).toEqual(expect.any(String))
       if (scenario === 'mcp-resume')
         expect(prompts.map((p: { nodeId: string }) => p.nodeId)).toEqual(['visual', 'visual'])
       const source = store.snapshot().reports.find((report) => report.nodeId === 'visual')!
@@ -101,14 +104,15 @@ describe('ACP 原生智能体接入', () => {
         included: true,
         historyIncluded: false,
       })
-      expect(updated.agent!.input!.request.content[0].text).toContain('MATERIAL_UPDATE_ONLY')
-      expect(updated.agent!.input!.request.content[0].text).not.toContain('FIRST_NODE_ONLY')
+      const request = updated.agent!.input!.request
+      expect('prompt' in request && request.prompt[0].text).toContain('MATERIAL_UPDATE_ONLY')
+      expect('prompt' in request && request.prompt[0].text).not.toContain('FIRST_NODE_ONLY')
     },
     30000,
   )
 
-  it('恢复失败不静默另建会话，明确重建后才新建；旧研究仍保留', async () => {
-    const { service, store, directory } = setup('session-failure')
+  it('从失败记录重建原连接，保留其他连接和已有研究', async () => {
+    const { service, store, directory, config } = setup('session-failure')
     const send = async () => {
       const { id } = await service.command({
         type: 'send-message',
@@ -132,11 +136,43 @@ describe('ACP 原生智能体接入', () => {
         ),
       ),
     ).toHaveLength(1)
-    await service.command({ type: 'reset-agent-session', nodeId: 'visual' })
+    const otherConfig = { ...config, args: [config.args![0], 'session-load'] }
+    store.saveSettings({ ...store.settings(), agent: otherConfig })
+    const other = await send()
+    expect(other.status, other.error).toBe('completed')
+    const bindings = new AcpSessions(store)
+    expect(failed.agentSessionBindingId).toBe(bindings.scope('visual', config).load()?.bindingId)
+    const portable = store.exportWorkspace(failed.workspaceId)
+    const historical = portable.runs.find((run) => run.id === first.id)!.agent!.input!
+    const captured = historical.request
+    expect('prompt' in captured).toBe(true)
+    if (!('prompt' in captured)) throw new Error('Fixture did not record ACP prompt params')
+    historical.request = {
+      sessionId: captured.sessionId,
+      requestId: 'local-id',
+      content: captured.prompt,
+    }
+    delete historical.correlationId
+    const imported = setup('session-failure', false)
+    imported.store.importWorkspace(portable)
+    expect(imported.store.run(failed.id).recovery).toBe('agent-session')
+    expect(imported.store.run(failed.id).agentSessionBindingId).toBeUndefined()
+    expect(imported.store.run(first.id).agent?.input).toEqual(historical)
+    expect(agentRequestDetails(imported.store.run(first.id).agent)).toEqual({
+      request: captured,
+      correlationId: 'local-id',
+    })
+    await expect(imported.service.resetAgentSession(failed.id)).rejects.toThrow('没有可重建')
+    await expect(service.resetAgentSession(failed.id)).resolves.toEqual({ id: failed.id })
+    expect(bindings.scope('visual', otherConfig).load()?.sessionId).toBe(other.agent!.sessionId)
+    expect(bindings.scope('visual', config).load()).toBeUndefined()
+    store.saveSettings({ ...store.settings(), agent: config })
     const rebuilt = await send()
     expect(rebuilt.status).toBe('completed')
     expect(rebuilt.agent!.sessionId).not.toBe(first.agent!.sessionId)
     expect(store.run(first.id).output).toBe('CURRENT_TURN_ONLY')
+    await expect(service.resetAgentSession(failed.id)).rejects.toThrow('没有可重建')
+    expect(bindings.scope('visual', config).load()?.sessionId).toBe(rebuilt.agent!.sessionId)
   }, 30000)
   it.each(['mcp-http', 'mcp-stdio'])(
     '通过 %s 注入真实 MCP 工具，直接保存并返回分支，重复调用一致',

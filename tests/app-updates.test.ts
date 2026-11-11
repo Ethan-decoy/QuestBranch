@@ -77,6 +77,11 @@ describe('published update selection', () => {
     expect(() => selectRelease({ message: 'rate limited' }, '0.3.0-dev.6', '')).toThrow()
     expect(() => selectRelease([{}], '0.3.0-dev.6', '')).toThrow()
   })
+  it('offers manual installation to legacy AppImage clients and a native feed to safe clients', () => {
+    const releases = [catalog('0.3.0-dev.8', { assets: [{ name: 'dev-safe-linux.yml' }] })]
+    expect(selectRelease(releases, '0.3.0-dev.7', '-linux')?.native).toBe(false)
+    expect(selectRelease(releases, '0.3.0-dev.7', '-safe-linux')?.native).toBe(true)
+  })
 })
 
 describe('desktop update lifecycle', () => {
@@ -88,8 +93,8 @@ describe('desktop update lifecycle', () => {
     await updates.check()
     expect(transport.latest).toHaveBeenCalledTimes(1)
     expect(transport.install).not.toHaveBeenCalled()
-    expect(updates.install().phase).toBe('installing')
-    updates.install()
+    expect((await updates.install()).phase).toBe('installing')
+    await updates.install()
     expect(transport.install).toHaveBeenCalledTimes(1)
   })
   it('blocks restart while research, auth or relocation is active, and does not queue a hidden restart', async () => {
@@ -97,12 +102,12 @@ describe('desktop update lifecycle', () => {
     await updates.check()
     await updates.download()
     busy(true)
-    expect(updates.install()).toMatchObject({ phase: 'ready', problem: 'busy' })
+    expect(await updates.install()).toMatchObject({ phase: 'ready', problem: 'busy' })
     expect(updates.installing).toBe(false)
     busy(false)
     await updates.check()
     expect(transport.install).not.toHaveBeenCalled()
-    updates.install()
+    await updates.install()
     expect(transport.install).toHaveBeenCalledTimes(1)
     expect(updates.installing).toBe(true)
   })
@@ -140,7 +145,7 @@ describe('desktop update lifecycle', () => {
       problem: 'download',
       availableVersion: release.version,
     })
-    expect(updates.install().phase).toBe('error')
+    expect((await updates.install()).phase).toBe('error')
     expect(transport.install).not.toHaveBeenCalled()
     expect((await updates.download()).phase).toBe('ready')
   })
@@ -151,16 +156,35 @@ describe('desktop update lifecycle', () => {
     })
     await updates.check()
     await updates.download()
-    expect(updates.install()).toMatchObject({ phase: 'ready', problem: 'install' })
+    expect(await updates.install()).toMatchObject({ phase: 'ready', problem: 'install' })
     expect(updates.installing).toBe(false)
-    expect(updates.install().phase).toBe('installing')
+    expect((await updates.install()).phase).toBe('installing')
+  })
+  it('blocks concurrent installs until asynchronous filesystem preparation finishes', async () => {
+    const { updates, transport } = fixture()
+    let failPreparation!: (error: Error) => void
+    vi.mocked(transport.install).mockImplementationOnce(
+      () =>
+        new Promise<void>((_, reject) => {
+          failPreparation = reject
+        }),
+    )
+    await updates.check()
+    await updates.download()
+    const installing = updates.install()
+    expect(updates.installing).toBe(true)
+    expect((await updates.install()).phase).toBe('installing')
+    expect(transport.install).toHaveBeenCalledTimes(1)
+    failPreparation(new Error('ENOSPC'))
+    expect(await installing).toMatchObject({ phase: 'ready', problem: 'install' })
+    expect(updates.installing).toBe(false)
   })
   it('manual builds only navigate to the official selected release', async () => {
     const { updates, transport } = fixture(false)
     vi.mocked(transport.latest).mockResolvedValue({ ...release, native: false })
     await updates.check()
     await updates.download()
-    updates.install()
+    await updates.install()
     expect(transport.download).not.toHaveBeenCalled()
     expect(transport.install).not.toHaveBeenCalled()
     await updates.openRelease()

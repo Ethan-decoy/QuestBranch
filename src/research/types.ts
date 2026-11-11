@@ -111,6 +111,7 @@ export type ContextPack = {
 }
 export type ResearchRun = {
   recovery?: 'agent-session'
+  agentSessionBindingId?: string
   modelCalls?: import('./usage').ModelCall[]
   session?: SessionTrace
   activities?: AgentActivity[]
@@ -317,7 +318,6 @@ export type AppCommand =
     }
   | { type: 'send-message'; nodeId: string; message: string; selectedReportId?: string }
   | { type: 'cancel-research'; runId: string }
-  | { type: 'reset-agent-session'; nodeId: string }
   | { type: 'import-workspace'; data: unknown }
 export interface ResearchClient {
   updates?: import('../app-updates').AppUpdates

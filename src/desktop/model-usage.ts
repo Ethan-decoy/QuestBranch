@@ -88,6 +88,7 @@ export class ModelUsageRecorder {
       startedAt: new Date().toISOString(),
     }
     const run = this.store.run(this.runId)
+    if (run.status !== 'running') throw new Error('研究已结束，无法开始模型调用')
     if ((run.modelCalls?.length ?? 0) >= 500)
       throw new Error('本轮模型调用达到上限；已有研究记录保留')
     this.store.saveRun({ ...run, modelCalls: [...(run.modelCalls ?? []), call] })
@@ -96,21 +97,24 @@ export class ModelUsageRecorder {
       usage?: TokenUsage,
       responseId?: string,
     ) => {
-      // Shutdown records cancellation before closing SQLite; late provider completion is optional.
+      // A late provider response may add usage, but cannot overwrite a terminal state.
       if (!this.store.isOpen) return
       const current = this.store.run(this.runId)
+      const saved = current.modelCalls?.find((value) => value.id === call.id)
+      if (!saved || (saved.status !== 'running' && !usage && !responseId)) return
+      const ended =
+        saved.status === 'running' ? { status, finishedAt: new Date().toISOString() } : {}
       this.store.saveRun({
         ...current,
-        modelCalls: current.modelCalls?.map((saved) =>
-          saved.id === call.id
+        modelCalls: current.modelCalls?.map((value) =>
+          value.id === call.id
             ? {
                 ...saved,
-                status,
-                finishedAt: new Date().toISOString(),
+                ...ended,
                 ...(usage ? { usage } : {}),
                 ...(responseId ? { responseId: responseId.slice(0, 200) } : {}),
               }
-            : saved,
+            : value,
         ),
       })
     }

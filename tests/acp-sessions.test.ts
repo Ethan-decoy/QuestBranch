@@ -39,7 +39,7 @@ it('原生会话按节点、程序、目录与配置隔离，配置键顺序不�
     new AcpSessions(store)
       .scope('visual', { ...config, options: { effort: 'low', model: 'a' } })
       .load(),
-  ).toEqual(saved)
+  ).toMatchObject(saved)
   expect(new AcpSessions(store).scope('context', config).load()).toBeUndefined()
   expect(
     new AcpSessions(store).scope('visual', { ...config, options: { model: 'b' } }).load(),
@@ -54,14 +54,16 @@ it('原生会话按节点、程序、目录与配置隔离，配置键顺序不�
   stores.splice(stores.indexOf(store), 1)
   const reopened = new ResearchStore(directory)
   stores.push(reopened)
-  expect(new AcpSessions(reopened).scope('visual', config).load()).toEqual(saved)
+  const sessions = new AcpSessions(reopened)
+  const reopenedBinding = sessions.scope('visual', config).load()!
+  expect(reopenedBinding).toMatchObject(saved)
   const copy = setup(false).store
   const id = copy.importWorkspace(reopened.exportWorkspace('welcome-research'))
   expect(id).toBe('welcome-research')
   expect(new AcpSessions(copy).scope('visual', config).load()).toBeUndefined()
   const reports = reopened.snapshot().reports
-  new AcpSessions(reopened).scope('visual', config).retire()
-  expect(new AcpSessions(reopened).scope('visual', config).load()).toBeUndefined()
+  expect(sessions.retire('visual', reopenedBinding.bindingId)).toBe(true)
+  expect(sessions.scope('visual', config).load()).toBeUndefined()
   expect(reopened.snapshot().reports).toEqual(reports)
 })
 it('恢复只追加本轮输入或材料更新，原生命令保持纯正文', () => {
@@ -118,6 +120,7 @@ it('节点在其他连接新增对话后，不恢复缺失这段讨论的旧线�
   store.saveRun({ ...base, id: 'another-connection' })
   expect(() => new AcpSessions(store).scope('visual', config, 'current').load()).toThrow('新增对话')
   expect(new AcpSessions(store).scope('visual', config).load()?.sessionId).toBe('native-id')
-  new AcpSessions(store).scope('visual', config).retire()
+  const sessions = new AcpSessions(store)
+  expect(sessions.retire('visual', sessions.scope('visual', config).load()!.bindingId)).toBe(true)
   expect(store.snapshot().messages).toHaveLength(4)
 })

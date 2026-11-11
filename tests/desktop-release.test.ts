@@ -1,6 +1,14 @@
 import { execFileSync, spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, join, resolve, sep } from 'node:path'
 import { afterEach, expect, it } from 'vitest'
@@ -98,7 +106,15 @@ function candidate() {
         signing: { adHocVerified: true },
         appImage: {
           researchAndReopen: true,
-          nativeUpdater: { downloadVerifiedBySdk: true, shutdownBySdk: true, relaunched: true },
+          nativeUpdater: {
+            downloadVerifiedBySdk: true,
+            shutdownBySdk: true,
+            relaunched: true,
+            packagedImplementation: true,
+            failurePreservedExecutable: true,
+            failedUpdateResearchReopen: true,
+            retrySameUpdater: true,
+          },
         },
         assets: assets.map((name) => {
           writeFileSync(join(folder, 'release', name), name)
@@ -109,7 +125,7 @@ function candidate() {
   )
   for (const [name, payload] of [
     ['dev.yml', 'QuestBranch-Setup-1.0.0-dev.1-x64.exe'],
-    ['dev-linux.yml', 'QuestBranch-1.0.0-dev.1-linux-x86_64.AppImage'],
+    ['dev-safe-linux.yml', 'QuestBranch-1.0.0-dev.1-linux-x86_64.AppImage'],
   ]) {
     const bytes = readFileSync(join(folder, 'release', payload))
     const sha512 = createHash('sha512').update(bytes).digest('base64')
@@ -171,6 +187,29 @@ it('rejects a download-only check without verified native relaunch', () => {
   c.records['linux-x64'].appImage.nativeUpdater.relaunched = false
   expect(c.run().status).not.toBe(0)
 })
+it('requires the packaged AppImage implementation, failure recovery and retry acceptance', () => {
+  const c = candidate()
+  c.records['linux-x64'].appImage.nativeUpdater.failedUpdateResearchReopen = false
+  expect(c.run().status).not.toBe(0)
+})
+it('prepares a safe Linux update feed and removes the legacy native-update entry', () => {
+  const c = candidate()
+  const legacy = join(c.folder, 'release/dev-linux.yml')
+  const safe = join(c.folder, 'release/dev-safe-linux.yml')
+  renameSync(safe, legacy)
+  const result = spawnSync(
+    process.execPath,
+    [resolve('scripts/update-release-assets.mjs'), '--prepare-linux'],
+    {
+      cwd: c.folder,
+      encoding: 'utf8',
+    },
+  )
+  expect(result.status, result.stderr).toBe(0)
+  expect(existsSync(legacy)).toBe(false)
+  expect(existsSync(safe)).toBe(true)
+  expect(c.run().status).toBe(0)
+})
 it('rejects a missing platform and failed runtime checks', () => {
   const c = candidate()
   c.records['macos-x64'].runtime.networkCases = 0
@@ -183,6 +222,23 @@ it('rejects candidate bytes changed after native acceptance', () => {
   const c = candidate()
   writeFileSync(join(c.folder, 'release', c.records['linux-x64'].assets[0].name), 'changed')
   expect(c.run().status).not.toBe(0)
+})
+it('rejects a replacement ZIP missing from the Windows acceptance record', () => {
+  const c = candidate()
+  const zip = c.records['windows-x64'].assets.pop()!
+  writeFileSync(join(c.folder, 'release', zip.name), 'unverified replacement')
+  const result = c.run()
+  expect(result.status).not.toBe(0)
+  expect(result.stderr).toContain('windows-x64')
+})
+it.each(['duplicate', 'wrong platform'])('rejects %s asset acceptance', (kind) => {
+  const c = candidate()
+  const mac = c.records['macos-x64'].assets
+  if (kind === 'duplicate') mac.push(mac[0])
+  else mac[0] = c.records['macos-arm64'].assets[0]
+  const result = c.run()
+  expect(result.status).not.toBe(0)
+  expect(result.stderr).toContain('macos-x64')
 })
 it('rejects metadata that redirects to another payload or contains an incorrect update hash', () => {
   const c = candidate()

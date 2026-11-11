@@ -190,7 +190,7 @@ const app = agent({ name: 'fixture' })
     if (resumable || loadable) {
       const text = params.prompt.map((part) => part.text ?? '').join('\n'),
         sessions = readSessions()
-      const receipt = { text }
+      const receipt = { text, params }
       if (isMcp) {
         receipt.nodeId = toolValue(
           await mcp.callTool({ name: 'qb_get_research', arguments: {} }),

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync, renameSync } from 'node:fs'
 import { join } from 'node:path'
 import yaml from 'js-yaml'
 import semver from 'semver'
@@ -9,13 +9,28 @@ export function updateAssetNames(version) {
   const channel = String(semver.prerelease(version)?.[0] ?? 'latest')
   return {
     windows: [`${channel}.yml`, `QuestBranch-Setup-${version}-x64.exe.blockmap`],
-    linux: [`${channel}-linux.yml`],
+    linux: [`${channel}-safe-linux.yml`],
   }
+}
+
+if (process.argv.includes('--prepare-linux')) {
+  const version = JSON.parse(readFileSync('package.json', 'utf8')).version
+  const channel = String(semver.prerelease(version)?.[0] ?? 'latest')
+  // Old AppImage clients discover only the legacy feed and therefore offer manual download.
+  renameSync(
+    join('release', `${channel}-linux.yml`),
+    join('release', updateAssetNames(version).linux[0]),
+  )
 }
 
 // Validate the SDK feed against the exact bytes accepted by platform verification.
 export function verifyUpdateAssets(directory, version) {
   const names = updateAssetNames(version)
+  const channel = String(semver.prerelease(version)?.[0] ?? 'latest')
+  assert(
+    !existsSync(join(directory, `${channel}-linux.yml`)),
+    'Legacy AppImage feed must stay manual',
+  )
   for (const [platform, feedNames] of Object.entries(names)) {
     const feed = yaml.load(readFileSync(join(directory, feedNames[0]), 'utf8'))
     assert.equal(feed.version, version, 'Update metadata belongs to another version')

@@ -138,6 +138,10 @@ void app
       writable()
       return service.command(command)
     })
+    ipcMain.handle('agents:reset-session', (_, runId) => {
+      writable()
+      return service.resetAgentSession(runId)
+    })
     ipcMain.handle('research:test', (_, settings) => {
       writable()
       return service.testConnection(settings)

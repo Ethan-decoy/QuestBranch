@@ -20,7 +20,7 @@ Ordinary direct-model chat does not automatically search. An optional Tavily key
 
 ## How do I check for and install updates?
 
-Open **Settings → About**, or click the sidebar version, for the update options supported by your installation. From dev.6 or earlier, install this release manually once. See [installation and upgrades](desktop-installation.en.md) for platform differences, backup and recovery.
+Open **Settings → About**, or click the sidebar version, for the update options supported by your installation. AppImages on dev.7 or earlier require one manual download of this version. Windows dev.6 or earlier requires one manual installation. See [installation and upgrades](desktop-installation.en.md) for platform differences, backup and recovery.
 
 ## How do I save a report and create branches?
 

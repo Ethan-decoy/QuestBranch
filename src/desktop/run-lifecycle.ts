@@ -68,7 +68,7 @@ export class ResearchRunLifecycle {
       cancelled: boolean
       progress: RunProgress
       secrets: readonly string[]
-      recovery?: ResearchRun['recovery']
+      agentSessionBindingId?: string
     },
   ) {
     // Shutdown has already recorded interruption; late asynchronous failures cannot reopen storage.
@@ -86,7 +86,9 @@ export class ResearchRunLifecycle {
         output: options.progress.output || current.output,
         ...(options.progress.agent ? { agent: options.progress.agent } : {}),
         error: message,
-        ...(options.recovery ? { recovery: options.recovery } : {}),
+        ...(options.agentSessionBindingId
+          ? { recovery: 'agent-session', agentSessionBindingId: options.agentSessionBindingId }
+          : {}),
         phase: options.cancelled ? '已停止' : current.mode === 'chat' ? '回复未完成' : '报告未完成',
         finishedAt: new Date().toISOString(),
       })

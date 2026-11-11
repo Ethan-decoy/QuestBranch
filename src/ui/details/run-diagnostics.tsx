@@ -1,12 +1,14 @@
 import { Check } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { uiLocale } from '../../i18n'
+import { agentRequestDetails } from '../../research/agent'
 import type { ResearchRun } from '../../research/types'
 import { useApp } from '../state'
 import { Feedback } from '../components'
 
 export function RunDiagnostics({ run }: { run: ResearchRun }) {
   const { t } = useTranslation()
+  const input = agentRequestDetails(run.agent)
   const snapshot = useApp((s) => s.snapshot)!,
     changed = run.context.items
       .filter((item) => item.included)
@@ -70,9 +72,9 @@ export function RunDiagnostics({ run }: { run: ResearchRun }) {
       <details className="raw-details">
         <summary>{t('查看实际发送的输入')}</summary>
         <pre>
-          {run.agent?.input
-            ? JSON.stringify(run.agent.input, null, 2)
-            : run.agent?.name === 'DeepSeek Harness'
+          {input
+            ? JSON.stringify(input.request, null, 2)
+            : run.agent
               ? t('此历史记录未保存原生请求，无法还原实际发送内容。')
               : run.session
                 ? JSON.stringify(run.session, null, 2)
@@ -80,6 +82,11 @@ export function RunDiagnostics({ run }: { run: ResearchRun }) {
                     .map((message) => `[${message.role}]\n${message.content}`)
                     .join('\n\n')}
         </pre>
+        {input?.correlationId && (
+          <p className="muted small-text">
+            {t('本地关联 ID')} <code>{input.correlationId}</code>
+          </p>
+        )}
       </details>
       <details className="raw-details">
         <summary>{t('查看模型原始输出')}</summary>

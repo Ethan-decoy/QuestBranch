@@ -12,18 +12,29 @@ const savedSchema = z.object({
   lastRunId: z.string().min(1).max(200).optional(),
 })
 export type SavedAgentSession = z.infer<typeof savedSchema>
+type BoundAgentSession = SavedAgentSession & { bindingId: string }
 export type AgentSessionScope = {
   runId?: string
-  load(): SavedAgentSession | undefined
+  load(): BoundAgentSession | undefined
   save(session: SavedAgentSession): void
-  retire(): void
 }
-export class AgentSessionRestoreError extends Error {}
+export class AgentSessionRestoreError extends Error {
+  constructor(
+    message: string,
+    readonly bindingId: string,
+  ) {
+    super(message)
+  }
+}
 const digest = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex')
 
 /** Machine-local native identities. JSON imports never adopt an external agent's live session. */
 export class AcpSessions {
   constructor(private readonly store: Pick<ResearchStore, 'directory' | 'agentSessionBindings'>) {}
+  retire(nodeId: string, bindingId: string) {
+    return this.store.agentSessionBindings.retire(nodeId, bindingId)
+  }
+
   scope(nodeId: string, config: AgentConfig, runId?: string): AgentSessionScope {
     const connection = digest([
       config.kind,
@@ -36,22 +47,20 @@ export class AcpSessions {
     return {
       runId,
       load: () => {
-        const value = bindings.load(nodeId, connection)
-        if (!value) return
-        const session = savedSchema.parse(value)
+        const binding = bindings.load(nodeId, connection)
+        if (!binding) return
+        const session = savedSchema.parse(binding.payload)
         if (runId && session.bootstrapped) {
           if (!bindings.coversChats(nodeId, session.lastRunId, runId))
             throw new AgentSessionRestoreError(
               '此原生会话未覆盖节点中的新增对话；请明确重建会话以承接当前研究，已有记录保留。',
+              binding.id,
             )
         }
-        return session
+        return { ...session, bindingId: binding.id }
       },
       save: (session) => {
         bindings.save(nodeId, connection, savedSchema.parse(session))
-      },
-      retire: () => {
-        bindings.retire(nodeId, connection)
       },
     }
   }

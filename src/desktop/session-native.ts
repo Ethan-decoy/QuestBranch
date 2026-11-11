@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from 'node:async_hooks'
 import { createHash } from 'node:crypto'
 import type { Model, Api } from '@earendil-works/pi-ai'
 import {
@@ -18,6 +19,9 @@ import type { Network } from './network'
 import { modelCacheKey, nativeUsage, type ModelUsageRecorder } from './model-usage'
 
 const verified = new WeakMap<Network, Map<string, { until: number; evidence: string }>>()
+type SessionNativeAdapter = NativeAdapter & {
+  reply<T>(request: NativeRequest, accept: (response: unknown) => Promise<T>): Promise<T>
+}
 
 /** Exact deployment capability checks; network/auth failures are never an unsupported result. */
 export async function resolveSessionNative(options: {
@@ -29,7 +33,7 @@ export async function resolveSessionNative(options: {
   signal: AbortSignal
   usage?: ModelUsageRecorder
   sessionId?: string
-}): Promise<NativeAdapter | undefined> {
+}): Promise<SessionNativeAdapter | undefined> {
   const { settings, model, profile, network, signal } = options
   if (sessionStrategy(settings) === 'portable') return
   if (settings.provider === 'account') {
@@ -53,47 +57,61 @@ export async function resolveSessionNative(options: {
   const cacheKey = createHash('sha256')
     .update(JSON.stringify([backend, options.headers]))
     .digest('hex')
+  // Preserve wire usage even when the adapter rejects the response during validation.
+  const received = new AsyncLocalStorage<(response: unknown) => void>()
+  async function observe<T>(
+    phase: 'reply' | 'compaction',
+    requestSignal: AbortSignal,
+    perform: () => Promise<T>,
+  ) {
+    requestSignal.throwIfAborted()
+    if (!options.usage) return perform()
+    const finish = options.usage.start({
+      phase,
+      provider: model.provider,
+      model: model.id,
+      api: model.api,
+      billing: 'api',
+      source: 'native',
+    })
+    let response: unknown
+    let status: 'completed' | 'failed' = 'failed'
+    try {
+      const result = await received.run((data) => {
+        response = data
+      }, perform)
+      requestSignal.throwIfAborted()
+      status = 'completed'
+      return result
+    } finally {
+      const wire = response as { id?: unknown } | undefined
+      finish(
+        requestSignal.aborted ? 'cancelled' : status,
+        nativeUsage(response, model.api),
+        typeof wire?.id === 'string' ? wire.id : undefined,
+      )
+    }
+  }
   const post =
     (path: string): NativeTransport =>
-    async (request, providedSignal) => {
-      const requestSignal = providedSignal ?? signal
+    async (request, requestSignal = signal) => {
       requestSignal.throwIfAborted()
-      const finish =
-        path.endsWith('input_tokens') || path.endsWith('count_tokens')
-          ? undefined
-          : options.usage?.start({
-              phase: path.endsWith('/compact') ? 'compaction' : 'reply',
-              provider: model.provider,
-              model: model.id,
-              api: model.api,
-              billing: 'api',
-              source: 'native',
-            })
-      try {
-        const response = await network.fetch(endpoint + path, {
-          method: 'POST',
-          headers: { ...options.headers, ...request.headers, 'content-type': 'application/json' },
-          body: JSON.stringify(request.body),
-          redirect: 'error',
-          signal: requestSignal,
-        })
-        const data = await response.json()
-        finish?.(
-          requestSignal.aborted ? 'cancelled' : response.ok ? 'completed' : 'failed',
-          nativeUsage(data, model.api),
-          data && typeof data === 'object' && typeof data.id === 'string' ? data.id : undefined,
+      const response = await network.fetch(endpoint + path, {
+        method: 'POST',
+        headers: { ...options.headers, ...request.headers, 'content-type': 'application/json' },
+        body: JSON.stringify(request.body),
+        redirect: 'error',
+        signal: requestSignal,
+      })
+      const data = await response.json()
+      received.getStore()?.(data)
+      if (!response.ok) {
+        cache.delete(cacheKey)
+        throw new Error(
+          `会话原生接口 HTTP ${response.status}：${JSON.stringify(data).slice(0, 1000)}`,
         )
-        if (!response.ok) {
-          cache.delete(cacheKey)
-          throw new Error(
-            `会话原生接口 HTTP ${response.status}：${JSON.stringify(data).slice(0, 1000)}`,
-          )
-        }
-        return data
-      } catch (error) {
-        finish?.(requestSignal.aborted ? 'cancelled' : 'failed')
-        throw error
       }
+      return data
     }
   if (model.api === 'openai-completions') {
     const binding = {
@@ -143,6 +161,18 @@ export async function resolveSessionNative(options: {
           generate: post('/v1/messages'),
           countTokens: count,
         })
+  const compact = adapter.compact?.bind(adapter)
+  if (compact)
+    adapter.compact = (request, requestSignal = signal) =>
+      observe('compaction', requestSignal, () => compact(request, requestSignal))
+  const native: SessionNativeAdapter = Object.assign(adapter, {
+    reply: <T>(request: NativeRequest, accept: (response: unknown) => Promise<T>) =>
+      observe('reply', signal, async () => {
+        const response = await adapter.send(request, signal)
+        signal.throwIfAborted()
+        return accept(response)
+      }),
+  })
   // Run settings are part of the counted request, never injected by the transport afterwards.
   const build = adapter.build.bind(adapter)
   adapter.build = (input) => {
@@ -182,7 +212,7 @@ export async function resolveSessionNative(options: {
   const known = cache.get(cacheKey)
   if (known && known.until > Date.now()) {
     profile.nativeCompaction = confirmedNativeCapability(adapter, known.evidence)
-    return adapter
+    return native
   }
   if (model.api === 'anthropic-messages') {
     const response = await network.fetch(endpoint + '/v1/models/' + encodeURIComponent(model.id), {
@@ -229,5 +259,5 @@ export async function resolveSessionNative(options: {
       evidence: profile.nativeCompaction.evidence,
     })
   }
-  return profile.nativeCompaction.status === 'supported' ? adapter : undefined
+  return profile.nativeCompaction.status === 'supported' ? native : undefined
 }

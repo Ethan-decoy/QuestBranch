@@ -1,23 +1,26 @@
 import { app } from 'electron'
 import assert from 'node:assert/strict'
+import { execFileSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import { createServer } from 'node:http'
+import fs from 'node:fs'
 import {
   createReadStream,
   existsSync,
   mkdirSync,
   mkdtempSync,
-  openSync,
   readFileSync,
   statSync,
   writeFileSync,
 } from 'node:fs'
-import { createRequire } from 'node:module'
-import { basename, dirname, join, resolve, sep } from 'node:path'
+import { createRequire, syncBuiltinESMExports } from 'node:module'
+import { basename, dirname, isAbsolute, join, resolve, sep } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { desktopPackage, option } from './desktop-package.mjs'
+import { updateAssetNames } from './update-release-assets.mjs'
 
-// A current SDK drives the real released predecessor's installer/image to the
-// accepted candidate, then the parent verifies the actual new application's launch.
-// This is an external acceptance driver: published dev.6 has no updater UI.
+// Exercise the packaged installation implementation against a real released predecessor.
+// The parent then checks the actual relaunched candidate window and open research library.
 assert.equal(process.env.GITHUB_ACTIONS, 'true', 'Use a disposable Actions runner')
 assert.equal(process.env.GITHUB_REPOSITORY, 'Ethan-decoy/QuestBranch')
 assert(['win32', 'linux'].includes(process.platform))
@@ -36,7 +39,7 @@ app.setPath('userData', folder)
 app.disableHardwareAcceleration()
 const root = desktopPackage().archive
 const require = createRequire(join(root, 'package.json'))
-const { NsisUpdater, AppImageUpdater } = require('electron-updater')
+const { NsisUpdater } = require('electron-updater')
 const { ElectronHttpExecutor } = require('electron-updater/out/electronHttpExecutor')
 assert.equal(require('electron-updater/package.json').version, '6.8.12')
 if (process.platform === 'win32') {
@@ -50,12 +53,18 @@ if (process.platform === 'win32') {
   process.env.APPIMAGE = oldRoot
 }
 const feed = readFileSync(
-  join(dirname(installer), process.platform === 'win32' ? 'dev.yml' : 'dev-linux.yml'),
+  join(
+    dirname(installer),
+    updateAssetNames(targetVersion)[process.platform === 'win32' ? 'windows' : 'linux'][0],
+  ),
 )
 let record = {
   fromVersion: previousVersion,
   toVersion: targetVersion,
-  driver: 'current packaged SDK with a released predecessor',
+  driver:
+    process.platform === 'linux'
+      ? 'packaged QuestBranch AtomicAppImageUpdater'
+      : 'packaged NSIS SDK with a released predecessor',
   predecessorUpdaterUi: false,
   fixtureFeed: true,
   installRequested: false,
@@ -103,16 +112,13 @@ void app
         server.close(() => app.exit(0))
       },
     }
-    const Updater = process.platform === 'win32' ? NsisUpdater : AppImageUpdater
+    const Updater =
+      process.platform === 'win32'
+        ? NsisUpdater
+        : (await import(pathToFileURL(join(root, 'out/main/update-transport.js')).href))
+            .AtomicAppImageUpdater
+    assert.equal(typeof Updater, 'function')
     const updater = new Updater(undefined, adapter)
-    if (process.platform === 'linux') {
-      // Keep the SDK's actual detached launch; retain its child output for CI diagnosis.
-      const spawnLog = updater.spawnLog.bind(updater)
-      const stdout = openSync(join(evidence, 'native-relaunch.stdout.log'), 'a')
-      const stderr = openSync(join(evidence, 'native-relaunch.stderr.log'), 'a')
-      updater.spawnLog = (command, args, env) =>
-        spawnLog(command, args, env, ['ignore', stdout, stderr])
-    }
     updater.httpExecutor = new ElectronHttpExecutor()
     updater.logger = null
     updater.autoDownload = false
@@ -121,11 +127,16 @@ void app
     updater.allowDowngrade = false
     updater.disableDifferentialDownload = true
     updater.disableWebInstaller = true
-    updater.on('error', fail)
+    let injectingFailure = false
+    let installFailure
+    updater.on('error', (error) => {
+      if (injectingFailure && error.code === 'ENOSPC') installFailure = error
+      else fail(error)
+    })
     await updater.netSession.setProxy({ mode: 'direct' })
     updater.setFeedURL({
       provider: 'generic',
-      channel: 'dev',
+      channel: process.platform === 'linux' ? 'dev-safe' : 'dev',
       url: `http://127.0.0.1:${server.address().port}/`,
     })
     const update = await updater.checkForUpdates()
@@ -133,8 +144,78 @@ void app
     assert.equal(update.updateInfo.version, targetVersion)
     const files = await updater.downloadUpdate()
     assert.equal(files.length, 1)
-    record = { ...record, downloadVerifiedBySdk: true, installRequested: true }
+    record = { ...record, downloadVerifiedBySdk: true }
+    if (process.platform === 'linux') {
+      const digest = (path) => createHash('sha256').update(readFileSync(path)).digest('hex')
+      const previousDigest = digest(oldRoot)
+      const replacementDigest = digest(installer)
+      const rename = fs.renameSync
+      injectingFailure = true
+      fs.renameSync = (source, destination) => {
+        if (destination === oldRoot)
+          throw Object.assign(new Error('Injected replacement failure'), { code: 'ENOSPC' })
+        return rename(source, destination)
+      }
+      syncBuiltinESMExports()
+      try {
+        await updater.installInPlace(oldRoot)
+      } finally {
+        fs.renameSync = rename
+        syncBuiltinESMExports()
+        injectingFailure = false
+      }
+      assert.equal(installFailure?.code, 'ENOSPC')
+      assert.equal(
+        digest(oldRoot),
+        previousDigest,
+        'Failed replacement changed the installed image',
+      )
+      assert.equal(record.shutdownBySdk, false, 'Failed replacement quit the running application')
+      const node = option('node-executable')
+      const reopen = option('reopen')
+      assert(node && isAbsolute(node), 'Missing acceptance Node executable')
+      assert(
+        reopen && resolve(reopen).startsWith(resolve('artifacts') + sep),
+        'Invalid research fixture',
+      )
+      const environment = { ...process.env }
+      delete environment.ELECTRON_RUN_AS_NODE
+      const output = execFileSync(
+        node,
+        [
+          'scripts/verify-branching-mcp.mjs',
+          `--package-root=${desktopPackage().root}`,
+          `--executable=${oldRoot}`,
+          `--reopen=${reopen}`,
+        ],
+        { encoding: 'utf8', env: environment, timeout: 120000, maxBuffer: 4 * 1024 * 1024 },
+      )
+      const reopened = JSON.parse(output.trim().split('\n').at(-1))
+      assert.equal(
+        reopened.success,
+        true,
+        'The predecessor did not reopen after replacement failure',
+      )
+      assert.equal(digest(oldRoot), previousDigest)
+      record = {
+        ...record,
+        packagedImplementation: true,
+        failurePreservedExecutable: true,
+        failedUpdateResearchReopen: true,
+        failureReopenFolder: reopened.folder,
+        installRequested: true,
+      }
+      await updater.installInPlace(oldRoot)
+      assert.equal(
+        digest(oldRoot),
+        replacementDigest,
+        'Retried replacement differs from the accepted bytes',
+      )
+      record = { ...record, retrySameUpdater: true }
+    } else {
+      record = { ...record, installRequested: true }
+      updater.quitAndInstall(true, true)
+    }
     writeFileSync(result, JSON.stringify(record, null, 2) + '\n')
-    updater.quitAndInstall(true, true)
   })
   .catch(fail)

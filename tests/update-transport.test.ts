@@ -1,13 +1,30 @@
+import { execFileSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import { EventEmitter } from 'node:events'
-import { resolve } from 'node:path'
+import {
+  chmodSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  rmdirSync,
+  writeFileSync,
+} from 'node:fs'
+import { tmpdir } from 'node:os'
+import { dirname, join, resolve } from 'node:path'
 import { beforeEach, expect, it, vi } from 'vitest'
 import type { Network } from '../src/desktop/network'
+import { DesktopUpdates } from '../src/desktop/app-updates'
 
 const host = vi.hoisted(() => ({
   packaged: true,
   installed: true,
   version: '0.3.0-dev.6',
   open: vi.fn(),
+  relaunch: vi.fn(),
+  quit: vi.fn(),
+  beforeReplace: vi.fn<(source: string, destination: string) => void>(),
+  appImageDownload: undefined as { path: string; sha512: string } | undefined,
 }))
 vi.mock('electron', () => ({
   app: {
@@ -15,14 +32,21 @@ vi.mock('electron', () => ({
     get isPackaged() {
       return host.packaged
     },
+    relaunch: host.relaunch,
   },
   shell: { openExternal: host.open },
 }))
-vi.mock('node:fs', () => ({
-  existsSync: () => host.installed,
-  accessSync: () => {},
-  constants: { W_OK: 2 },
-}))
+vi.doMock('node:fs', async (importOriginal) => {
+  const fs = await importOriginal<typeof import('node:fs')>()
+  return {
+    ...fs,
+    existsSync: () => host.installed,
+    renameSync: (source: string, destination: string) => {
+      host.beforeReplace(source, destination)
+      fs.renameSync(source, destination)
+    },
+  }
+})
 const sdk = Object.assign(new EventEmitter(), {
   netSession: { setProxy: vi.fn(async () => {}) },
   setFeedURL: vi.fn(),
@@ -37,13 +61,39 @@ const sdk = Object.assign(new EventEmitter(), {
   disableWebInstaller: false,
   logger: {},
 })
-vi.mock('electron-updater', () => ({
-  default: {
-    get autoUpdater() {
-      return sdk
+vi.doMock('electron-updater', () => {
+  class AppImageUpdater extends EventEmitter {
+    netSession = sdk.netSession
+    setFeedURL = sdk.setFeedURL
+    checkForUpdates = sdk.checkForUpdates
+    downloadUpdate = sdk.downloadUpdate
+    get installerPath() {
+      return host.appImageDownload?.path
+    }
+    get downloadedUpdateHelper() {
+      return { downloadedFileInfo: host.appImageDownload }
+    }
+    protected doInstall(): boolean {
+      throw new Error('AppImage replacement must use the QuestBranch implementation')
+    }
+    quitAndInstall(silent: boolean, forceRun: boolean) {
+      sdk.quitAndInstall(silent, forceRun)
+      try {
+        if (this.doInstall()) host.quit()
+      } catch (error) {
+        this.emit('error', error)
+      }
+    }
+  }
+  return {
+    default: {
+      AppImageUpdater,
+      get autoUpdater() {
+        return process.platform === 'linux' ? new AppImageUpdater() : sdk
+      },
     },
-  },
-}))
+  }
+})
 const { createUpdateTransport, supportsNativeUpdate, isAppImageMount } =
   await import('../src/desktop/update-transport')
 const entry = (version = '0.3.0-dev.7') => ({
@@ -58,6 +108,7 @@ beforeEach(() => {
   host.packaged = true
   host.installed = true
   host.version = '0.3.0-dev.6'
+  host.appImageDownload = undefined
 })
 function network(fetch = vi.fn<typeof globalThis.fetch>()) {
   return { fetch, run: (_context, work) => work() } satisfies Network
@@ -81,6 +132,86 @@ it('detects native installation capability without enabling directory, DMG or DE
   expect(supportsNativeUpdate('linux', false, true)).toBe(false)
   expect(supportsNativeUpdate('darwin', true, true)).toBe(false)
 })
+it.each(['rename failure', 'digest mismatch'])(
+  'preserves the current AppImage through a %s and retries the verified replacement',
+  async (failure) => {
+    const directory = mkdtempSync(join(tmpdir(), 'qb-update-'))
+    const original = join(directory, 'QuestBranch Custom.AppImage')
+    const downloaded = join(directory, 'download.AppImage')
+    const oldImage = '#!/bin/sh\nprintf "old executable"\n'
+    const newImage = '#!/bin/sh\nprintf "new executable"\n'
+    const platform = Object.getOwnPropertyDescriptor(process, 'platform')!
+    try {
+      Object.defineProperty(process, 'platform', { ...platform, value: 'linux' })
+      vi.stubEnv('APPIMAGE', original)
+      vi.stubEnv('APPDIR', dirname(process.execPath))
+      writeFileSync(original, oldImage)
+      chmodSync(original, 0o755)
+      writeFileSync(downloaded, failure === 'digest mismatch' ? 'changed' : newImage)
+      host.appImageDownload = {
+        path: downloaded,
+        sha512: createHash('sha512').update(newImage).digest('base64'),
+      }
+      if (failure === 'rename failure') {
+        host.beforeReplace.mockImplementationOnce((stage, destination) => {
+          expect(dirname(dirname(stage))).toBe(directory)
+          expect(destination).toBe(original)
+          expect(readFileSync(stage, 'utf8')).toBe(newImage)
+          expect(readFileSync(original, 'utf8')).toBe(oldImage)
+          throw Object.assign(new Error('No space left on device'), { code: 'ENOSPC' })
+        })
+      }
+      sdk.checkForUpdates.mockResolvedValue({
+        isUpdateAvailable: true,
+        updateInfo: { version: '0.3.0-dev.7' },
+      })
+      sdk.downloadUpdate.mockResolvedValue([downloaded])
+      const fetch = vi
+        .fn<typeof globalThis.fetch>()
+        .mockImplementation(async (url) =>
+          String(url).endsWith('/latest')
+            ? new Response(null, { status: 404 })
+            : Response.json([{ ...entry(), assets: [{ name: 'dev-safe-linux.yml' }] }]),
+        )
+      const report = vi.fn<(error: Error) => void>()
+      const { transport, native } = await createUpdateTransport(network(fetch), report)
+      const updates = new DesktopUpdates(host.version, transport, () => false, vi.fn(), native)
+      report.mockImplementation((error) => updates.failed('install', error))
+      expect(native).toBe(true)
+      expect(await updates.check()).toMatchObject({ phase: 'available', installation: 'native' })
+      expect((await updates.download()).phase).toBe('ready')
+      expect(sdk.setFeedURL).toHaveBeenCalledWith(expect.objectContaining({ channel: 'dev-safe' }))
+      expect(await updates.install()).toMatchObject({ phase: 'ready', problem: 'install' })
+      if (failure === 'rename failure')
+        expect(report).toHaveBeenCalledWith(expect.objectContaining({ code: 'ENOSPC' }))
+      else expect(host.beforeReplace).not.toHaveBeenCalled()
+      expect(readFileSync(original, 'utf8')).toBe(oldImage)
+      if (platform.value === 'linux')
+        expect(execFileSync(original, { encoding: 'utf8' })).toBe('old executable')
+      expect(host.relaunch).not.toHaveBeenCalled()
+      expect(host.quit).not.toHaveBeenCalled()
+
+      writeFileSync(downloaded, newImage)
+      expect((await updates.install()).phase).toBe('installing')
+      expect(readFileSync(original, 'utf8')).toBe(newImage)
+      if (platform.value === 'linux')
+        expect(execFileSync(original, { encoding: 'utf8' })).toBe('new executable')
+      expect(readdirSync(directory).sort()).toEqual(
+        ['QuestBranch Custom.AppImage', 'download.AppImage'].sort(),
+      )
+      expect(host.relaunch).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({ execPath: original }),
+      )
+      expect(host.quit).toHaveBeenCalledTimes(1)
+    } finally {
+      Object.defineProperty(process, 'platform', platform)
+      vi.unstubAllEnvs()
+      rmSync(original, { force: true })
+      rmSync(downloaded, { force: true })
+      rmdirSync(directory)
+    }
+  },
+)
 it.runIf(process.platform === 'win32')(
   'uses the OS proxy, disables surprise downloads/install-on-quit and pins downloads to the selected version',
   async () => {

@@ -569,6 +569,101 @@ it('原生 Responses 使用完整 wire JSON 和计数接口续传，鉴权错误
   expect(generated).toBe(4)
 })
 
+it.each(['incomplete', 'invalid compaction', 'shutdown'] as const)(
+  '原生调用记录符合实际结束状态 (%s)',
+  async (mode) => {
+    const { store, root } = setup()
+    store.saveSettings({
+      ...store.settings(),
+      modelProvider: 'custom',
+      baseUrl: 'https://fixture.invalid/v1',
+      model: 'wire-fixture',
+      modelContextWindow: 128000,
+      apiProtocol: 'openai-responses',
+      sessionStrategy: 'auto',
+    })
+    let resolveReply!: (response: Response) => void
+    const reply = new Promise<Response>((resolve) => {
+      resolveReply = resolve
+    })
+    const data = {
+      id: 'incomplete-response',
+      status: 'incomplete',
+      output: [],
+      usage: { input_tokens: 1000, output_tokens: 123 },
+    }
+    const fetch = vi.fn<typeof globalThis.fetch>(async (url) => {
+      const path = String(url)
+      if (path.endsWith('/input_tokens')) return Response.json({ input_tokens: 1000 })
+      if (path.endsWith('/compact'))
+        return Response.json({
+          id: 'capability-probe',
+          object: 'response.compaction',
+          output:
+            mode === 'invalid compaction'
+              ? []
+              : [{ type: 'compaction', encrypted_content: 'opaque' }],
+          usage: data.usage,
+        })
+      return mode === 'shutdown' ? reply : Response.json(data)
+    })
+    const network = { fetch, run: <T>(_scope: unknown, fn: () => T) => fn() }
+    const service = new ResearchService(store, new PiModels(store, { network }))
+    cleanup.push(() => service.shutdown())
+    const { id } = await service.command({ type: 'send-message', nodeId: root, message: '研究' })
+    if (mode !== 'shutdown') {
+      await vi.waitFor(() => expect(store.run(id!).status).toBe('failed'), { timeout: 15000 })
+      expect(store.run(id!).error).toContain(
+        mode === 'incomplete' ? 'OpenAI response did not complete' : 'complete output array',
+      )
+      expect(store.run(id!).modelCalls?.at(-1)).toMatchObject({
+        status: 'failed',
+        phase: mode === 'incomplete' ? 'reply' : 'compaction',
+        responseId: mode === 'incomplete' ? data.id : 'capability-probe',
+        usage: { inputTokens: 1000, outputTokens: 123 },
+      })
+      return
+    }
+    await vi.waitFor(
+      () =>
+        expect(store.run(id!).modelCalls?.at(-1)).toMatchObject({
+          phase: 'reply',
+          status: 'running',
+        }),
+      { timeout: 15000 },
+    )
+    service.shutdown()
+    const ended = store.run(id!)
+    expect(ended.status).toBe('interrupted')
+    expect(ended.modelCalls?.at(-1)).toMatchObject({
+      phase: 'reply',
+      status: 'interrupted',
+      finishedAt: ended.finishedAt,
+    })
+    store.close()
+    resolveReply(Response.json(data))
+    const reopened = new ResearchStore(store.directory)
+    cleanup.push(() => {
+      if (reopened.isOpen) reopened.close()
+    })
+    await new Promise((done) => setTimeout(done, 0))
+    expect(reopened.run(id!)).toEqual(ended)
+    reopened.close()
+    // Earlier clients left an interrupted run with a still-running call in SQLite.
+    const legacy = new DatabaseSync(join(store.directory, 'research.sqlite'))
+    try {
+      const row = structuredClone(ended)
+      Object.assign(row.modelCalls!.at(-1)!, { status: 'running', finishedAt: undefined })
+      legacy.prepare('UPDATE runs SET payload=? WHERE id=?').run(JSON.stringify(row), id!)
+    } finally {
+      legacy.close()
+    }
+    const recovered = new ResearchStore(store.directory)
+    cleanup.push(() => recovered.close())
+    expect(recovered.run(id!)).toEqual(ended)
+  },
+)
+
 it('unknown 不伪装为 unsupported；用户可明确选择 portable', async () => {
   const { store, root, faux } = setup()
   const runtime = new PiModels(store, { providers: [faux.provider] })

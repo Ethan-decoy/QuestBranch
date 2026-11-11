@@ -519,7 +519,10 @@ describe('Pi 报告工具与模型能力', () => {
       nodeId: 'visual',
       instruction: '整理报告',
     })
-    await vi.waitFor(() => expect(db.run(started.id!).status).toBe('completed'))
+    // Cold SessionWeave initialization can exceed vi.waitFor's default one second.
+    await vi.waitFor(() => expect(db.run(started.id!).status).toBe('completed'), {
+      timeout: 15000,
+    })
     const run = db.run(started.id!)
     expect(JSON.parse(run.output)).toEqual(report)
     expect(run.pi).toMatchObject({ provider: 'fixture-account', responseId: 'fixture-response' })
@@ -593,7 +596,7 @@ describe('Pi 报告工具与模型能力', () => {
       nodeId: 'visual',
       instruction: '整理报告',
     })
-    await vi.waitFor(() => expect(db.run(run.id!).status).toBe('failed'))
+    await vi.waitFor(() => expect(db.run(run.id!).status).toBe('failed'), { timeout: 15000 })
     expect(JSON.parse(db.run(run.id!).output).title).toBe(123)
     expect(db.snapshot().reports).toHaveLength(3)
     service.shutdown()

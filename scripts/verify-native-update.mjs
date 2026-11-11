@@ -71,6 +71,14 @@ let record = {
   shutdownBySdk: false,
 }
 const result = join(evidence, `native-update-${process.platform}.json`)
+if (process.platform === 'linux') {
+  const relaunch = app.relaunch.bind(app)
+  app.relaunch = (options) => {
+    const accepted = relaunch(options)
+    record = { ...record, relaunchOptions: options, relaunchAccepted: accepted }
+    return accepted
+  }
+}
 const server = createServer((request, response) => {
   const name = decodeURIComponent(new URL(request.url, 'http://localhost').pathname.slice(1))
   if (name.endsWith('.yml')) response.end(feed)

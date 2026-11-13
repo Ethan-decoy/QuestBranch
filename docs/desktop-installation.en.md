@@ -1,6 +1,6 @@
 # Install and update QuestBranch
 
-[简体中文](https://github.com/Ethan-decoy/QuestBranch/blob/v0.3.0-dev.8/docs/desktop-installation.md) · English
+[简体中文](https://github.com/Ethan-decoy/QuestBranch/blob/v0.3.0-dev.9/docs/desktop-installation.md) · English
 
 Download a published version from [Releases](https://github.com/Ethan-decoy/QuestBranch/releases). Application packages do not require Node.js or pnpm. Match your OS and CPU, and verify the file against that version's `SHA256SUMS.txt`. The assets actually attached to the release define what is available.
 
@@ -27,13 +27,13 @@ The DEB recommends `fonts-noto-cjk`. AppImage users need a system CJK font; inst
 
 ## Research and credentials
 
-Open Settings → Local storage to inspect the actual research path and available relocation controls. Installed applications and the browser preview have separate default locations. `QUESTBRANCH_DATA_DIR` overrides the saved location.
+Each desktop project can hold multiple studies in its folder's `.questbranch/research.sqlite`, including QB-managed session state. Choose a folder when creating a project, or use the default under `projects/` in the research directory. To reopen an existing project, use the sidebar plus button, choose its folder, then select Open project. Settings → Local storage moves the whole current project without restarting and retains the source; a study's menu can transfer it individually. The legacy shared library remains one existing-research project. Global connections and the folder index remain in the application profile's `application.sqlite`. `QUESTBRANCH_DATA_DIR` sets the legacy/default parent directory; browser preview still uses a separate shared library.
 
-The Windows portable launch script uses adjacent `data/research/`, `data/profile/` and `data/codex/` directories. Run the script consistently to preserve that isolation; directly launching the EXE can open ordinary desktop data. See the [Windows guide](https://github.com/Ethan-decoy/QuestBranch/blob/v0.3.0-dev.8/docs/windows-trial.en.md).
+The Windows portable launch script uses adjacent `data/research/`, `data/profile/` and `data/codex/` directories. Run the script consistently to preserve that isolation; directly launching the EXE can open ordinary desktop data. See the [Windows guide](https://github.com/Ethan-decoy/QuestBranch/blob/v0.3.0-dev.9/docs/windows-trial.en.md).
 
-Create a new research space for your own question, then connect a model or agent. The example can be read without credentials. For a first complete workflow, see [getting started](https://github.com/Ethan-decoy/QuestBranch/blob/v0.3.0-dev.8/docs/getting-started.en.md).
+Create a new research space for your own question, then connect a model or agent. The example can be read without credentials. For a first complete workflow, see [getting started](https://github.com/Ethan-decoy/QuestBranch/blob/v0.3.0-dev.9/docs/getting-started.en.md).
 
-Local-first storage does not make cloud model calls offline. Cloud services and external tools receive the material used for configured requests. Research JSON excludes model credentials and external agent work files.
+Copy a complete project folder after quitting normally to move its research and QB-managed sessions. Reconnect models on another machine; external agents' native files and accounts need their own backup. Research JSON creates separate sessions and excludes full native state, credentials and external work files. Local-first storage does not make cloud model calls offline: configured services receive the material needed for their requests.
 
 ## Update and recover
 
@@ -44,9 +44,9 @@ Open **Settings → About**, or click the sidebar version. Installed Windows edi
 
 Restart is blocked while research, account connection or data relocation is active; click again after it finishes. Normal exit does not install an update. Running application files are replaced after exit. Stable clients follow stable releases; preview clients follow their preview channel and later stable releases. Downgrades are excluded.
 
-**AppImage users on dev.7 or earlier must download dev.8 manually once.** Later versions use the repaired built-in updater. Windows users on dev.6 or earlier must also install manually once. macOS uses manual DMG upgrades.
+**AppImage users on dev.7 or earlier must download the current version manually once.** Later versions use the repaired built-in updater. Windows users on dev.6 or earlier must also install manually once. macOS uses manual DMG upgrades.
 
-This release adopts SessionWeave `0.1.0-beta.3`. Before the first new-format material is saved, the research database and any local credential key are backed up under the research directory's `backups/`. Back up your complete configuration, research and external agent files before upgrading.
+Project SQLite upgrades to schema 4 with a pre-upgrade snapshot; research JSON remains format 3. SessionWeave stays pinned to `0.1.0-beta.3`, with material sessions v4. Existing `backups/` archives are retained during project relocation and may contain historical encrypted settings and old keys; protect them as complete local recovery archives. Current global credentials are not copied into active project databases. Back up complete configuration, project folders and external-agent files before upgrading.
 
 Reopen the same profile and research location; check questions, reports, conversations, sources and connections.
 
@@ -56,4 +56,4 @@ Removing the installed application preserves research but is not a backup. Retai
 
 Windows prepares old research with the real published dev.7 installer, then uses the packaged SDK to install and relaunch this candidate. Linux loads the safe updater from the final application package: an injected replacement failure must leave the real dev.7 image and its research usable, then the same updater must retry successfully. Acceptance checks the relaunched window, application bytes and open research database. These are external acceptance drivers; they do not exercise the predecessor's updater UI. DMG/DEB checks cover fresh installation, same-version reinstall, retention and removal. Model responses are local fixtures. See `VERIFICATION.json` for actual results.
 
-See [FAQ](https://github.com/Ethan-decoy/QuestBranch/blob/v0.3.0-dev.8/docs/faq.en.md) and the [Windows upgrade guide](https://github.com/Ethan-decoy/QuestBranch/blob/v0.3.0-dev.8/docs/windows-trial.en.md). Report problems in [Issues](https://github.com/Ethan-decoy/QuestBranch/issues), including version, OS/CPU, package type and steps, without credentials or private research.
+See [FAQ](https://github.com/Ethan-decoy/QuestBranch/blob/v0.3.0-dev.9/docs/faq.en.md) and the [Windows upgrade guide](https://github.com/Ethan-decoy/QuestBranch/blob/v0.3.0-dev.9/docs/windows-trial.en.md). Report problems in [Issues](https://github.com/Ethan-decoy/QuestBranch/issues), including version, OS/CPU, package type and steps, without credentials or private research.

@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { setTimeout } from 'node:timers/promises'
 import lockfile from 'proper-lockfile'
 import { z } from 'zod'
@@ -46,7 +46,7 @@ export class PiCredentialStore implements CredentialStore {
     options?: AuthOperationOptions,
   ): Promise<T> {
     const key = join(
-      this.store.directory,
+      dirname(this.store.credentialDatabase),
       `pi-${createHash('sha256').update(this.scope).digest('hex')}.lock`,
     )
     const previous = PiCredentialStore.chains.get(key) ?? Promise.resolve()
@@ -60,7 +60,7 @@ export class PiCredentialStore implements CredentialStore {
         while (!release) {
           signal?.throwIfAborted()
           try {
-            release = await lockfile.lock(join(this.store.directory, 'research.sqlite'), {
+            release = await lockfile.lock(this.store.credentialDatabase, {
               lockfilePath: key,
               stale: 30000,
               update: 10000,

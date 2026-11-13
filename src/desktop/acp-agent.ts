@@ -102,10 +102,17 @@ function configOptions(options: SessionConfigOption[] = []): AgentConnection['op
 
 /** Owns the stdio process and protocol lifetime; domain/UI never handle ACP payloads. */
 export class AcpAgents implements AgentClient {
+  owns(id: string) {
+    return this.connections.has(id)
+  }
   private connections = new Map<string, LiveConnection>()
   private readonly directory: string
-  constructor(directory: string) {
+  constructor(
+    directory: string,
+    private readonly workingDirectory = join(directory, 'agent-workspace'),
+  ) {
     this.directory = resolve(directory)
+    this.workingDirectory = resolve(workingDirectory)
   }
   get pending() {
     return [...this.connections.values()].some((entry) => entry.state.status === 'authenticating')
@@ -156,7 +163,7 @@ export class AcpAgents implements AgentClient {
     if (signal?.aborted) throw new Error('已取消研究')
     if (this.connections.size >= 6) throw new Error('请先结束已有智能体连接')
     const config = AgentConfigSchema.parse(input)
-    const cwd = config.cwd || join(this.directory, 'agent-workspace')
+    const cwd = config.cwd || this.workingDirectory
     if (!isAbsolute(cwd)) throw new Error('工作目录应使用绝对路径')
     if (!config.cwd) mkdirSync(cwd, { recursive: true })
     const launch =
@@ -363,7 +370,7 @@ export class AcpAgents implements AgentClient {
       const session = await this.bounded(
         entry,
         entry.peer.agent.request(methods.agent.session.new, {
-          cwd: entry.config.cwd || join(this.directory, 'agent-workspace'),
+          cwd: entry.config.cwd || this.workingDirectory,
           mcpServers: entry.mcpServers ?? [],
         }),
       )

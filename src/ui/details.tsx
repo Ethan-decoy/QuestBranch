@@ -43,6 +43,7 @@ export function ResearchDetails() {
     setView = useApp((s) => s.setView),
     open = useApp((s) => s.open)
   const node = snapshot.nodes.find((n) => n.id === view.selectedId)!,
+    archived = !!snapshot.researchNavigation?.[node.workspaceId]?.archivedAt,
     reports = snapshot.reports
       .filter((r) => r.nodeId === node.id)
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
@@ -234,6 +235,7 @@ export function ResearchDetails() {
             className="icon-button"
             title={t('编辑研究问题')}
             aria-label={t('编辑研究问题')}
+            disabled={archived}
             onClick={() => open('edit')}
           >
             <Pencil size={15} />

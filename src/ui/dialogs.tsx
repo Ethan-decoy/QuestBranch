@@ -1,8 +1,16 @@
 import { uiLocale } from '../i18n'
 import { useDeferredValue, useMemo, useState } from 'react'
-import { FileText, Link2, GitBranch, LoaderCircle, Search, Sparkles } from 'lucide-react'
+import {
+  FileText,
+  Link2,
+  GitBranch,
+  LoaderCircle,
+  Search,
+  Sparkles,
+  FolderOpen,
+} from 'lucide-react'
 import { Modal, Button, Feedback, nodeStatus, StatusLabel } from './components'
-import { useApp } from './state'
+import { useApp, flushViewNow } from './state'
 import { SettingsDialog } from './settings-dialog'
 import { ModelsDialog } from './models/dialog'
 import { HostModelsDialog } from './models/host-picker'
@@ -17,10 +25,12 @@ import {
   defaultComparisonDimensions,
 } from '../research/comparison'
 import { useTranslation } from 'react-i18next'
+import { ProjectDialog } from './projects/project-dialog'
 
 export function AppDialogs() {
   const dialog = useApp((s) => s.dialog)
   const nodeId = useApp((s) => s.view?.selectedId ?? '')
+  if (dialog === 'project') return <ProjectDialog />
   if (dialog === 'workspace' || dialog === 'node' || dialog === 'sibling' || dialog === 'edit')
     return <QuestionDialog kind={dialog} key={dialog} />
   if (dialog === 'settings') return <SettingsDialog />
@@ -32,12 +42,13 @@ export function AppDialogs() {
 function QuestionDialog({ kind }: { kind: 'workspace' | 'node' | 'sibling' | 'edit' }) {
   const { t } = useTranslation()
   const state = useApp(),
-    node = state.snapshot!.nodes.find((n) => n.id === state.view!.selectedId)!,
+    node = state.snapshot!.nodes.find((n) => n.id === state.view?.selectedId)!,
     [question, setQuestion] = useState(kind === 'edit' ? node.question : ''),
     [name, setName] = useState(''),
     [constraints, setConstraints] = useState(''),
     [submitting, setSubmitting] = useState(false),
-    [error, setError] = useState('')
+    [error, setError] = useState(''),
+    [projectId] = useState(state.projectTargetId)
   const parent =
     kind === 'sibling' ? state.snapshot!.nodes.find((n) => n.id === node.parentId)! : node
   const creating = kind === 'node' || kind === 'sibling'
@@ -54,15 +65,36 @@ function QuestionDialog({ kind }: { kind: 'workspace' | 'node' | 'sibling' | 'ed
     setSubmitting(true)
     setError('')
     try {
-      const result = await state.command(
-        workspace
-          ? { type: 'create-workspace', question, name, constraints }
-          : creating
-            ? { type: 'create-node', parentId: parent.id, question, sourceReportId, requestId }
-            : { type: 'edit-node', nodeId: node.id, question },
-      )
-      if (workspace) state.workspace(result.id!)
-      else if (creating) {
+      if (workspace && client.projects) await flushViewNow()
+      const result =
+        workspace && client.projects
+          ? await state
+              .projectCommand({
+                type: 'create-research',
+                projectId,
+                question,
+                name,
+                constraints,
+                requestId,
+              })
+              .then((result) => ({ id: result.workspaceId }))
+          : await state.command(
+              workspace
+                ? { type: 'create-workspace', question, name, constraints }
+                : creating
+                  ? {
+                      type: 'create-node',
+                      parentId: parent.id,
+                      question,
+                      sourceReportId,
+                      requestId,
+                    }
+                  : { type: 'edit-node', nodeId: node.id, question },
+            )
+      if (workspace) {
+        await useApp.getState().refresh()
+        if ('id' in result && result.id) await useApp.getState().workspace(result.id)
+      } else if (creating) {
         state.select(result.id!, { showDetails: !state.dialogReturnToGraph })
         if (state.dialogReturnToGraph) {
           state.showPane('map')
@@ -98,7 +130,9 @@ function QuestionDialog({ kind }: { kind: 'workspace' | 'node' | 'sibling' | 'ed
     <Modal
       title={
         workspace
-          ? t('新建研究空间')
+          ? client.projects
+            ? t('新建研究')
+            : t('新建研究空间')
           : kind === 'sibling'
             ? t('添加同级方向')
             : kind === 'node'
@@ -115,6 +149,14 @@ function QuestionDialog({ kind }: { kind: 'workspace' | 'node' | 'sibling' | 'ed
               <span>{kind === 'edit' ? t('当前研究') : t('从这里展开')}</span>
               <strong>{parent.title}</strong>
             </div>
+          </div>
+        )}
+        {workspace && client.projects && (
+          <div className="parent-preview">
+            <FolderOpen size={16} />
+            <strong>
+              {state.snapshot?.projects?.find((project) => project.id === projectId)?.name}
+            </strong>
           </div>
         )}
         {workspace && (
@@ -189,7 +231,13 @@ function QuestionDialog({ kind }: { kind: 'workspace' | 'node' | 'sibling' | 'ed
             disabled={submitting || !question.trim() || (creating && !sourceReportId)}
           >
             {submitting ? <LoaderCircle size={14} className="spin" /> : <GitBranch size={14} />}{' '}
-            {workspace ? t('创建研究空间') : creating ? t('添加研究方向') : t('保存问题')}
+            {workspace
+              ? client.projects
+                ? t('创建研究')
+                : t('创建研究空间')
+              : creating
+                ? t('添加研究方向')
+                : t('保存问题')}
           </Button>
         </div>
       </form>

@@ -2,6 +2,11 @@ import { contextBridge, ipcRenderer } from 'electron'
 import type { ResearchClient } from '../research/types'
 
 const client: ResearchClient = {
+  projects: {
+    chooseDirectory: () => ipcRenderer.invoke('projects:choose-directory'),
+    command: (input) => ipcRenderer.invoke('projects:command', input),
+    open: (token) => ipcRenderer.invoke('projects:open', token),
+  },
   updates: {
     state: () => ipcRenderer.invoke('app-updates:state'),
     check: () => ipcRenderer.invoke('app-updates:check'),

@@ -1,27 +1,27 @@
 # Windows 安装与升级
 
-简体中文 · [English](https://github.com/Ethan-decoy/QuestBranch/blob/v0.3.0-dev.8/docs/windows-trial.en.md)
+简体中文 · [English](https://github.com/Ethan-decoy/QuestBranch/blob/v0.3.0-dev.9/docs/windows-trial.en.md)
 
-适用版本：**0.3.0-dev.8 · Windows x64 预发布**。无需安装 Node.js 或 pnpm。实际附件及校验文件见 [Releases](https://github.com/Ethan-decoy/QuestBranch/releases)。
+适用版本：**0.3.0-dev.9 · Windows x64 预发布**。无需安装 Node.js 或 pnpm。实际附件及校验文件见 [Releases](https://github.com/Ethan-decoy/QuestBranch/releases)。
 
 ## 安装版
 
-1. 下载 `QuestBranch-Setup-0.3.0-dev.8-x64.exe` 与 `SHA256SUMS.txt`，核对 SHA-256。
+1. 下载 `QuestBranch-Setup-0.3.0-dev.9-x64.exe` 与 `SHA256SUMS.txt`，核对 SHA-256。
 2. 运行安装程序，为当前 Windows 用户安装，可选择程序目录，不要求管理员权限。
 3. 安装后通过开始菜单或程序目录中的 QuestBranch 启动，再在“模型与连接”连接自己的服务。
 
-普通桌面配置默认位于 `%APPDATA%\questbranch`，研究默认位于其 `research` 子目录。“设置 → 本地存储”可将研究迁移到另一磁盘上的空文件夹；程序安装位置与研究保存位置分别选择。
+普通桌面配置默认位于 `%APPDATA%\questbranch`。新项目可选择文件夹，默认放在 `research/projects/`；一个项目可包含多项研究。“设置 → 本地存储”迁移整个当前项目，研究菜单可单独移动研究。旧共享库作为“已有研究”项目保留。程序安装位置与项目保存位置分别选择。
 
 卸载保留用户配置与研究资料，但不能替代备份。备份时保留用户配置目录与实际研究目录；外部智能体的账号和工作文件仍由后端管理。
 
 ## 免安装隔离试用
 
-1. 下载完整的 `QuestBranch-0.3.0-dev.8-windows-x64.zip` 和 `SHA256SUMS.txt`，核对校验值。
+1. 下载完整的 `QuestBranch-0.3.0-dev.9-windows-x64.zip` 和 `SHA256SUMS.txt`，核对校验值。
 2. 完整解压到可写目录，例如 `D:\Apps\QuestBranch`。保留 `win-unpacked/` 整个目录，不单独复制 EXE。
 3. 双击顶层 `Start-QuestBranch.cmd`。首次可先新建或浏览研究；对话前在“模型与连接”连接自己的模型或智能体。
 
 ```powershell
-Get-FileHash .\QuestBranch-0.3.0-dev.8-windows-x64.zip -Algorithm SHA256
+Get-FileHash .\QuestBranch-0.3.0-dev.9-windows-x64.zip -Algorithm SHA256
 Get-Content .\SHA256SUMS.txt
 ```
 
@@ -31,7 +31,7 @@ Get-Content .\SHA256SUMS.txt
 
 启动脚本将研究、Electron 配置和内置 Codex 配置分别保存在解压目录的 `data/research/`、`data/profile/`、`data/codex/`。重开同一脚本可继续研究；这些目录包含个人资料或凭据，不要随反馈分享。
 
-直接运行 `win-unpacked/QuestBranch.exe` 使用普通桌面路径，可能打开日常资料。隔离试用请始终使用脚本；脚本设定了研究目录，设置中的目录迁移此时不可用。要换盘，正常退出后移动整个试用目录。自定义 ACP 后端仍遵循自身的账号和工作目录，脚本无法隔离所有外部后端。
+直接运行 `win-unpacked/QuestBranch.exe` 使用普通桌面路径，可能打开日常资料。隔离试用请始终使用脚本。默认项目位于 `data/research/projects/`；自选文件夹中的项目须另行备份，移动整个试用目录不会带走这些项目。设置中仍可迁移当前项目。全局连接在 `data/profile/application.sqlite`，自定义 ACP 后端遵循自身的账号与文件规则，脚本无法隔离所有外部后端。
 
 连接自己的账号或 API 后才会发生真实模型调用。目录中的模型不保证套餐可用；不同后端的工具、原生会话和压缩能力以实际连接为准。固定响应验收不代表所有服务已实测。
 
@@ -58,8 +58,8 @@ Get-Content .\SHA256SUMS.txt
 
 本版提供 Windows x64 安装程序和 ZIP。新装、自选路径、升级、研究位置保留、导入与重开和卸载保留资料由隔离 Windows runner 验证。升级验收使用已发布的 v0.3.0-dev.5 安装器和 ZIP，另验证旧 ZIP 的研究迁入安装版。
 
-其他平台和实际验收范围见[安装指南](https://github.com/Ethan-decoy/QuestBranch/blob/v0.3.0-dev.8/docs/desktop-installation.md)与 `VERIFICATION.json`。本版 Windows 未签名；固定响应不代表全部真实厂商均已验证。项目采用 MIT，第三方许可见 [LICENSING.md](https://github.com/Ethan-decoy/QuestBranch/blob/v0.3.0-dev.8/LICENSING.md)。
+其他平台和实际验收范围见[安装指南](https://github.com/Ethan-decoy/QuestBranch/blob/v0.3.0-dev.9/docs/desktop-installation.md)与 `VERIFICATION.json`。本版 Windows 未签名；固定响应不代表全部真实厂商均已验证。项目采用 MIT，第三方许可见 [LICENSING.md](https://github.com/Ethan-decoy/QuestBranch/blob/v0.3.0-dev.9/LICENSING.md)。
 
 在 [Issues](https://github.com/Ethan-decoy/QuestBranch/issues) 附上版本、系统、连接类型与复现步骤；提供日志或截图前移除密钥和私人研究内容。
 
-继续见[第一次研究](https://github.com/Ethan-decoy/QuestBranch/blob/v0.3.0-dev.8/docs/getting-started.md)与[常见问题](https://github.com/Ethan-decoy/QuestBranch/blob/v0.3.0-dev.8/docs/faq.md)。
+继续见[第一次研究](https://github.com/Ethan-decoy/QuestBranch/blob/v0.3.0-dev.9/docs/getting-started.md)与[常见问题](https://github.com/Ethan-decoy/QuestBranch/blob/v0.3.0-dev.9/docs/faq.md)。

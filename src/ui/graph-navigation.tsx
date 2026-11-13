@@ -36,6 +36,7 @@ function NodeActions() {
   const state = useApp(),
     view = state.view!,
     node = state.snapshot!.nodes.find((node) => node.id === view.selectedId)!,
+    archived = !!state.snapshot!.researchNavigation?.[node.workspaceId]?.archivedAt,
     focused = graphPresentation(view).focusId
   return (
     <>
@@ -47,7 +48,7 @@ function NodeActions() {
               ? t('添加子方向 (Ctrl+Enter)')
               : t('在当前节点对话中保存报告后，再添加方向。')
           }
-          disabled={!branchReport(state.snapshot!, node.id, view)}
+          disabled={archived || !branchReport(state.snapshot!, node.id, view)}
           onClick={() => state.open('node', { returnToGraph: true })}
         >
           <Plus size={16} />
@@ -61,7 +62,7 @@ function NodeActions() {
                 ? t('添加同级方向 (Shift+Enter)')
                 : t('在父节点对话中保存报告后，再添加同级方向。')
           }
-          disabled={!branchReport(state.snapshot!, node.parentId, view)}
+          disabled={archived || !branchReport(state.snapshot!, node.parentId, view)}
           onClick={() => state.open('sibling', { returnToGraph: true })}
         >
           <GitFork size={15} />
@@ -71,6 +72,7 @@ function NodeActions() {
         <button
           aria-label={t('编辑当前研究')}
           title={t('编辑问题 (F2)')}
+          disabled={archived}
           onClick={() => state.open('edit')}
         >
           <Pencil size={14} />

@@ -323,7 +323,7 @@ export function AgentPanel() {
             {t('目录')}
             <input
               value={config.cwd ?? ''}
-              placeholder={t('默认使用研究存储目录下的 agent-workspace')}
+              placeholder={t('默认使用项目文件夹，旧研究库使用 agent-workspace')}
               onChange={(event) => update({ cwd: event.target.value })}
             />
           </label>

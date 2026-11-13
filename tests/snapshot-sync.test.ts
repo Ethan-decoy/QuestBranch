@@ -24,6 +24,43 @@ afterEach(() => {
 })
 
 describe('跨承载的条件快照', () => {
+  it('快速切换项目时，较早请求的迟到响应不会把界面切回旧项目', async () => {
+    const state = fixture()
+    const first = state.workspaces[0]
+    const second = { ...first, id: 'second-project', rootId: 'second-root', name: '项目二' }
+    state.workspaces.push(second)
+    state.nodes.push({ ...state.nodes[0], id: second.rootId, workspaceId: second.id })
+    state.activeWorkspaceId = first.id
+    let finish = () => {}
+    const delayed = new Promise<void>((resolve) => {
+      finish = resolve
+    })
+    const activate = vi.fn(async ({ workspaceId: id }: { workspaceId: string }) => {
+      state.activeWorkspaceId = id
+      state.version++
+      if (id === second.id) await delayed
+    })
+    vi.stubGlobal('window', {
+      questbranch: {
+        snapshot: async (version?: number) =>
+          version === state.version ? null : structuredClone(state),
+        command: async () => ({}),
+        projects: { command: activate },
+      },
+    })
+    vi.stubGlobal('localStorage', { getItem: () => null, setItem: () => {} })
+    const { useApp } = await import('../src/ui/state')
+    await useApp.getState().refresh()
+    const older = useApp.getState().workspace(second.id)
+    await vi.waitFor(() =>
+      expect(activate).toHaveBeenCalledWith({ type: 'select-research', workspaceId: second.id }),
+    )
+    await useApp.getState().workspace(first.id)
+    finish()
+    await older
+    expect(useApp.getState().workspaceId).toBe(first.id)
+    expect(useApp.getState().snapshot?.activeWorkspaceId).toBe(first.id)
+  })
   it('用户正在查看的子树被移除时回到活动祖先，清除失效聚焦与返回历史并保留布局偏好', async () => {
     let state = fixture()
     const root = state.workspaces[0].rootId

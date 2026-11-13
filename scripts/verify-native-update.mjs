@@ -185,7 +185,12 @@ void app
       assert.equal(record.shutdownBySdk, false, 'Failed replacement quit the running application')
       const node = option('node-executable')
       const reopen = option('reopen')
+      const previousVerifier = resolve(option('previous-verifier') ?? '')
       assert(node && isAbsolute(node), 'Missing acceptance Node executable')
+      assert(
+        previousVerifier.startsWith(temporary + sep) && existsSync(previousVerifier),
+        'Missing frozen predecessor verifier',
+      )
       assert(
         reopen && resolve(reopen).startsWith(resolve('artifacts') + sep),
         'Invalid research fixture',
@@ -195,7 +200,7 @@ void app
       const output = execFileSync(
         node,
         [
-          'scripts/verify-branching-mcp.mjs',
+          previousVerifier,
           `--package-root=${desktopPackage().root}`,
           `--executable=${oldRoot}`,
           `--reopen=${reopen}`,
@@ -214,6 +219,7 @@ void app
         packagedImplementation: true,
         failurePreservedExecutable: true,
         failedUpdateResearchReopen: true,
+        predecessorVerifierSource: option('previous-source'),
         failureReopenFolder: reopened.folder,
         installRequested: true,
       }

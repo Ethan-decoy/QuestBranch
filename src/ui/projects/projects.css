@@ -1,0 +1,221 @@
+.projects-navigation {
+  min-width: 0;
+}
+.project-entry {
+  display: flex;
+  align-items: center;
+  position: relative;
+  min-width: 0;
+  min-height: 36px;
+  border-radius: 6px;
+}
+.project-entry:hover {
+  background: var(--color-surface-hover);
+}
+.project-group {
+  position: relative;
+  margin: 0;
+}
+.project-name,
+.project-study-button,
+.project-empty-add {
+  background: transparent;
+  border: 0;
+  color: var(--color-text-body);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  min-width: 0;
+  font: inherit;
+}
+.project-name {
+  flex: 1;
+  padding: 6px 2px;
+  font-weight: 600;
+}
+.project-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex: 1;
+}
+.project-name svg,
+.project-study-button svg {
+  flex-shrink: 0;
+}
+.project-name.current {
+  color: var(--color-action-text);
+}
+.project-chevron {
+  width: 32px;
+  flex-shrink: 0;
+}
+.project-chevron svg {
+  transition: transform 120ms ease;
+}
+.project-chevron .expanded {
+  transform: rotate(90deg);
+}
+.project-children {
+  padding-left: 18px;
+}
+.project-study {
+  position: relative;
+}
+.project-study.is-dragging,
+.project-group.is-dragging {
+  opacity: 0.45;
+}
+.project-study[data-drop-position]::after,
+.project-group[data-drop-position]::after {
+  content: '';
+  position: absolute;
+  left: 7px;
+  right: 7px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--color-focus);
+  pointer-events: none;
+  z-index: 3;
+}
+.project-study[data-drop-position='before']::after,
+.project-group[data-drop-position='before']::after {
+  top: -1px;
+}
+.project-study[data-drop-position='after']::after,
+.project-group[data-drop-position='after']::after {
+  bottom: -1px;
+}
+.project-study-button,
+.project-name {
+  cursor: default;
+}
+.project-study.is-dragging .project-study-button,
+.project-group.is-dragging .project-name {
+  cursor: grabbing;
+}
+.project-more,
+.project-add {
+  opacity: 0;
+  width: 32px;
+  min-width: 32px;
+  flex-shrink: 0;
+}
+.project-entry:hover .project-more,
+.project-entry:hover .project-add,
+.project-entry:focus-within .project-more,
+.project-entry:focus-within .project-add {
+  opacity: 1;
+}
+.project-study-button {
+  flex: 1;
+  border-radius: 6px;
+  padding: 9px 7px;
+  min-height: 36px;
+}
+.project-entry:has(.project-study-button.active) {
+  background: var(--color-surface-selected);
+}
+.project-study-button.active {
+  color: var(--color-action-text);
+}
+.project-empty-add {
+  color: var(--color-text-secondary);
+  padding: 7px;
+  font-size: 12px;
+}
+.project-menu {
+  z-index: 120;
+  min-width: 156px;
+  max-width: min(320px, calc(100vw - 24px));
+  max-height: min(440px, 80vh);
+  overflow-y: auto;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 6px;
+  padding: 4px;
+  box-shadow: var(--shadow-popover);
+}
+.project-menu-item {
+  padding: 7px 10px;
+  font-size: 12px;
+  color: var(--color-text-body);
+  border-radius: 4px;
+  outline: none;
+  cursor: default;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.project-menu-item[data-highlighted] {
+  background: var(--color-surface-hover);
+}
+.project-menu-item[data-disabled] {
+  color: var(--color-disabled-text);
+}
+.project-submenu-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.project-inline-edit {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  background: var(--color-sidebar);
+  border-radius: 6px;
+  z-index: 2;
+}
+.project-rename {
+  flex: 1;
+  width: 0;
+  margin: 2px;
+  padding: 6px;
+  color: var(--color-text-body);
+  background: var(--color-surface);
+  border: 1px solid var(--color-focus);
+  border-radius: 6px;
+  font: inherit;
+}
+.project-move {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 0;
+}
+.project-move select {
+  min-width: 0;
+  flex: 1;
+  width: 100px;
+  background: var(--color-surface);
+  color: var(--color-text-body);
+  border: 1px solid var(--color-border-interactive);
+  border-radius: 6px;
+}
+.project-landing {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 24px;
+  min-width: 0;
+}
+.project-landing h1 {
+  font-size: 20px;
+  margin: 0;
+}
+.project-landing code {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+@media (prefers-reduced-motion: reduce) {
+  .project-chevron svg {
+    transition: none;
+  }
+}

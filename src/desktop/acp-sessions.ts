@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { join, resolve } from 'node:path'
+import { resolve } from 'node:path'
 import { z } from 'zod'
 import type { AgentConfig } from '../research/agent'
 import type { ContextPack } from '../research/types'
@@ -30,7 +30,9 @@ const digest = (value: unknown) => createHash('sha256').update(JSON.stringify(va
 
 /** Machine-local native identities. JSON imports never adopt an external agent's live session. */
 export class AcpSessions {
-  constructor(private readonly store: Pick<ResearchStore, 'directory' | 'agentSessionBindings'>) {}
+  constructor(
+    private readonly store: Pick<ResearchStore, 'agentWorkingDirectory' | 'agentSessionBindings'>,
+  ) {}
   retire(nodeId: string, bindingId: string) {
     return this.store.agentSessionBindings.retire(nodeId, bindingId)
   }
@@ -40,7 +42,7 @@ export class AcpSessions {
       config.kind,
       config.command ?? '',
       config.args ?? [],
-      resolve(config.cwd || join(this.store.directory, 'agent-workspace')),
+      resolve(config.cwd || this.store.agentWorkingDirectory),
       Object.entries(config.options ?? {}).sort(([a], [b]) => a.localeCompare(b)),
     ])
     const bindings = this.store.agentSessionBindings

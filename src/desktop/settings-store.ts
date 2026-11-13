@@ -24,6 +24,22 @@ export class SettingsStore {
     private readonly codec: CredentialCodec,
     private readonly transaction: <T>(operation: () => T) => T,
   ) {}
+  copyTo(target: SettingsStore) {
+    const rows = this.db.prepare('SELECT key,payload FROM settings').all()
+    target.transaction(() => {
+      for (const row of rows) {
+        const key = String(row.key)
+        if (target.readSetting(key) !== undefined) continue
+        const value = String(row.payload)
+        target.putSetting(
+          key,
+          key === 'apiKey' || key === 'searchKey' || key.startsWith('piCredential:')
+            ? target.codec.encrypt(this.codec.decrypt(value))
+            : value,
+        )
+      }
+    })
+  }
   private putSetting(key: string, payload: string) {
     this.db.prepare('INSERT OR REPLACE INTO settings VALUES (?,?)').run(key, payload)
   }

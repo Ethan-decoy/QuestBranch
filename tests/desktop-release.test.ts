@@ -76,6 +76,7 @@ function candidate() {
                 freshInstall: true,
                 installerUpgrade: true,
                 uninstallPreservesResearch: true,
+                projectCases: 22,
                 nativeUpdater: {
                   downloadVerifiedBySdk: true,
                   shutdownBySdk: true,
@@ -102,6 +103,7 @@ function candidate() {
           networkCases: 1,
           oauthCases: 1,
           modelFixtureRuns: 14,
+          projectCases: 22,
         },
         signing: { adHocVerified: true },
         appImage: {
@@ -218,6 +220,17 @@ it('rejects a missing platform and failed runtime checks', () => {
   expect(c.run().status).not.toBe(0)
   delete c.records['macos-x64']
   rmSync(join(c.folder, 'release/VERIFICATION-macos-x64.json'))
+  expect(c.run().status).not.toBe(0)
+})
+
+it('requires project navigation acceptance from each installed native package', () => {
+  const c = candidate()
+  const installer = c.records['windows-x64'].installer
+  if (!installer) throw new Error('Missing Windows fixture')
+  installer.projectCases = 0
+  expect(c.run().status).not.toBe(0)
+  installer.projectCases = 22
+  c.records['macos-arm64'].runtime.projectCases = 0
   expect(c.run().status).not.toBe(0)
 })
 it('rejects candidate bytes changed after native acceptance', () => {

@@ -30,9 +30,9 @@ Published developer previews provide Windows x64 installer/ZIP, Apple Silicon an
 
 See [installation and upgrades](docs/desktop-installation.en.md), the [Windows isolated trial](docs/windows-trial.en.md), and [FAQ](docs/faq.en.md). Windows is unsigned; Mac uses ad-hoc signing without Developer ID or notarization. Tested OS versions and limitations are recorded with each release.
 
-For AppImages on dev.7 or earlier, download dev.8 manually once, then use the repaired built-in updater.
+For AppImages on dev.7 or earlier, download the current version manually once, then use the repaired built-in updater.
 
-1. Read the example or create your own research space and root question.
+1. Read the example, or create a project and add your own study and root question.
 2. Connect a model or an agent. Tools and web search depend on the chosen connection; an account login alone does not enable them.
 3. Discuss in a node. When directions are clear, ask AI to save a stage report and create those pending branches.
 4. Select a direction to continue, compare specific report versions, then quit and reopen to resume.
@@ -41,6 +41,7 @@ The example stays available. Chat suggestions only fill editable drafts; child r
 
 ## Features
 
+- Organize topics with Project → Research, drag to reorder, and keep research and QB sessions in project folders, with archive reading, export and relocation.
 - Organize questions on a research canvas; expand or collapse branches, search, compare reports, and synthesize findings across directions.
 - Continue conversations within a node. AI tools can save stage reports and agreed child branches while preserving original messages and report history.
 - Connect supported accounts, API services, and Ollama through Pi AI, or use an agent's own tools and skills through ACP.
@@ -85,7 +86,7 @@ For an API service, select a provider and enter your key. Custom services also r
 
 Press Enter to send and Shift+Enter for a new line by default. Change this in **Settings → Shortcuts**. The composer lets you select models and reasoning effort offered by the current connection. When asked to save a report or create agreed research directions, AI uses research tools to save them; child research does not start automatically.
 
-The browser preview uses `.questbranch/` in the project directory by default. The Windows desktop app defaults to `%APPDATA%\questbranch\research`. See the [usage guide](docs/getting-started.en.md) for storage migration, export and restore, and environment configuration.
+Desktop navigation uses **Project → Research**: each project can contain multiple studies, with research and QB session state saved in its folder. Create projects with the sidebar plus button and research with the project-row plus button. Right-click to rename, pin, archive or move research. Windows defaults to `%APPDATA%\questbranch\research\projects`; custom folders are supported. Browser preview retains `.questbranch/` in its working directory. See the [usage guide](docs/getting-started.en.md) for migration, backups and recovery.
 
 ## Source layout
 

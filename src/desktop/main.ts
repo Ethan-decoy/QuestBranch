@@ -5,22 +5,20 @@ import { randomUUID } from 'node:crypto'
 import log from 'electron-log/main.js'
 import { DesktopUpdates } from './app-updates'
 import { createUpdateTransport } from './update-transport'
-import { ResearchStore } from './store'
+import { ProjectLibrary } from './project-library'
+import { inspectProject, projectData, projectFolder } from './project-files'
+import { projectCommandSchema } from './project-commands'
+import { existsSync } from 'node:fs'
 import { ResearchService } from './service'
 import { PiModels } from './pi-models'
 import { createElectronNetwork } from './network-electron'
 import { createNetworkLog } from './network-log'
 import { installHostFetch } from './network'
 import { installNativeAppearance, windowAppearance } from './appearance'
-import {
-  loadStorageLocation,
-  relocateResearchStorage,
-  validateStorageDestination,
-} from './storage-location'
+import { loadStorageLocation } from './storage-location'
 
 const directory = dirname(fileURLToPath(import.meta.url))
-let service: ResearchService
-let store: ResearchStore
+let service: ProjectLibrary
 let disposeAppearance: (() => void) | undefined
 let disposeNetwork: (() => void) | undefined
 let disposeUpdates: (() => void) | undefined
@@ -81,25 +79,34 @@ void app
     const location = loadStorageLocation(userData, process.env.QUESTBRANCH_DATA_DIR)
     let relocating = false
     let updates: DesktopUpdates | undefined
-    let selection: { directory: string; token: string; sender: number } | undefined
+    let selection:
+      | {
+          directory: string
+          token: string
+          sender: number
+          kind: 'project' | 'relocate'
+          projectId: string
+        }
+      | undefined
     const writable = () => {
-      if (relocating) throw new Error('正在迁移研究资料，应用即将重启')
+      if (relocating) throw new Error('正在迁移研究项目，请稍后重试')
       if (updates?.installing) throw new Error('正在安装更新，应用即将重启')
     }
-    store = new ResearchStore(location.directory, {
+    service = new ProjectLibrary(location.directory, userData, {
       codec: safeStorage.isEncryptionAvailable()
         ? {
             encrypt: (value) => safeStorage.encryptString(value).toString('base64'),
             decrypt: (value) => safeStorage.decryptString(Buffer.from(value, 'base64')),
           }
         : undefined,
+      service: (store) =>
+        new ResearchService(
+          store,
+          new PiModels(store, { openAuthUrl: (url) => shell.openExternal(url), network }),
+          undefined,
+          network,
+        ),
     })
-    service = new ResearchService(
-      store,
-      new PiModels(store, { openAuthUrl: (url) => shell.openExternal(url), network }),
-      undefined,
-      network,
-    )
     const logUpdate = (phase: string, error?: unknown) => {
       // Record phase and a bounded code, never SDK URLs, headers or account data.
       const code = error && typeof error === 'object' && 'code' in error ? String(error.code) : ''
@@ -132,7 +139,7 @@ void app
     ipcMain.handle('research:snapshot', async (_, sinceVersion?: number) => {
       const snapshot =
         sinceVersion === undefined ? await service.snapshot() : await service.snapshot(sinceVersion)
-      return snapshot && { ...snapshot, storage: { ...snapshot.storage!, source: location.source } }
+      return snapshot
     })
     ipcMain.handle('research:command', (_, command) => {
       writable()
@@ -179,45 +186,80 @@ void app
       return service.auth.logout(settings)
     })
     ipcMain.handle('research:export', (_, id: string) => service.exportWorkspace(id))
-    ipcMain.handle('storage:choose-directory', async (event) => {
+    const chooseFolder = async (
+      event: Electron.IpcMainInvokeEvent,
+      kind: 'project' | 'relocate',
+    ) => {
       writable()
-      if (location.source === 'environment')
-        throw new Error('当前保存位置由 QUESTBRANCH_DATA_DIR 指定，请移除启动覆盖后再选择')
       const window = BrowserWindow.fromWebContents(event.sender)
       if (!window) throw new Error('请在问之窗口中选择文件夹')
       const result = await dialog.showOpenDialog(window, {
-        title: '选择一个空文件夹保存问之研究',
-        buttonLabel: '选择保存位置',
+        title: kind === 'project' ? '选择研究项目文件夹' : '选择此项目的新位置',
+        buttonLabel: '选择文件夹',
         properties: ['openDirectory', 'createDirectory', 'dontAddToRecent'],
       })
       if (result.canceled || !result.filePaths[0]) return null
+      const snapshot = await service.snapshot()
+      const directory =
+        kind === 'relocate'
+          ? service.relocationDirectory(snapshot.activeProjectId ?? '', result.filePaths[0])
+          : projectFolder(result.filePaths[0])
+      const legacy = service.isLegacyDirectory(directory)
+      const existing = existsSync(projectData(directory)) || legacy
+      if (kind === 'relocate' && existing) throw new Error('此文件夹已有项目数据，请选择其他文件夹')
+      if (existing) inspectProject(directory, legacy)
       selection = {
-        directory: validateStorageDestination(store.directory, result.filePaths[0]),
+        directory,
         token: randomUUID(),
         sender: event.sender.id,
+        kind,
+        projectId: snapshot.activeProjectId ?? '',
       }
-      return { directory: selection.directory, token: selection.token }
+      return { directory: selection.directory, token: selection.token, existing }
+    }
+    const chosen = (
+      event: Electron.IpcMainInvokeEvent,
+      token: unknown,
+      kind: 'project' | 'relocate',
+    ) => {
+      if (
+        !selection ||
+        selection.sender !== event.sender.id ||
+        token !== selection.token ||
+        selection.kind !== kind
+      )
+        throw new Error('请先选择项目文件夹')
+      return selection
+    }
+    ipcMain.handle('projects:choose-directory', (event) => chooseFolder(event, 'project'))
+    ipcMain.handle('projects:command', async (event, input) => {
+      writable()
+      const command = projectCommandSchema.parse(input)
+      const directory =
+        command.type === 'create-project' && command.directoryToken
+          ? chosen(event, command.directoryToken, 'project').directory
+          : undefined
+      const result = await service.projectCommand(command, directory)
+      if (command.type === 'create-project') selection = undefined
+      return result
     })
+    ipcMain.handle('projects:open', async (event, token) => {
+      writable()
+      const result = await service.openProject(chosen(event, token, 'project').directory)
+      selection = undefined
+      return result
+    })
+    ipcMain.handle('storage:choose-directory', (event) => chooseFolder(event, 'relocate'))
     ipcMain.handle('storage:relocate', async (event, token: unknown) => {
       writable()
-      if (!selection || selection.sender !== event.sender.id || token !== selection.token)
-        throw new Error('请先选择新的研究保存文件夹')
-      if (service.hasActiveRuns) throw new Error('请等待当前研究或账号连接结束后再迁移')
+      const selected = chosen(event, token, 'relocate')
       relocating = true
       try {
-        await relocateResearchStorage(store, userData, selection.directory)
-      } catch (error) {
+        await service.relocateProject(selected.projectId, selected.directory)
+        selection = undefined
+      } finally {
         relocating = false
-        throw error
       }
-      setTimeout(() => {
-        try {
-          app.relaunch()
-        } catch {
-          dialog.showErrorBox('研究位置已更改', '资料已迁移，请重新打开问之继续研究。')
-        }
-        app.quit()
-      }, 400)
     })
     createWindow()
   })
@@ -234,10 +276,10 @@ app.on('activate', () => {
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
 })
-app.on('before-quit', () => {
+// Windows must finish their beforeunload view saves before storage is closed.
+app.on('will-quit', () => {
   disposeUpdates?.()
   disposeAppearance?.()
   service?.shutdown()
-  if (store?.isOpen) store.close()
   disposeNetwork?.()
 })

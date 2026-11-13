@@ -15,7 +15,7 @@ const text = z.string().max(100_000),
     ),
   time = z.iso.datetime()
 export { id as recordIdSchema }
-const workspaceSchema = z.object({
+export const workspaceSchema = z.object({
   id,
   name: text,
   question: text,

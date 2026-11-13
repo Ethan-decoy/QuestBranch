@@ -1,5 +1,6 @@
 import { create } from 'zustand'
-import type { AppCommand, Snapshot, ViewState, ReaderState } from '../research/types'
+import type { AppCommand, Snapshot, ViewState, ReaderState, ProjectFolder } from '../research/types'
+import type { ProjectCommand, ProjectResult } from '../research/projects'
 import { client } from './client'
 import { graphPresentation, transitionView, type ViewAction } from './research-view'
 import type { ResearchSearchHit } from './research-search'
@@ -17,13 +18,25 @@ type NavigationTarget = Pick<
 >
 
 type Dialog =
-  'workspace' | 'node' | 'sibling' | 'edit' | 'settings' | 'models' | 'search' | 'compare' | null
+  | 'project'
+  | 'workspace'
+  | 'node'
+  | 'sibling'
+  | 'edit'
+  | 'settings'
+  | 'models'
+  | 'search'
+  | 'compare'
+  | null
 export type SettingsSection = 'general' | 'appearance' | 'shortcuts' | 'storage' | 'updates'
 type State = {
   snapshot: Snapshot | null
   workspaceId: string
   view: ViewState | null
   dialog: Dialog
+  projectFolder: ProjectFolder | null
+  projectTargetId: string
+  projectCommand: (input: ProjectCommand) => Promise<ProjectResult>
   settingsSection: SettingsSection
   setSettingsSection: (section: SettingsSection) => void
   error: string
@@ -42,17 +55,23 @@ type State = {
   locate: (hit: NavigationTarget) => void
   jumpToRelated: (id: string) => void
   navigateGraph: (action: ViewAction) => void
-  workspace: (id: string) => void
+  workspace: (id: string) => Promise<void>
   setView: (patch: Partial<ViewState>) => void
   open: (
     dialog: Dialog,
-    options?: { returnToGraph?: boolean; settingsSection?: SettingsSection },
+    options?: {
+      returnToGraph?: boolean
+      settingsSection?: SettingsSection
+      folder?: ProjectFolder
+      projectId?: string
+    },
   ) => void
   setError: (error: string) => void
   setLayoutWidths: (widths: WorkbenchWidths) => boolean
   resetLayout: () => boolean
 }
 let timer: ReturnType<typeof setTimeout> | undefined
+let workspaceRequest = 0
 const retained = import.meta.hot?.data.state as
   Pick<State, 'snapshot' | 'workspaceId' | 'view'> | undefined
 export const useApp = create<State>((set, get) => ({
@@ -60,6 +79,8 @@ export const useApp = create<State>((set, get) => ({
   workspaceId: retained?.workspaceId ?? localStorage.getItem('questbranch-workspace') ?? '',
   view: retained?.view ?? null,
   dialog: null,
+  projectFolder: null,
+  projectTargetId: '',
   settingsSection: 'general',
   setSettingsSection: (settingsSection) => set({ settingsSection }),
   error: '',
@@ -81,15 +102,35 @@ export const useApp = create<State>((set, get) => ({
   async refresh() {
     try {
       const previous = get().snapshot
-      const snapshot = previous ? await client.snapshot(previous.version) : await client.snapshot()
+      let snapshot = previous ? await client.snapshot(previous.version) : await client.snapshot()
       if (!snapshot) return
       const old = get()
+      if (
+        !previous &&
+        client.projects &&
+        old.workspaceId &&
+        snapshot.workspaces.some((workspace) => workspace.id === old.workspaceId) &&
+        snapshot.projects?.some(
+          (project) =>
+            project.available &&
+            snapshot!.workspaces.some(
+              (workspace) => workspace.id === old.workspaceId && workspace.projectId === project.id,
+            ),
+        ) &&
+        snapshot.activeWorkspaceId !== old.workspaceId
+      ) {
+        await client.projects.command({ type: 'select-research', workspaceId: old.workspaceId })
+        snapshot = await client.snapshot()
+      }
       if (old.snapshot && snapshot.version <= old.snapshot.version) return
       for (const [id, local] of Object.entries(old.snapshot?.views ?? {}))
         if ((local.revision ?? 0) > (snapshot.views[id]?.revision ?? 0)) snapshot.views[id] = local
-      const workspaceId = snapshot.workspaces.some((w) => w.id === old.workspaceId)
-        ? old.workspaceId
-        : (snapshot.workspaces[0]?.id ?? '')
+      const requested = snapshot.activeWorkspaceId ?? old.workspaceId
+      const workspaceId = client.projects
+        ? (snapshot.activeWorkspaceId ?? '')
+        : snapshot.workspaces.some((w) => w.id === requested)
+          ? requested
+          : (snapshot.workspaces[0]?.id ?? '')
       let view =
         old.view && old.workspaceId === workspaceId
           ? old.view
@@ -253,7 +294,12 @@ export const useApp = create<State>((set, get) => ({
       })
     }
   },
-  workspace(id) {
+  async workspace(id) {
+    if (client.projects) {
+      await get().projectCommand({ type: 'select-research', workspaceId: id })
+      return
+    }
+    const request = ++workspaceRequest
     const { snapshot } = get()
     if (!snapshot) return
     clearTimeout(timer)
@@ -262,16 +308,44 @@ export const useApp = create<State>((set, get) => ({
       void client
         .command({ type: 'save-view', workspaceId: previous.workspaceId, view: previous.view })
         .catch(() => {})
+    const currentSnapshot = get().snapshot ?? snapshot
+    if (
+      request !== workspaceRequest ||
+      (currentSnapshot.activeWorkspaceId && currentSnapshot.activeWorkspaceId !== id)
+    )
+      return
     localStorage.setItem('questbranch-workspace', id)
     set({
       workspaceId: id,
       navigationTarget: null,
-      view: snapshot.views[id] ?? {
-        selectedId: snapshot.workspaces.find((w) => w.id === id)!.rootId,
+      view: currentSnapshot.views[id] ?? {
+        selectedId: currentSnapshot.workspaces.find((w) => w.id === id)!.rootId,
         collapsed: [],
         drafts: {},
       },
     })
+  },
+  async projectCommand(input) {
+    if (!client.projects) throw new Error('当前环境没有项目文件夹能力')
+    const selection = ['select-project', 'select-research'].includes(input.type)
+    const request = selection ? ++workspaceRequest : 0
+    try {
+      set({ busy: true, error: '' })
+      await flushViewNow()
+      if (selection && request !== workspaceRequest) return {}
+      const result = await client.projects.command(input)
+      if (selection && request !== workspaceRequest) return result
+      await get().refresh()
+      if (selection && request !== workspaceRequest) return result
+      localStorage.setItem('questbranch-workspace', get().workspaceId)
+      set({ navigationTarget: null })
+      return result
+    } catch (error) {
+      set({ error: error instanceof Error ? error.message : String(error) })
+      throw error
+    } finally {
+      set({ busy: false })
+    }
   },
   setView(patch) {
     const current = get()
@@ -295,6 +369,13 @@ export const useApp = create<State>((set, get) => ({
     }, 280)
   },
   open: (dialog, options) => {
+    if (dialog && ['node', 'sibling', 'edit', 'compare'].includes(dialog)) {
+      const state = get()
+      if (state.snapshot?.researchNavigation?.[state.workspaceId]?.archivedAt) {
+        set({ error: i18next.t('此研究已归档，请先恢复研究') })
+        return
+      }
+    }
     if (dialog === 'node' || dialog === 'sibling') {
       const { snapshot, view } = get()
       const node = snapshot?.nodes.find((node) => node.id === view?.selectedId)
@@ -303,6 +384,11 @@ export const useApp = create<State>((set, get) => ({
     }
     set({
       dialog,
+      ...(dialog === 'workspace' ? { projectFolder: options?.folder ?? null } : {}),
+      ...(dialog === 'project' ? { projectFolder: options?.folder ?? null } : {}),
+      ...(dialog === 'workspace'
+        ? { projectTargetId: options?.projectId ?? get().snapshot?.activeProjectId ?? '' }
+        : {}),
       dialogReturnToGraph: options?.returnToGraph ?? false,
       ...(dialog === 'settings' ? { settingsSection: options?.settingsSection ?? 'general' } : {}),
     })
@@ -325,7 +411,12 @@ if (import.meta.hot)
   })
 export function flushView() {
   const state = useApp.getState()
-  if (state.view) {
+  if (
+    state.snapshot?.projects?.find((project) => project.id === state.snapshot?.activeProjectId)
+      ?.available === false
+  )
+    return
+  if (state.view && state.workspaceId) {
     clearTimeout(timer)
     const command: AppCommand = {
       type: 'save-view',
@@ -342,8 +433,31 @@ export function flushView() {
 }
 export async function flushViewNow() {
   clearTimeout(timer)
-  const { view, workspaceId } = useApp.getState()
-  if (view) await client.command({ type: 'save-view', workspaceId, view })
+  const { view, workspaceId, snapshot } = useApp.getState()
+  if (
+    snapshot?.projects?.find((project) => project.id === snapshot.activeProjectId)?.available ===
+    false
+  )
+    return
+  if (view && workspaceId) await client.command({ type: 'save-view', workspaceId, view })
+}
+export async function openProjectFolder() {
+  if (!client.projects) return
+  const state = useApp.getState()
+  useApp.setState({ busy: true })
+  try {
+    await flushViewNow()
+    const folder = await client.projects.chooseDirectory()
+    if (!folder) return
+    if (folder.existing) {
+      await client.projects.open(folder.token)
+      await useApp.getState().refresh()
+    } else state.open('project', { folder })
+  } catch (error) {
+    state.setError(error instanceof Error ? error.message : String(error))
+  } finally {
+    useApp.setState({ busy: false })
+  }
 }
 export function download(data: unknown, name: string) {
   const url = URL.createObjectURL(

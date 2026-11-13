@@ -32,7 +32,7 @@ Manual branch creation needs a source report belonging to the current parent nod
 
 ## How do I start my own research?
 
-The example workspace demonstrates the map, reports and sources. Use Create your own research or the plus button beside Workspaces to start a separate space; the example remains available. You can also discuss its questions. Its imported project material is not a result from your own research.
+The example demonstrates the map, reports and sources, and remains under the existing-research project. Use the plus button beside Projects to create a project, then the plus button on that project to create your research. You can also add research to an existing project. The example's imported material is not a result from your own research.
 
 ## Does local-first mean no data leaves my computer?
 
@@ -40,7 +40,7 @@ The research database is local. Cloud models and external tools receive relevant
 
 ## Where is research stored, and how do I move it?
 
-Inspect the actual path in Settings → Local storage. The standalone desktop app can copy and check the database into an empty directory, then restart; the source is retained as a backup. Research JSON moves reports, conversations and sources across systems, but omits credentials, complete native state and external work files. See the [usage guide](getting-started.en.md) for full backups. DSH has its own storage and session-backup instructions.
+Desktop navigation uses Project → Research. Each project folder's `.questbranch/research.sqlite` holds all its studies. Use the sidebar plus button and choose an existing project folder to open it. Settings → Local storage moves the whole current project without restarting and retains the source. A study's menu can transfer it individually. Copying the complete folder preserves research and QB-managed session state. Global credentials stay in the application profile; other files and external agents' native state need separate backups. Research JSON imports create separate sessions. Legacy shared libraries are not split automatically. See the [usage guide](getting-started.en.md) for backup details; DSH follows its host's rules.
 
 Before the first durable-material upgrade, `backups/before-sessionweave-materials-v4/` under your research directory stores the pre-upgrade database, local credential key if present, and `backup.json`. Older SW readers cannot open the new session format. To restore an older app, quit QB, separately back up your current research, then restore the complete pre-upgrade database and key together. This older backup excludes later research; lowering a version field or deleting material records is not a downgrade.
 

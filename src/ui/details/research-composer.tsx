@@ -29,11 +29,12 @@ export function ResearchComposer({
     .filter((run) => run.nodeId === node.id)
     .reverse()
     .find((run) => run.status === 'running')
+  const archived = !!snapshot.researchNavigation?.[node.workspaceId]?.archivedAt
   const draft = view.chatDrafts?.[node.id] ?? view.drafts[node.id] ?? ''
   const composing = useRef(false),
     compositionConfirmUntil = useRef(0)
   const start = async () => {
-    if (selectionBusy || running) return
+    if (selectionBusy || running || archived) return
     if (snapshot.settings.backend === 'acp' ? !snapshot.settings.agent : !snapshot.settings.model) {
       open('models')
       return
@@ -64,7 +65,8 @@ export function ResearchComposer({
         onChange={(event) =>
           setView({ chatDrafts: { ...view.chatDrafts, [node.id]: event.target.value } })
         }
-        placeholder={t('在这条分支上，你想聊些什么？')}
+        placeholder={archived ? t('恢复研究后可继续对话') : t('在这条分支上，你想聊些什么？')}
+        readOnly={archived}
         aria-label={t('节点对话输入')}
         maxLength={12000}
         onCompositionStart={() => {
@@ -114,7 +116,7 @@ export function ResearchComposer({
             aria-keyshortcuts={sendShortcut === 'enter' ? 'Enter' : 'Control+Enter Meta+Enter'}
             title={t('发送消息（{{val}}）', { val: sendShortcutLabel(sendShortcut) })}
             onClick={() => void start()}
-            disabled={!draft.trim() || selectionBusy}
+            disabled={!draft.trim() || selectionBusy || archived}
           >
             <ArrowUp size={18} aria-hidden="true" />
           </Button>

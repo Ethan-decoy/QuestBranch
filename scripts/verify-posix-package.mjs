@@ -16,6 +16,7 @@ import {
 } from 'node:fs'
 import { dirname, join, resolve, sep } from 'node:path'
 import { desktopPackage } from './desktop-package.mjs'
+import { readReleaseCatalog, selectPreviousRelease } from './desktop-release-catalog.mjs'
 
 assert.equal(process.env.GITHUB_ACTIONS, 'true', 'Use a disposable Actions runner')
 assert.equal(process.env.GITHUB_REPOSITORY, 'Ethan-decoy/QuestBranch')
@@ -75,14 +76,10 @@ function preserveResult(folder, name) {
   return result
 }
 
-async function research(root, name, extra = []) {
+async function research(root, name, extra = [], verifier = 'scripts/verify-branching-mcp.mjs') {
   let output
   try {
-    output = await run(name, process.execPath, [
-      'scripts/verify-branching-mcp.mjs',
-      `--package-root=${root}`,
-      ...extra,
-    ])
+    output = await run(name, process.execPath, [verifier, `--package-root=${root}`, ...extra])
   } catch (error) {
     const stdout = readFileSync(join(evidence, `${name}.stdout.log`), 'utf8')
     const folder = stdout.match(/^Verification folder: (.+)$/m)?.[1]
@@ -209,6 +206,9 @@ const network = await gui(installed, 'verify-network', 'network')
 const oauth = await gui(installed, 'verify-auth-recovery', 'oauth')
 const models = await gui(installed, 'verify-pi-models', 'models', ['--packaged'])
 assert.equal(models.completedRuns, 14)
+const projects = await gui(installed, 'verify-project-folders', 'projects')
+assert.equal(projects.status, 'passed')
+assert.equal(projects.cases.length, 22)
 const imported = await research(installed, 'windows-research-import', [
   '--restore=tests/fixtures/portable-research-v3.json',
 ])
@@ -223,6 +223,7 @@ if (process.platform === 'linux') {
     `--reopen=${imageStudy.folder}`,
   ])
   const predecessor = join(temporary, 'QuestBranch-upgrade.AppImage')
+  const previous = selectPreviousRelease(await readReleaseCatalog(), version)
   await run('appimage-predecessor', 'curl', [
     '--fail',
     '--location',
@@ -230,14 +231,36 @@ if (process.platform === 'linux') {
     '2',
     '--output',
     predecessor,
-    'https://github.com/Ethan-decoy/QuestBranch/releases/download/v0.3.0-dev.7/QuestBranch-0.3.0-dev.7-linux-x86_64.AppImage',
+    previous.assets.appImage.url,
   ])
-  assert.equal(
-    sha256(predecessor),
-    'b8a4c05173f06638920462ba7fdfe28724bd817cd7e02aacf589f37bc76e476b',
-  )
+  assert.equal(sha256(predecessor), previous.assets.appImage.sha256)
   chmodSync(predecessor, 0o755)
-  const data = join(imageStudy.folder, 'research')
+  const verifierRoot = join(temporary, 'predecessor-verifier')
+  const verifierArchive = join(temporary, 'predecessor-verifier.tar')
+  mkdirSync(verifierRoot)
+  assert.equal(
+    JSON.parse(
+      execFileSync('git', ['show', `${previous.sourceCommit}:package.json`], { encoding: 'utf8' }),
+    ).version,
+    previous.version,
+  )
+  await run('predecessor-verifier-source', 'git', [
+    'archive',
+    '--format=tar',
+    `--output=${verifierArchive}`,
+    previous.sourceCommit,
+    'scripts/verify-branching-mcp.mjs',
+    'scripts/desktop-package.mjs',
+  ])
+  await run('predecessor-verifier-extract', 'tar', ['-xf', verifierArchive, '-C', verifierRoot])
+  const previousVerifier = join(verifierRoot, 'scripts/verify-branching-mcp.mjs')
+  const previousStudy = await research(
+    built.root,
+    'appimage-predecessor-research',
+    [`--executable=${predecessor}`],
+    previousVerifier,
+  )
+  const data = join(previousStudy.folder, 'research')
   await run(
     'native-update',
     engine,
@@ -245,9 +268,11 @@ if (process.platform === 'linux') {
       'scripts/verify-native-update.mjs',
       `--previous-root=${predecessor}`,
       `--installer=${image}`,
-      '--previous-version=0.3.0-dev.7',
+      `--previous-version=${previous.version}`,
+      `--previous-verifier=${previousVerifier}`,
+      `--previous-source=${previous.sourceCommit}`,
       `--node-executable=${process.execPath}`,
-      `--reopen=${imageStudy.folder}`,
+      `--reopen=${previousStudy.folder}`,
     ],
     {
       env: { ...environment, QUESTBRANCH_DATA_DIR: data },
@@ -317,6 +342,8 @@ if (process.platform === 'linux') {
   )
   assert(relaunchedPid, 'Updated AppImage did not relaunch its research window')
   const nativeUpdate = json(join(evidence, 'native-update-linux.json'))
+  assert.equal(nativeUpdate.fromVersion, previous.version)
+  assert.equal(nativeUpdate.predecessorVerifierSource, previous.sourceCommit)
   assert.equal(nativeUpdate.installRequested, true)
   assert.equal(nativeUpdate.shutdownBySdk, true)
   assert.equal(nativeUpdate.normalQuit, true)
@@ -342,7 +369,7 @@ if (process.platform === 'linux') {
   await new Promise((done) => setTimeout(done, 1000))
   await research(built.root, 'appimage-updated-reopen', [
     `--executable=${predecessor}`,
-    `--reopen=${imageStudy.folder}`,
+    `--reopen=${previousStudy.folder}`,
   ])
   appImage = { realLauncher: true, researchAndReopen: true, nativeUpdater: nativeUpdate }
   await run('deb-uninstall', 'sudo', ['apt-get', 'remove', '-y', 'questbranch'])
@@ -379,6 +406,7 @@ const record = {
     networkCases: network.cases.length,
     oauthCases: oauth.cases.length,
     modelFixtureRuns: models.completedRuns,
+    projectCases: projects.cases.length,
   },
   package: json(join(evidence, 'package-integrity.json')),
   om: (() => {

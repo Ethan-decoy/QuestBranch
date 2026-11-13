@@ -1,9 +1,10 @@
 import { DatabaseSync } from 'node:sqlite'
-import { mkdirSync } from 'node:fs'
+import { mkdirSync, existsSync, copyFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { createHash, randomUUID } from 'node:crypto'
 import { z } from 'zod'
 import { SqliteSessionArchive } from './session-archive'
+import { ProjectData } from './project-data'
 import { recordIdSchema, viewSchema, exportSchema } from './storage-schemas'
 import { SettingsStore, createLocalCredentialCodec, type CredentialCodec } from './settings-store'
 export { viewSchema } from './storage-schemas'
@@ -36,20 +37,41 @@ export class ResearchStore {
   private db: DatabaseSync
   private readonly settingsStore: SettingsStore
   readonly sessions: SqliteSessionArchive
+  readonly projectData: ProjectData
   private transactionDepth = 0
   get isOpen() {
     return this.db.isOpen
   }
   constructor(
     readonly directory: string,
-    options: { seed?: boolean; codec?: CredentialCodec; recoverRuns?: boolean } = {},
+    options: {
+      seed?: boolean
+      codec?: CredentialCodec
+      recoverRuns?: boolean
+      settingsStore?: SettingsStore
+      credentialDatabase?: string
+      agentWorkingDirectory?: string
+    } = {},
   ) {
     mkdirSync(directory, { recursive: true })
-    const codec = options.codec ?? createLocalCredentialCodec(directory)
+    this.credentialDatabase = options.credentialDatabase ?? join(directory, 'research.sqlite')
+    this.agentWorkingDirectory = options.agentWorkingDirectory ?? join(directory, 'agent-workspace')
     this.db = new DatabaseSync(join(directory, 'research.sqlite'))
-    if (Number(this.db.prepare('PRAGMA user_version').get()!.user_version) > 3) {
+    const previousVersion = Number(this.db.prepare('PRAGMA user_version').get()!.user_version)
+    if (previousVersion > 4) {
       this.db.close()
       throw new Error('数据库由较新的问之版本创建，请使用对应版本打开')
+    }
+    if (previousVersion > 0 && previousVersion < 4) {
+      const backupDirectory = join(directory, 'backups')
+      mkdirSync(backupDirectory, { recursive: true })
+      const backupName = `pre-projects-${randomUUID()}`
+      this.db.prepare('VACUUM INTO ?').run(join(backupDirectory, backupName + '.sqlite'))
+      if (existsSync(join(directory, '.credential-key')))
+        copyFileSync(
+          join(directory, '.credential-key'),
+          join(backupDirectory, backupName + '.credential-key'),
+        )
     }
     this.db.exec(`PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;
       CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value INTEGER NOT NULL);
@@ -66,16 +88,26 @@ export class ResearchStore {
       CREATE TABLE IF NOT EXISTS node_edits (id INTEGER PRIMARY KEY, node_id TEXT NOT NULL REFERENCES nodes(id), previous TEXT NOT NULL, created_at TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS messages (id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL REFERENCES workspaces(id), node_id TEXT NOT NULL REFERENCES nodes(id), run_id TEXT NOT NULL REFERENCES runs(id), role TEXT NOT NULL, payload TEXT NOT NULL, UNIQUE(run_id,role));
       CREATE INDEX IF NOT EXISTS messages_node ON messages(node_id);
-      PRAGMA user_version=3;`)
-    this.settingsStore = new SettingsStore(this.db, codec, (operation) =>
-      this.transaction(operation),
-    )
+      `)
+    this.projectData = new ProjectData(this.db, (work) => this.transaction(work))
+    this.settingsStore =
+      options.settingsStore ??
+      new SettingsStore(
+        this.db,
+        options.codec ?? createLocalCredentialCodec(directory),
+        (operation) => this.transaction(operation),
+      )
     this.sessions = new SqliteSessionArchive(this.db)
     this.db.exec(`CREATE TABLE IF NOT EXISTS acp_sessions (
       id TEXT PRIMARY KEY, node_id TEXT NOT NULL REFERENCES nodes(id), connection TEXT NOT NULL,
       active INTEGER NOT NULL DEFAULT 1, payload TEXT NOT NULL);
       CREATE UNIQUE INDEX IF NOT EXISTS acp_active ON acp_sessions(node_id,connection) WHERE active=1;`)
-    if (options.seed !== false && !this.all<Workspace>('workspaces').length) {
+    this.db.exec('PRAGMA user_version=4')
+    if (
+      options.seed !== false &&
+      !this.projectData.info() &&
+      !this.all<Workspace>('workspaces').length
+    ) {
       const initial = starterResearch()
       this.transaction(() => {
         this.insertWorkspace(initial.workspace)
@@ -150,11 +182,18 @@ export class ResearchStore {
       ).map((row) => JSON.parse(row.payload) as ConversationMessage),
       views,
       settings: this.settings(),
+      project: this.projectData.info(),
+      researchNavigation: this.projectData.navigation(),
       storage: { directory: this.directory, database: join(this.directory, 'research.sqlite') },
     }
   }
   settings(): Settings {
     return this.settingsStore.settings()
+  }
+  readonly credentialDatabase: string
+  readonly agentWorkingDirectory: string
+  copySettingsTo(target: SettingsStore) {
+    this.settingsStore.copyTo(target)
   }
   credentials(): { apiKey: string; searchKey: string } {
     return this.settingsStore.credentials()
@@ -226,6 +265,16 @@ export class ResearchStore {
       this.saveView(wid, { selectedId: nid, collapsed: [], drafts: {} })
     })
     return wid
+  }
+  renameWorkspace(id: string, name: string) {
+    this.transaction(() => {
+      const row = this.db.prepare('SELECT payload FROM workspaces WHERE id=?').get(id)
+      if (!row) throw new Error('研究不存在')
+      const workspace = JSON.parse(String(row.payload)) as Workspace
+      this.db
+        .prepare('UPDATE workspaces SET payload=? WHERE id=?')
+        .run(JSON.stringify({ ...workspace, name, updatedAt: new Date().toISOString() }), id)
+    })
   }
   report(id: string): Report {
     const row = this.db.prepare('SELECT payload FROM reports WHERE id=?').get(id) as

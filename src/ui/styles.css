@@ -3,6 +3,58 @@
 @import './details/records.css';
 @import './details/composer.css';
 
+.project-actions,
+.project-folder-row,
+.project-start-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.project-actions {
+  gap: 4px;
+}
+.project-folder-row code {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text-secondary);
+}
+.project-folder-row {
+  margin-top: 9px;
+}
+.project-folder-row > button {
+  flex-shrink: 0;
+}
+.project-start {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  padding: 32px;
+}
+.project-start h1 {
+  margin: 0;
+  font-size: 20px;
+}
+.project-start p {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+.project-start > code {
+  max-width: min(640px, 100%);
+  overflow-wrap: anywhere;
+}
+.project-start nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
 :root {
   font-family: Inter, 'Segoe UI', 'Microsoft YaHei UI', 'PingFang SC', sans-serif;
   font-synthesis: none;

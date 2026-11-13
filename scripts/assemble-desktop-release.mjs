@@ -28,6 +28,7 @@ const platforms = Object.fromEntries(
       assert.equal(record.installer.freshInstall, true)
       assert.equal(record.installer.installerUpgrade, true)
       assert.equal(record.installer.uninstallPreservesResearch, true)
+      assert.equal(record.installer.projectCases, 22)
       assert.equal(record.installer.nativeUpdater.downloadVerifiedBySdk, true)
       assert.equal(record.installer.nativeUpdater.shutdownBySdk, true)
       assert.equal(record.installer.nativeUpdater.relaunched, true)
@@ -56,6 +57,7 @@ const platforms = Object.fromEntries(
       assert(record.runtime.networkCases > 0)
       assert(record.runtime.oauthCases > 0)
       assert.equal(record.runtime.modelFixtureRuns, 14)
+      assert.equal(record.runtime.projectCases, 22)
       if (key === 'linux-x64') {
         assert.equal(record.appImage.researchAndReopen, true)
         assert.equal(record.appImage.nativeUpdater.downloadVerifiedBySdk, true)

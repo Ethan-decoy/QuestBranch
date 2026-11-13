@@ -31,19 +31,25 @@ export class ResearchService implements ResearchClient {
   get hasActiveRuns() {
     return this.active.size > 0 || this.modelRuntime.auth.pending || this.agentRuntime.pending
   }
+  get hasPendingConnection() {
+    return this.modelRuntime.auth.pending || this.agentRuntime.pending
+  }
   constructor(
     readonly store: ResearchStore,
     private readonly modelRuntime: Pick<
       PiModels,
       'connect' | 'providers' | 'generate' | 'auth' | 'shutdown'
     > = new PiModels(store),
-    private readonly agentRuntime = new AcpAgents(store.directory),
+    private readonly agentRuntime = new AcpAgents(store.directory, store.agentWorkingDirectory),
     private readonly network: Network = defaultNetwork,
   ) {
     this.agentSessions = new AcpSessions(store)
   }
   get agent(): NonNullable<ResearchClient['agent']> {
     return this.agentRuntime
+  }
+  ownsAgentConnection(id: string) {
+    return this.agentRuntime.owns(id)
   }
   async modelProviders() {
     return this.modelRuntime.providers()

@@ -1,5 +1,13 @@
 import { z } from 'zod'
 import type { AgentClient, AgentConfig, AgentRun, AgentActivity } from './agent'
+import type {
+  ResearchProject,
+  ResearchNavigation,
+  ProjectSummary,
+  ProjectNavigation,
+  ProjectCommand,
+  ProjectResult,
+} from './projects'
 
 export const SourceSchema = z.object({
   id: z.string().max(200),
@@ -12,6 +20,7 @@ export const SourceSchema = z.object({
 })
 export type Source = z.infer<typeof SourceSchema>
 export type Workspace = {
+  projectId?: string
   id: string
   name: string
   question: string
@@ -276,10 +285,17 @@ export type Snapshot = {
   messages: ConversationMessage[]
   views: Record<string, ViewState>
   settings: Settings
+  activeWorkspaceId?: string
+  activeProjectId?: string
+  project?: ResearchProject
+  researchNavigation?: Record<string, ResearchNavigation>
+  navigation?: ProjectNavigation
+  projects?: ProjectSummary[]
   storage?: {
     directory: string
     database: string
-    source?: 'default' | 'preference' | 'environment'
+    source?: 'default' | 'preference' | 'environment' | 'project'
+    legacy?: boolean
   }
 }
 export const ResearchOutputSchema = z.object({
@@ -319,7 +335,13 @@ export type AppCommand =
   | { type: 'send-message'; nodeId: string; message: string; selectedReportId?: string }
   | { type: 'cancel-research'; runId: string }
   | { type: 'import-workspace'; data: unknown }
+export type ProjectFolder = { directory: string; token: string; existing: boolean }
 export interface ResearchClient {
+  projects?: {
+    chooseDirectory(): Promise<ProjectFolder | null>
+    command(input: ProjectCommand): Promise<ProjectResult>
+    open(token: string): Promise<ProjectResult>
+  }
   updates?: import('../app-updates').AppUpdates
   host?: {
     name: string

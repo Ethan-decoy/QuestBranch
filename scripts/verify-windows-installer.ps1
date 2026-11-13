@@ -9,10 +9,12 @@ $qbEvidence = Join-Path $qbRoot 'artifacts/release-evidence'
 New-Item -ItemType Directory -Path $qbEvidence -Force | Out-Null
 $qbTemporary = Join-Path $env:RUNNER_TEMP ('questbranch-installer-' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $qbTemporary | Out-Null
-$qbPreviousVersion = '0.3.0-dev.7'
-$qbPreviousDigest = '41416c4dd761a165b8dd56140adfe33ca0d2ccc88a08636f8bd949535b0a929e'
-$qbPreviousInstallerDigest = '2b54ea54bbd921181910a74f1a4d91497ca0b857297a101bf33223a081824e8f'
-$qbPreviousSourceCommit = 'dda47930c59ea75cd897162758203bda9ea484eb'
+$qbPrevious = & node scripts/desktop-release-catalog.mjs previous | ConvertFrom-Json
+if ($LASTEXITCODE -ne 0) { throw 'Cannot select a verified published predecessor' }
+$qbPreviousVersion = $qbPrevious.version
+$qbPreviousDigest = $qbPrevious.assets.zip.sha256
+$qbPreviousInstallerDigest = $qbPrevious.assets.installer.sha256
+$qbPreviousSourceCommit = $qbPrevious.sourceCommit
 $qbPreviousVerifier = Join-Path $qbTemporary 'previous-verifier'
 $qbPreviousVerifierArchive = Join-Path $qbTemporary 'previous-verifier.zip'
 $qbPreviousArchive = Join-Path $qbTemporary 'previous.zip'
@@ -64,6 +66,10 @@ function Run-QbElectronCheck([string]$Script, [string[]]$Arguments, [string]$Nam
   if ($Script -like '*conversation*') {
     if ($qbLastLine -notmatch '^Conversation actions verified \(14 cases\): (.+)$') { throw 'Missing conversation acceptance record' }
     $qbResultFolder = $Matches[1]
+  } elseif ($Script -like '*project-folders*') {
+    $qbResult = $qbLastLine | ConvertFrom-Json
+    if ($qbResult.status -ne 'passed' -or $qbResult.cases.Count -ne 22) { throw 'Project acceptance count or status mismatch' }
+    $qbResultFolder = $qbResult.folder
   } else {
     $qbResult = $qbLastLine | ConvertFrom-Json
     if ($qbResult.cases -ne 12 -or $qbResult.issues.Count) { throw 'Graph acceptance count or issues mismatch' }
@@ -132,6 +138,7 @@ Install-Qb (Resolve-Path -LiteralPath $Installer).Path $qbFreshDirectory $qbVers
 if ((Hash-QbFile (Join-Path $qbFreshDirectory 'resources/app.asar')) -ne (Hash-QbFile 'release/win-unpacked/resources/app.asar')) { throw 'Fresh install bytes differ from final build' }
 $qbFreshStudy = Invoke-QbResearch $qbFreshDirectory 'fresh-installed-research'
 $null = Invoke-QbResearch $qbFreshDirectory 'fresh-installed-reopen' $qbFreshStudy
+Run-QbElectronCheck 'scripts/verify-project-folders.mjs' @("--package-root=$qbFreshDirectory") 'installed-projects'
 $qbPortableStudy = Invoke-QbResearch (Join-Path $qbPreviousApp 'win-unpacked') 'old-portable-research' -PreviousRelease
 $qbBackup = Join-Path $qbPortableStudy 'research.questbranch.json'
 & node scripts/verify-branching-mcp.mjs "--package-root=$qbFreshDirectory" "--restore=$qbBackup" *> (Join-Path $qbEvidence 'portable-import.log')
@@ -151,7 +158,7 @@ $qbEvidenceRecord = [ordered]@{
   installerUpgrade=$true; reportsConversationsAndOriginsPreserved=$true; savedStorageLocationPreserved=$true;
   nativeUpdater=$qbNativeUpdate;
   oldPortableJsonImportAndReopen=$true; normalExitAndReopen=$true; uninstallPreservesResearch=$true;
-  conversationCases=14; branchingCases=15; lightGraphCases=12; darkGraphCases=12;
+  conversationCases=14; branchingCases=15; lightGraphCases=12; darkGraphCases=12; projectCases=22;
   installerSignature=(Get-AuthenticodeSignature -LiteralPath $Installer).Status.ToString()
 }
 $qbEvidenceRecord | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $qbEvidence 'installer-verification.json') -Encoding utf8

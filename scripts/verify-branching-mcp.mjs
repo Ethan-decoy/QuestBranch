@@ -276,8 +276,10 @@ try {
   } else if (previous) {
     const current = await snapshot()
     if (process.argv.includes('--saved-location')) {
-      assert.equal(current.storage.source, 'preference')
+      assert.equal(current.storage.source, 'project')
       assert.equal(resolve(current.storage.directory), resolve(research))
+      assert.equal(resolve(current.storage.database), join(resolve(research), 'research.sqlite'))
+      assert.equal(current.storage.legacy, true)
       evidence.savedStorageLocationPreserved = true
     }
     assert.equal(
@@ -308,18 +310,25 @@ try {
     evidence.reopenedAndRetried = true
     await capture('08-reopened')
   } else {
-    await click('[aria-label="新建研究空间"]')
+    const beforeCreation = await snapshot()
+    assert(beforeCreation.activeProjectId, 'A desktop project must own the new research')
+    await click(
+      `[data-project-id="${beforeCreation.activeProjectId}"] [aria-label="在项目内新建研究"]`,
+    )
     await until(() => evaluate(() => !!document.querySelector('.modal textarea')))
     await fill('.modal textarea', '隔离验收：怎样让研究分支承接确切的报告版本？')
-    await clickText('创建研究空间', '.modal button')
+    await clickText('创建研究', '.modal button')
     await until(() =>
       evaluate(() =>
-        document.querySelector('.workspace-item.active')?.textContent.includes('隔离验收'),
+        document.querySelector('.project-study-button.active')?.textContent.includes('隔离验收'),
       ),
     )
     let current = await snapshot()
-    const workspace = current.workspaces.at(-1),
+    assert.equal(current.activeProjectId, beforeCreation.activeProjectId)
+    assert.equal(current.workspaces.length, beforeCreation.workspaces.length + 1)
+    const workspace = current.workspaces.find((item) => item.id === current.activeWorkspaceId),
       parentId = workspace.rootId
+    assert(!beforeCreation.workspaces.some((item) => item.id === workspace.id))
     evidence.workspaceId = workspace.id
     evidence.parentId = parentId
     for (const selector of [

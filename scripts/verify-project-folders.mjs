@@ -20,6 +20,7 @@ const parent = resolve('artifacts/project-navigation')
 mkdirSync(parent, { recursive: true })
 const folder = mkdtempSync(join(parent, 'check-')),
   paths = {}
+console.log(`Verification folder: ${folder}`)
 for (const name of ['profile', 'legacy', 'A', 'B', 'moved']) {
   paths[name] = join(folder, name)
   mkdirSync(paths[name])
@@ -138,6 +139,18 @@ app.on('browser-window-created', (_, window) => {
     }
     // Chromium's own drag start creates the data; CDP only delivers the target/drop.
     const dragItem = async (kind, sourceId, targetId, placement, cancel = false, screenshot) => {
+      await until(() =>
+        evaluate(
+          ({ kind, sourceId }) => {
+            const attribute = kind === 'project' ? 'data-project-id' : 'data-workspace-id'
+            const control = document.querySelector(
+              `[${attribute}="${CSS.escape(sourceId)}"] ${kind === 'project' ? '.project-name' : '.project-study-button'}`,
+            )
+            return control?.draggable === true && !control.disabled
+          },
+          { kind, sourceId },
+        ),
+      )
       const points = await evaluate(
         ({ kind, sourceId, targetId, placement }) => {
           const attribute = kind === 'project' ? 'data-project-id' : 'data-workspace-id'
@@ -145,9 +158,10 @@ app.on('browser-window-created', (_, window) => {
             [...document.querySelectorAll(`[${attribute}]`)].find(
               (item) => item.getAttribute(attribute) === id,
             )
-          const source = row(sourceId)
-              .querySelector(kind === 'project' ? '.project-name' : '.project-study-button')
-              .getBoundingClientRect(),
+          const sourceElement = row(sourceId).querySelector(
+              kind === 'project' ? '.project-name' : '.project-study-button',
+            ),
+            source = sourceElement.getBoundingClientRect(),
             target = (
               kind === 'project' ? row(targetId).querySelector('.project-entry') : row(targetId)
             ).getBoundingClientRect()
@@ -267,7 +281,19 @@ app.on('browser-window-created', (_, window) => {
           clickCount: 1,
         })
         await until(() =>
-          evaluate(() => !document.querySelector('.is-dragging, [data-drop-position]')),
+          evaluate(
+            ({ kind, sourceId }) => {
+              const attribute = kind === 'project' ? 'data-project-id' : 'data-workspace-id'
+              const control = document.querySelector(
+                `[${attribute}="${CSS.escape(sourceId)}"] ${kind === 'project' ? '.project-name' : '.project-study-button'}`,
+              )
+              return (
+                !document.querySelector('.is-dragging, [data-drop-position]') &&
+                control?.draggable === true
+              )
+            },
+            { kind, sourceId },
+          ),
         )
       } finally {
         debuggerClient.removeListener('message', intercepted)
@@ -399,6 +425,13 @@ app.on('browser-window-created', (_, window) => {
       cases.push(
         'native project drag inserts above/below and cancellation retains selection and collapse state',
       )
+      await until(() =>
+        evaluate(
+          (id) =>
+            document.querySelector(`[data-project-id="${id}"] .project-name`)?.draggable === true,
+          a.id,
+        ),
+      )
       await evaluate(
         (id) => document.querySelector(`[data-project-id="${id}"] .project-name`).focus(),
         a.id,
@@ -423,7 +456,12 @@ app.on('browser-window-created', (_, window) => {
         })
         await expectProjectOrder(expected)
         await until(() =>
-          evaluate(() => document.querySelector('.project-name:focus')?.draggable === true),
+          evaluate(
+            (id) =>
+              document.querySelector(`[data-project-id="${id}"] .project-name:focus`)?.draggable ===
+              true,
+            a.id,
+          ),
         )
       }
       await menu('project', a.id)

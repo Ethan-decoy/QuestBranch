@@ -269,7 +269,13 @@ app.on('browser-window-created', (_, window) => {
       })
       const workspace = current.workspaces[0],
         root = workspace.rootId
-      await evaluate(() => document.querySelector('.root-link').click())
+      await evaluate((id) => {
+        const card = document.querySelector(
+          `.react-flow__node[data-id="${CSS.escape(id)}"] .research-card`,
+        )
+        if (!card) throw new Error('Root research card is missing')
+        card.click()
+      }, root)
       const source = current.reports.find((report) => report.nodeId === root)
       const target = await command({
         type: 'create-node',
@@ -278,8 +284,12 @@ app.on('browser-window-created', (_, window) => {
         question: '1',
       })
       await until(() =>
-        evaluate(() =>
-          [...document.querySelectorAll('.branch-title')].some((item) => item.textContent === '1'),
+        evaluate(
+          (id) =>
+            document
+              .querySelector(`.react-flow__node[data-id="${CSS.escape(id)}"]`)
+              ?.textContent.includes('1'),
+          target.id,
         ),
       )
       const before = await snapshot(),
@@ -344,9 +354,12 @@ app.on('browser-window-created', (_, window) => {
       assert(current.nodes.find((node) => node.id === target.id).removedAt)
       assert.equal(
         await evaluate(() =>
-          [...document.querySelectorAll('.branch-title')].some((item) => item.textContent === '1'),
+          document
+            .querySelector('.project-study-button.active')
+            ?.closest('[data-workspace-id]')
+            ?.getAttribute('data-workspace-id'),
         ),
-        false,
+        workspace.id,
       )
       assert.equal(
         await evaluate(
@@ -375,8 +388,12 @@ app.on('browser-window-created', (_, window) => {
       )
       await clickText('撤销', '.tool-undo')
       await until(() =>
-        evaluate(() =>
-          [...document.querySelectorAll('.branch-title')].some((item) => item.textContent === '1'),
+        evaluate(
+          (id) =>
+            document
+              .querySelector(`.react-flow__node[data-id="${CSS.escape(id)}"]`)
+              ?.textContent.includes('1'),
+          target.id,
         ),
       )
       assert(!(await snapshot()).nodes.find((node) => node.id === target.id).removedAt)

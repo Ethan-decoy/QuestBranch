@@ -146,7 +146,10 @@ app.on('browser-window-created', (_, window) => {
             const control = document.querySelector(
               `[${attribute}="${CSS.escape(sourceId)}"] ${kind === 'project' ? '.project-name' : '.project-study-button'}`,
             )
-            return control?.draggable === true && !control.disabled
+            if (!control?.draggable || control.disabled) return false
+            const rect = control.getBoundingClientRect()
+            const hit = document.elementFromPoint(rect.left + 40, rect.top + rect.height / 2)
+            return rect.width > 40 && rect.height > 0 && !!hit && control.contains(hit)
           },
           { kind, sourceId },
         ),
@@ -377,6 +380,10 @@ app.on('browser-window-created', (_, window) => {
       window.show()
       window.focus()
       window.webContents.focus()
+      // Showing a macOS window can constrain its initial bounds to the display.
+      // Apply the interaction viewport after showing it and verify the real width.
+      window.setContentSize(1440, 900)
+      await until(() => evaluate(() => innerWidth > 1100))
       assert(
         await evaluate(() => {
           const header = document.querySelector('.projects-navigation .sidebar-label')
@@ -874,7 +881,13 @@ app.on('browser-window-created', (_, window) => {
       await capture('projects-dark')
       window.setContentSize(1100, 760)
       await capture('projects-narrow')
-      assert(await evaluate(() => document.documentElement.scrollWidth <= innerWidth))
+      assert(
+        await evaluate(
+          () =>
+            matchMedia('(max-width: 1100px)').matches &&
+            document.documentElement.scrollWidth <= innerWidth,
+        ),
+      )
       window.setContentSize(1440, 900)
       cases.push('light, dark and narrow layouts keep the research content usable')
       const db = new DatabaseSync(join(paths.moved, '.questbranch', 'research.sqlite'), {
